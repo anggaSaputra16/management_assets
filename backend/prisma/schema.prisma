@@ -1,0 +1,374 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum definitions
+enum UserRole {
+  ADMIN
+  ASSET_ADMIN
+  MANAGER
+  DEPARTMENT_USER
+  TECHNICIAN
+  AUDITOR
+  TOP_MANAGEMENT
+}
+
+enum AssetStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  RETIRED
+  DISPOSED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ALLOCATED
+  COMPLETED
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AuditStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum NotificationType {
+  REQUEST_APPROVAL
+  ASSET_ALLOCATION
+  MAINTENANCE_DUE
+  AUDIT_SCHEDULED
+  GENERAL
+}
+
+// User Management
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  username    String   @unique
+  password    String
+  firstName   String
+  lastName    String
+  phone       String?
+  role        UserRole @default(DEPARTMENT_USER)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  
+  // User activities
+  assetRequests    AssetRequest[]
+  approvedRequests AssetRequest[] @relation("ApprovedBy")
+  assignedAssets   Asset[]        @relation("AssignedTo")
+  maintenanceRecords MaintenanceRecord[] @relation("TechnicianMaintenance")
+  managedDepartments Department[] @relation("DepartmentManager")
+  auditRecords     AuditRecord[]
+  notifications    Notification[]
+  
+  @@map("users")
+}
+
+// Department Management
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  managerId   String?
+  budgetLimit Decimal? @db.Decimal(15, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  manager      User?          @relation("DepartmentManager", fields: [managerId], references: [id])
+  users        User[]
+  assets       Asset[]
+  assetRequests AssetRequest[]
+  
+  @@map("departments")
+}
+
+// Location Management
+model Location {
+  id          String   @id @default(cuid())
+  name        String
+  building    String?
+  floor       String?
+  room        String?
+  address     String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  assets Asset[]
+  
+  @@map("locations")
+}
+
+// Category Management
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  parentId    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  assets   Asset[]
+  
+  @@map("categories")
+}
+
+// Vendor Management
+model Vendor {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  email       String?
+  phone       String?
+  address     String?
+  contactPerson String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  assets Asset[]
+  maintenanceContracts MaintenanceContract[]
+  maintenanceRecords MaintenanceRecord[] @relation("MaintenanceVendor")
+  
+  @@map("vendors")
+}
+
+// Asset Management
+model Asset {
+  id              String      @id @default(cuid())
+  assetTag        String      @unique
+  name            String
+  description     String?
+  serialNumber    String?
+  model           String?
+  brand           String?
+  purchaseDate    DateTime?
+  purchasePrice   Decimal?    @db.Decimal(15, 2)
+  currentValue    Decimal?    @db.Decimal(15, 2)
+  warrantyExpiry  DateTime?
+  status          AssetStatus @default(AVAILABLE)
+  condition       String?
+  notes           String?
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Foreign Keys
+  categoryId      String
+  vendorId        String?
+  locationId      String?
+  departmentId    String?
+  assignedToId    String?
+  
+  // Relations
+  category        Category     @relation(fields: [categoryId], references: [id])
+  vendor          Vendor?      @relation(fields: [vendorId], references: [id])
+  location        Location?    @relation(fields: [locationId], references: [id])
+  department      Department?  @relation(fields: [departmentId], references: [id])
+  assignedTo      User?        @relation("AssignedTo", fields: [assignedToId], references: [id])
+  
+  // Asset activities
+  assetRequests   AssetRequest[]
+  maintenanceRecords MaintenanceRecord[]
+  auditRecords    AuditRecord[]
+  disposalRecord  DisposalRecord?
+  
+  @@map("assets")
+}
+
+// Asset Request Management
+model AssetRequest {
+  id              String        @id @default(cuid())
+  requestNumber   String        @unique
+  description     String
+  justification   String
+  priority        String        @default("MEDIUM")
+  status          RequestStatus @default(PENDING)
+  requestedDate   DateTime      @default(now())
+  approvedDate    DateTime?
+  allocatedDate   DateTime?
+  rejectionReason String?
+  notes           String?
+  
+  // Foreign Keys
+  requesterId     String
+  departmentId    String
+  assetId         String?
+  approvedById    String?
+  
+  // Relations
+  requester       User        @relation(fields: [requesterId], references: [id])
+  department      Department  @relation(fields: [departmentId], references: [id])
+  asset           Asset?      @relation(fields: [assetId], references: [id])
+  approvedBy      User?       @relation("ApprovedBy", fields: [approvedById], references: [id])
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@map("asset_requests")
+}
+
+// Maintenance Management
+model MaintenanceRecord {
+  id              String            @id @default(cuid())
+  maintenanceType String // PREVENTIVE, CORRECTIVE, EMERGENCY
+  description     String
+  scheduledDate   DateTime
+  completedDate   DateTime?
+  status          MaintenanceStatus @default(SCHEDULED)
+  cost            Decimal?          @db.Decimal(15, 2)
+  notes           String?
+  
+  // Foreign Keys
+  assetId         String
+  technicianId    String?
+  vendorId        String?
+  
+  // Relations
+  asset           Asset     @relation(fields: [assetId], references: [id])
+  technician      User?     @relation("TechnicianMaintenance", fields: [technicianId], references: [id])
+  vendor          Vendor?   @relation("MaintenanceVendor", fields: [vendorId], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("maintenance_records")
+}
+
+// Maintenance Contracts
+model MaintenanceContract {
+  id              String    @id @default(cuid())
+  contractNumber  String    @unique
+  description     String
+  startDate       DateTime
+  endDate         DateTime
+  cost            Decimal   @db.Decimal(15, 2)
+  terms           String?
+  isActive        Boolean   @default(true)
+  
+  // Foreign Keys
+  vendorId        String
+  
+  // Relations
+  vendor          Vendor    @relation(fields: [vendorId], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("maintenance_contracts")
+}
+
+// Audit Management
+model AuditRecord {
+  id              String      @id @default(cuid())
+  auditType       String      // PHYSICAL, FINANCIAL, COMPLIANCE
+  scheduledDate   DateTime
+  completedDate   DateTime?
+  status          AuditStatus @default(SCHEDULED)
+  findings        String?
+  recommendations String?
+  
+  // Foreign Keys
+  assetId         String?
+  auditorId       String
+  
+  // Relations
+  asset           Asset?      @relation(fields: [assetId], references: [id])
+  auditor         User        @relation(fields: [auditorId], references: [id])
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@map("audit_records")
+}
+
+// Asset Disposal
+model DisposalRecord {
+  id              String    @id @default(cuid())
+  disposalType    String    // SALE, DONATION, SCRAP, TRANSFER
+  disposalDate    DateTime
+  disposalValue   Decimal?  @db.Decimal(15, 2)
+  reason          String
+  approvalReference String?
+  notes           String?
+  
+  // Foreign Keys
+  assetId         String    @unique
+  
+  // Relations
+  asset           Asset     @relation(fields: [assetId], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("disposal_records")
+}
+
+// Notification System
+model Notification {
+  id              String           @id @default(cuid())
+  title           String
+  message         String
+  type            NotificationType
+  isRead          Boolean          @default(false)
+  
+  // Foreign Keys
+  userId          String
+  
+  // Relations
+  user            User             @relation(fields: [userId], references: [id])
+  
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  @@map("notifications")
+}
+
+// System Settings
+model SystemSettings {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  value           String
+  description     String?
+  isActive        Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("system_settings")
+}

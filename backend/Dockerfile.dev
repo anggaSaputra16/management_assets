@@ -1,0 +1,40 @@
+# Backend Development Dockerfile with Hot Reload
+FROM node:18-alpine
+
+# Install curl for health checks, postgresql-client, and nodemon for hot reload
+RUN apk add --no-cache curl postgresql-client openssl
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files first (for better caching)
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install ALL dependencies including dev dependencies
+RUN npm install
+
+# Create uploads directory with proper permissions
+RUN mkdir -p uploads && chown -R node:node uploads
+
+# Copy source code
+COPY . .
+
+# Change ownership of entire app directory to node user
+RUN chown -R node:node /app
+
+# Switch to non-root user
+USER node
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Expose port
+EXPOSE 5000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:5000/api/health || exit 1
+
+# Development command with nodemon for hot reload
+CMD ["npm", "run", "dev"]
