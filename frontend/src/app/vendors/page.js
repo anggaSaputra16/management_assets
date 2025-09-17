@@ -144,6 +144,25 @@ export default function VendorsPage() {
 
   const handleEdit = (vendor) => {
     setEditingVendor(vendor)
+    setFormData({
+      name: vendor.name || '',
+      code: vendor.code || '',
+      type: vendor.type || 'Supplier',
+      contactPerson: vendor.contactPerson || '',
+      email: vendor.email || '',
+      phone: vendor.phone || '',
+      website: vendor.website || '',
+      address: vendor.address || '',
+      city: vendor.city || '',
+      state: vendor.state || '',
+      postalCode: vendor.postalCode || '',
+      country: vendor.country || 'Indonesia',
+      description: vendor.description || '',
+      taxId: vendor.taxId || '',
+      paymentTerms: vendor.paymentTerms || '',
+      isActive: vendor.isActive !== false
+    })
+    setShowModal(true)
   }
 
   const handleDelete = async (id) => {
@@ -157,15 +176,6 @@ export default function VendorsPage() {
       }
     }
   }
-      postalCode: vendor.postalCode || '',
-      country: vendor.country || 'Indonesia',
-      description: vendor.description || '',
-      taxId: vendor.taxId || '',
-      paymentTerms: vendor.paymentTerms || '',
-      isActive: vendor.isActive !== false
-    })
-    setShowModal(true)
-  }
 
   const openModal = () => {
     resetForm()
@@ -174,6 +184,14 @@ export default function VendorsPage() {
 
   const filteredVendors = getFilteredVendors()
   const vendorStats = getVendorStats()
+
+  const vendorTypes = [
+    { value: 'SUPPLIER', label: 'Supplier' },
+    { value: 'SERVICE_PROVIDER', label: 'Service Provider' },
+    { value: 'CONTRACTOR', label: 'Contractor' },
+    { value: 'CONSULTANT', label: 'Consultant' },
+    { value: 'MAINTENANCE', label: 'Maintenance' }
+  ]
 
   if (loading) {
     return (
@@ -184,20 +202,6 @@ export default function VendorsPage() {
       </DashboardLayout>
     )
   }
-      icon: Building2,
-      color: 'bg-orange-500',
-      textColor: 'text-orange-600',
-      bgColor: 'bg-orange-50'
-    }
-  ]
-
-  const vendorTypes = [
-    { value: 'SUPPLIER', label: 'Supplier' },
-    { value: 'SERVICE_PROVIDER', label: 'Service Provider' },
-    { value: 'CONTRACTOR', label: 'Contractor' },
-    { value: 'CONSULTANT', label: 'Consultant' },
-    { value: 'MAINTENANCE', label: 'Maintenance' }
-  ]
 
   return (
     <DashboardLayout>

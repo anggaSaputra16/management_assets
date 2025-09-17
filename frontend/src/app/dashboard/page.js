@@ -86,7 +86,8 @@ export default function DashboardPage() {
           
           // Set category breakdown
           if (categoriesRes.data.success && assetData.assetsByCategory) {
-            const categoryMap = categoriesRes.data.data.reduce((acc, cat) => {
+            const categories = categoriesRes.data.data.categories || []
+            const categoryMap = categories.reduce((acc, cat) => {
               acc[cat.id] = cat.name
               return acc
             }, {})
