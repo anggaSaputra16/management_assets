@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useAssetStore, useCategoryStore, useLocationStore, useDepartmentStore, useVendorStore } from '@/stores'
 import { useToast } from '@/contexts/ToastContext'
+import QRCodeScanner from '@/components/QRCodeScanner'
+import AssetSpecifications from '@/components/AssetSpecifications'
 import {
   Package,
   Plus,
@@ -18,7 +20,9 @@ import {
   X,
   Tag,
   AlertCircle,
-  MapPin
+  MapPin,
+  QrCode,
+  Eye
 } from 'lucide-react'
 
 const AssetsPage = () => {
@@ -35,13 +39,15 @@ const AssetsPage = () => {
     createAsset,
     updateAsset,
     deleteAsset,
+    bulkImportAssets,
+    exportAssets,
     setSearchTerm,
     setStatusFilter,
     setConditionFilter,
     setShowModal,
     setEditingAsset,
     resetForm,
-    handleInputChange,
+    handleFieldChange,
     getFilteredAssets,
     getAssetStats
   } = useAssetStore()
@@ -55,6 +61,13 @@ const AssetsPage = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [assetToDelete, setAssetToDelete] = useState(null)
+  const [showQRScanner, setShowQRScanner] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState(null)
+  const [showQRModal, setShowQRModal] = useState(false)
+  const [selectedAssetForQR, setSelectedAssetForQR] = useState(null)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importData, setImportData] = useState('')
+  const [importResults, setImportResults] = useState(null)
   const itemsPerPage = 10
 
   const filteredAssets = getFilteredAssets()
@@ -90,11 +103,6 @@ const AssetsPage = () => {
     // Basic validation
     if (!formData.name?.trim()) {
       showError('Asset name is required')
-      return
-    }
-    
-    if (!formData.assetTag?.trim()) {
-      showError('Asset tag is required')
       return
     }
     
@@ -146,6 +154,198 @@ const AssetsPage = () => {
     }
   }
 
+  // Import/Export handlers
+  const handleImport = async () => {
+    if (!importData.trim()) {
+      showError('Please enter CSV data to import')
+      return
+    }
+
+    try {
+      // Parse CSV data
+      const lines = importData.trim().split('\n')
+      const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
+      
+      const assetsData = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.replace(/"/g, '').trim())
+        const asset = {}
+        
+        headers.forEach((header, index) => {
+          const value = values[index]
+          switch (header.toLowerCase()) {
+            case 'name':
+              asset.name = value
+              break
+            case 'description':
+              asset.description = value || null
+              break
+            case 'serial number':
+            case 'serialnumber':
+              asset.serialNumber = value || null
+              break
+            case 'model':
+              asset.model = value || null
+              break
+            case 'brand':
+              asset.brand = value || null
+              break
+            case 'category':
+              // Find category by name
+              const category = categories.find(c => c.name.toLowerCase() === value.toLowerCase())
+              asset.categoryId = category?.id
+              break
+            case 'location':
+              // Find location by name
+              const location = locations.find(l => l.name.toLowerCase() === value.toLowerCase())
+              asset.locationId = location?.id
+              break
+            case 'department':
+              // Find department by name
+              const department = departments.find(d => d.name.toLowerCase() === value.toLowerCase())
+              asset.departmentId = department?.id
+              break
+            case 'vendor':
+              // Find vendor by name
+              const vendor = vendors.find(v => v.name.toLowerCase() === value.toLowerCase())
+              asset.vendorId = vendor?.id
+              break
+            case 'purchase date':
+            case 'purchasedate':
+              asset.purchaseDate = value ? new Date(value).toISOString() : null
+              break
+            case 'purchase price':
+            case 'purchaseprice':
+              asset.purchasePrice = value ? parseFloat(value) : null
+              break
+            case 'warranty expiry':
+            case 'warrantyexpiry':
+              asset.warrantyExpiry = value ? new Date(value).toISOString() : null
+              break
+            case 'condition':
+              asset.condition = value || 'GOOD'
+              break
+            case 'notes':
+              asset.notes = value || null
+              break
+          }
+        })
+        
+        return asset
+      })
+
+      // Import assets
+      const result = await bulkImportAssets(assetsData)
+      setImportResults(result)
+      showSuccess(`Import completed! ${result.data.success.length} assets created, ${result.data.errors.length} errors.`)
+      
+      if (result.data.errors.length === 0) {
+        setShowImportModal(false)
+        setImportData('')
+      }
+    } catch (error) {
+      console.error('Import error:', error)
+      showError('Failed to import assets. Please check your CSV format.')
+    }
+  }
+
+  const handleExport = async () => {
+    try {
+      const blob = await exportAssets('csv', {
+        status: statusFilter,
+        condition: conditionFilter,
+        search: searchTerm
+      })
+      
+      // Create and download the file
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `assets-export-${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+      
+      showSuccess('Assets exported successfully!')
+    } catch (error) {
+      console.error('Export error:', error)
+      showError('Failed to export assets')
+    }
+  }
+
+  // QR Code handlers
+  const handleQRScan = async (qrData) => {
+    try {
+      const response = await fetch('/api/assets/scan-qr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          qrData: typeof qrData === 'string' ? qrData : JSON.stringify(qrData),
+          scanLocation: 'Assets List',
+          scanContext: 'SEARCH'
+        })
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        setShowQRScanner(false)
+        // Navigate to asset details or show in modal
+        if (result.data?.id) {
+          showInfo(`Found asset: ${result.data.name} (${result.data.assetTag})`)
+          // Scroll to asset or highlight it
+          const assetElement = document.querySelector(`[data-asset-id="${result.data.id}"]`)
+          if (assetElement) {
+            assetElement.scrollIntoView({ behavior: 'smooth' })
+            assetElement.classList.add('ring-2', 'ring-blue-500')
+            setTimeout(() => {
+              assetElement.classList.remove('ring-2', 'ring-blue-500')
+            }, 3000)
+          }
+        }
+      } else {
+        showError(result.message || 'QR code scan failed')
+      }
+    } catch (error) {
+      console.error('QR scan error:', error)
+      showError('Failed to process QR code')
+    }
+  }
+
+  const handleGenerateQR = async (assetId) => {
+    try {
+      const response = await fetch(`/api/assets/${assetId}/generate-qr`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        showSuccess('QR code generated successfully!')
+        await fetchAssets()
+      } else {
+        showError(result.message || 'Failed to generate QR code')
+      }
+    } catch (error) {
+      console.error('QR generation error:', error)
+      showError('Failed to generate QR code')
+    }
+  }
+
+  const handleViewQR = (asset) => {
+    if (asset.qrCodeImage) {
+      setSelectedAssetForQR(asset)
+      setShowQRModal(true)
+    }
+  }
+
   const getStatusBadgeColor = (status) => {
     switch (status) {
       case 'ACTIVE':
@@ -177,6 +377,35 @@ const AssetsPage = () => {
         return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  // Handle form data changes including specifications
+  const handleFormChange = (fieldOrEvent, value) => {
+    // If it's an event object
+    if (fieldOrEvent && fieldOrEvent.target) {
+      const { name, value: eventValue } = fieldOrEvent.target
+      if (name === 'categoryId') {
+        handleFieldChange(name, eventValue)
+        // Update selected category for specifications template
+        const category = categories.find(c => c.id === eventValue)
+        setSelectedCategory(category)
+      } else {
+        handleFieldChange(name, eventValue)
+      }
+    } else {
+      // Direct field and value call
+      const field = fieldOrEvent
+      if (field === 'specifications') {
+        handleFieldChange(field, value)
+      } else if (field === 'categoryId') {
+        handleFieldChange(field, value)
+        // Update selected category for specifications template
+        const category = categories.find(c => c.id === value)
+        setSelectedCategory(category)
+      } else {
+        handleFieldChange(field, value)
+      }
     }
   }
 
@@ -213,22 +442,24 @@ const AssetsPage = () => {
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={handleInputChange}
+                  onChange={handleFormChange}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Asset Tag *
+                  Asset Tag
+                  <span className="text-sm text-gray-500 ml-2">(Auto-generated)</span>
                 </label>
                 <input
                   type="text"
                   name="assetTag"
-                  value={formData.assetTag}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  value={formData.assetTag || (editingAsset ? editingAsset.assetTag : 'Will be auto-generated')}
+                  onChange={handleFormChange}
+                  readOnly
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-gray-600 cursor-not-allowed"
+                  placeholder="Auto-generated after creation"
                 />
               </div>
             </div>
@@ -241,9 +472,9 @@ const AssetsPage = () => {
                 <select
                   name="categoryId"
                   value={formData.categoryId}
-                  onChange={handleInputChange}
+                  onChange={handleFormChange}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select Category</option>
                   {Array.isArray(categories) && categories.map(category => (
@@ -260,9 +491,9 @@ const AssetsPage = () => {
                 <select
                   name="locationId"
                   value={formData.locationId}
-                  onChange={handleInputChange}
+                  onChange={handleFormChange}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select Location</option>
                   {Array.isArray(locations) && locations.map(location => (
@@ -282,7 +513,7 @@ const AssetsPage = () => {
                 <select
                   name="departmentId"
                   value={formData.departmentId}
-                  onChange={handleInputChange}
+                  onChange={handleFormChange}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 >
                   <option value="">Select Department</option>
@@ -300,7 +531,7 @@ const AssetsPage = () => {
                 <select
                   name="vendorId"
                   value={formData.vendorId}
-                  onChange={handleInputChange}
+                  onChange={handleFormChange}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 >
                   <option value="">Select Vendor</option>
@@ -322,8 +553,8 @@ const AssetsPage = () => {
                   type="text"
                   name="model"
                   value={formData.model}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  onChange={handleFormChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
@@ -334,8 +565,8 @@ const AssetsPage = () => {
                   type="text"
                   name="serialNumber"
                   value={formData.serialNumber}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  onChange={handleFormChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -348,8 +579,8 @@ const AssetsPage = () => {
                 <select
                   name="status"
                   value={formData.status}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  onChange={handleFormChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="ACTIVE">Active</option>
                   <option value="INACTIVE">Inactive</option>
@@ -365,8 +596,8 @@ const AssetsPage = () => {
                 <select
                   name="condition"
                   value={formData.condition}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  onChange={handleFormChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="EXCELLENT">Excellent</option>
                   <option value="GOOD">Good</option>
@@ -386,8 +617,8 @@ const AssetsPage = () => {
                   type="date"
                   name="purchaseDate"
                   value={formData.purchaseDate}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  onChange={handleFormChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
@@ -398,9 +629,9 @@ const AssetsPage = () => {
                   type="number"
                   name="purchasePrice"
                   value={formData.purchasePrice}
-                  onChange={handleInputChange}
+                  onChange={handleFormChange}
                   step="0.01"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -414,7 +645,7 @@ const AssetsPage = () => {
                   type="number"
                   name="depreciationRate"
                   value={formData.depreciationRate}
-                  onChange={handleInputChange}
+                  onChange={handleFormChange}
                   step="0.01"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 />
@@ -427,7 +658,7 @@ const AssetsPage = () => {
                   type="date"
                   name="warrantyExpiry"
                   value={formData.warrantyExpiry}
-                  onChange={handleInputChange}
+                  onChange={handleFormChange}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 />
               </div>
@@ -440,9 +671,21 @@ const AssetsPage = () => {
               <textarea
                 name="description"
                 value={formData.description}
-                onChange={handleInputChange}
+                onChange={handleFormChange}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {/* Asset Specifications */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Specifications
+              </label>
+              <AssetSpecifications
+                category={selectedCategory}
+                specifications={formData.specifications || {}}
+                onChange={(specs) => handleFormChange('specifications', specs)}
               />
             </div>
 
@@ -505,6 +748,153 @@ const AssetsPage = () => {
     )
   }
 
+  const renderImportModal = () => {
+    if (!showImportModal) return null
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Import Assets</h3>
+              <button
+                onClick={() => {
+                  setShowImportModal(false)
+                  setImportData('')
+                  setImportResults(null)
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                CSV Data
+              </label>
+              <p className="text-sm text-gray-600 mb-2">
+                Paste your CSV data below. Expected format: Name, Description, Serial Number, Model, Brand, Category, Location, Department, Vendor, Purchase Date, Purchase Price, Warranty Expiry, Condition, Notes
+              </p>
+              <textarea
+                value={importData}
+                onChange={(e) => setImportData(e.target.value)}
+                rows={10}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Name,Description,Serial Number,Model,Brand,Category,Location,Department,Vendor,Purchase Date,Purchase Price,Warranty Expiry,Condition,Notes&#10;Laptop Dell,Business laptop,ABC123,Latitude 5520,Dell,Computer,Office Floor 1,IT Department,Dell Inc,2023-01-15,15000000,2026-01-15,GOOD,Standard laptop"
+              />
+            </div>
+
+            {importResults && (
+              <div className="mt-4 p-4 border rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Import Results</h4>
+                <div className="space-y-2">
+                  <p className="text-green-600">
+                    ✓ {importResults.data.success.length} assets imported successfully
+                  </p>
+                  {importResults.data.errors.length > 0 && (
+                    <div>
+                      <p className="text-red-600">
+                        ✗ {importResults.data.errors.length} errors occurred:
+                      </p>
+                      <ul className="list-disc list-inside text-sm text-red-600 mt-1">
+                        {importResults.data.errors.map((error, index) => (
+                          <li key={index}>Row {error.row}: {error.error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <button
+                onClick={() => {
+                  setShowImportModal(false)
+                  setImportData('')
+                  setImportResults(null)
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={!importData.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Import Assets
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const renderQRModal = () => {
+    if (!showQRModal || !selectedAssetForQR) return null
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg max-w-md w-full">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">QR Code</h3>
+              <button
+                onClick={() => setShowQRModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="text-center">
+              <h4 className="text-md font-medium text-gray-900 mb-2">
+                {selectedAssetForQR.name}
+              </h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Asset Tag: {selectedAssetForQR.assetTag}
+              </p>
+              
+              <div className="flex justify-center mb-4">
+                <img 
+                  src={`/api${selectedAssetForQR.qrCodeImage}`}
+                  alt="QR Code"
+                  className="max-w-xs max-h-xs border border-gray-200 rounded"
+                />
+              </div>
+              
+              <div className="flex justify-center space-x-3">
+                <button
+                  onClick={() => {
+                    const link = document.createElement('a')
+                    link.href = `/api${selectedAssetForQR.qrCodeImage}`
+                    link.download = `qr-${selectedAssetForQR.assetTag}.png`
+                    link.click()
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Download className="h-4 w-4 mr-2 inline" />
+                  Download
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Print
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -524,14 +914,14 @@ const AssetsPage = () => {
             Filters
           </button>
           <button 
-            onClick={() => showInfo('Import feature coming soon!')}
+            onClick={() => setShowImportModal(true)}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
           >
             <Upload className="h-4 w-4 mr-2" />
             Import
           </button>
           <button 
-            onClick={() => showInfo('Export feature coming soon!')}
+            onClick={handleExport}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
           >
             <Download className="h-4 w-4 mr-2" />
@@ -546,6 +936,13 @@ const AssetsPage = () => {
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Asset
+          </button>
+          <button
+            onClick={() => setShowQRScanner(true)}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <QrCode className="h-4 w-4 mr-2" />
+            Scan QR
           </button>
         </div>
       </div>
@@ -701,7 +1098,12 @@ const AssetsPage = () => {
                   <tr key={asset.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{asset.name}</div>
+                        <div className="flex items-center">
+                          <span className="text-sm font-medium text-gray-900">{asset.name}</span>
+                          {asset.qrCodeImage && (
+                            <QrCode className="h-4 w-4 ml-2 text-green-500" title="QR Code Available" />
+                          )}
+                        </div>
                         <div className="text-sm text-gray-500">
                           <Tag className="inline h-3 w-3 mr-1" />
                           {asset.assetTag}
@@ -735,12 +1137,31 @@ const AssetsPage = () => {
                         <button
                           onClick={() => handleEdit(asset)}
                           className="text-blue-600 hover:text-blue-900"
+                          title="Edit Asset"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
+                        {asset.qrCodeImage ? (
+                          <button
+                            onClick={() => handleViewQR(asset)}
+                            className="text-green-600 hover:text-green-900"
+                            title="View QR Code"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleGenerateQR(asset.id)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Generate QR Code"
+                          >
+                            <QrCode className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDelete(asset)}
                           className="text-red-600 hover:text-red-900"
+                          title="Delete Asset"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -797,6 +1218,17 @@ const AssetsPage = () => {
       {/* Modals */}
       {renderModal()}
       {renderDeleteModal()}
+      {renderImportModal()}
+      {renderQRModal()}
+
+      {/* QR Code Scanner */}
+      {showQRScanner && (
+        <QRCodeScanner
+          isOpen={showQRScanner}
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
+      )}
     </div>
   )
 }

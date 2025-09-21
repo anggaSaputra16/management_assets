@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, FileText } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/lib/api'
@@ -12,7 +12,6 @@ export default function CreateRequestPage() {
   const { user } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [assets, setAssets] = useState([])
-  const [categories, setCategories] = useState([])
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -164,7 +163,7 @@ export default function CreateRequestPage() {
                       value={formData.title}
                       onChange={handleInputChange}
                       required
-                      className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter a descriptive title for your request"
                     />
                   </div>
@@ -180,7 +179,7 @@ export default function CreateRequestPage() {
                       onChange={handleInputChange}
                       required
                       rows={4}
-                      className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Provide detailed description of your request"
                     />
                   </div>
@@ -196,7 +195,7 @@ export default function CreateRequestPage() {
                         value={formData.type}
                         onChange={handleInputChange}
                         required
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         {requestTypes.map(type => (
                           <option key={type.value} value={type.value}>
@@ -216,7 +215,7 @@ export default function CreateRequestPage() {
                         value={formData.priority}
                         onChange={handleInputChange}
                         required
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         {priorities.map(priority => (
                           <option key={priority.value} value={priority.value}>
@@ -238,7 +237,7 @@ export default function CreateRequestPage() {
                       onChange={handleInputChange}
                       required
                       rows={3}
-                      className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Explain why this request is necessary for business operations"
                     />
                   </div>
@@ -261,7 +260,7 @@ export default function CreateRequestPage() {
                         name="assetId"
                         value={formData.assetId}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="">Select an asset</option>
                         {assets.map(asset => (
@@ -284,7 +283,7 @@ export default function CreateRequestPage() {
                         value={formData.specifications}
                         onChange={handleInputChange}
                         rows={4}
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="List technical specifications, requirements, and features needed"
                       />
                     </div>
@@ -303,7 +302,7 @@ export default function CreateRequestPage() {
                           value={formData.quantity}
                           onChange={handleInputChange}
                           min="1"
-                          className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
                     )}
@@ -320,7 +319,7 @@ export default function CreateRequestPage() {
                         onChange={handleInputChange}
                         min="0"
                         step="0.01"
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="0.00"
                       />
                     </div>
@@ -336,7 +335,7 @@ export default function CreateRequestPage() {
                         value={formData.expectedDeliveryDate}
                         onChange={handleInputChange}
                         min={new Date().toISOString().split('T')[0]}
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                   </div>
@@ -355,7 +354,7 @@ export default function CreateRequestPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Creating...' : 'Create Request'}
                 </button>

@@ -19,7 +19,8 @@ import {
   LogOut,
   User,
   Shield,
-  Home
+  Home,
+  GitBranch
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { getGreeting, getRoleDisplayName } from '@/lib/utils'
@@ -31,6 +32,7 @@ const menuItems = [
   { name: 'Users', href: '/users', icon: Users, roles: ['ADMIN', 'ASSET_ADMIN'] },
   { name: 'Departments', href: '/departments', icon: Building },
   { name: 'Maintenance', href: '/maintenance', icon: Wrench },
+  { name: 'Decomposition', href: '/decomposition', icon: GitBranch, roles: ['ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'] },
   { name: 'Categories', href: '/categories', icon: Settings },
   { name: 'Locations', href: '/locations', icon: MapPin },
   { name: 'Vendors', href: '/vendors', icon: Truck },
@@ -39,7 +41,14 @@ const menuItems = [
   { name: 'Reports', href: '/reports', icon: BarChart3 }
 ]
 
-export default function DashboardLayout({ children, title }) {
+import { ReactNode } from 'react'
+
+interface DashboardLayoutProps {
+  children: ReactNode
+  title?: string
+}
+
+export default function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const { user, logout, isHydrated } = useAuthStore()
   const router = useRouter()
   const pathname = usePathname()

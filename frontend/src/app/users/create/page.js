@@ -76,8 +76,8 @@ export default function CreateUserPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Users className="h-6 w-6 text-purple-600" />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Users className="h-6 w-6 text-blue-600" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Create New User</h1>
@@ -100,7 +100,7 @@ export default function CreateUserPage() {
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -115,7 +115,7 @@ export default function CreateUserPage() {
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -130,7 +130,7 @@ export default function CreateUserPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -145,7 +145,7 @@ export default function CreateUserPage() {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                   minLength={6}
                 />
@@ -160,7 +160,7 @@ export default function CreateUserPage() {
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   <option value="DEPARTMENT_USER">Department User</option>
@@ -185,7 +185,7 @@ export default function CreateUserPage() {
                   name="departmentId"
                   value={formData.departmentId}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   <option value="">Select Department</option>
@@ -206,7 +206,7 @@ export default function CreateUserPage() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
@@ -217,7 +217,7 @@ export default function CreateUserPage() {
                   name="isActive"
                   checked={formData.isActive}
                   onChange={handleChange}
-                  className="h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                  className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                 />
                 <label className="ml-2 block text-sm text-gray-700">
                   Active User
@@ -237,7 +237,7 @@ export default function CreateUserPage() {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 disabled={loading}
               >
                 {loading ? 'Creating...' : 'Create User'}

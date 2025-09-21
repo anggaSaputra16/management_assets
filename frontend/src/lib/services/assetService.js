@@ -116,19 +116,46 @@ export const assetService = {
   },
 
   // Bulk import assets
-  bulkImport: async (file) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    const response = await api.post('/assets/bulk-import', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+  bulkImport: async (assetsData) => {
+    const response = await api.post('/assets/bulk-import', { assets: assetsData })
     return response.data
   },
 
   // Export assets
-  exportAssets: async (format = 'excel', filters = {}) => {
+  exportAssets: async (format = 'csv', filters = {}) => {
     const params = new URLSearchParams({ format, ...filters })
-    const response = await api.get(`/assets/export?${params}`, { responseType: 'blob' })
-    return response
+    if (format === 'csv') {
+      const response = await api.get(`/assets/export?${params}`, { responseType: 'blob' })
+      return response
+    } else {
+      const response = await api.get(`/assets/export?${params}`)
+      return response.data
+    }
+  },
+
+  // Get compatible assets for component transfer
+  getCompatibleAssets: async (componentId) => {
+    const response = await api.get(`/assets/compatible/${componentId}`)
+    return response.data
+  },
+
+  // QR Code related methods
+  generateQRCode: async (id, format = 'file') => {
+    const response = await api.post(`/assets/${id}/generate-qr`, { format })
+    return response.data
+  },
+
+  scanQRCode: async (qrData, scanLocation = '', scanContext = 'SEARCH') => {
+    const response = await api.post('/assets/scan-qr', { 
+      qrData, 
+      scanLocation, 
+      scanContext 
+    })
+    return response.data
+  },
+
+  getQRScanHistory: async (id, limit = 10) => {
+    const response = await api.get(`/assets/${id}/qr-scans?limit=${limit}`)
+    return response.data
   }
 }

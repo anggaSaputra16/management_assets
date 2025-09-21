@@ -11,11 +11,8 @@ import {
   Mail,
   Globe,
   MapPin,
-  Package,
   Download,
-  Upload,
-  CheckCircle,
-  XCircle
+  Upload
 } from 'lucide-react'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { useAuthStore } from '@/stores/authStore'
@@ -28,7 +25,6 @@ export default function VendorsPage() {
   const {
     vendors,
     loading,
-    error,
     searchTerm,
     showModal,
     editingVendor,
@@ -89,7 +85,7 @@ export default function VendorsPage() {
         document.body.removeChild(link)
       }
       showToast('Vendors exported successfully', 'success')
-    } catch (error) {
+    } catch {
       showToast('Failed to export vendors', 'error')
     }
   }
@@ -111,7 +107,7 @@ export default function VendorsPage() {
           }
           
           showToast('CSV file loaded. Import functionality can be implemented based on business requirements.', 'info')
-        } catch (error) {
+        } catch {
           showToast('Error reading CSV file', 'error')
         }
       }
@@ -143,7 +139,22 @@ export default function VendorsPage() {
   }
 
   const handleEdit = (vendor) => {
+    setFormData({
+      name: vendor.name || '',
+      email: vendor.email || '',
+      phone: vendor.phone || '',
+      address: vendor.address || '',
+      city: vendor.city || '',
+      state: vendor.state || '',
+      postalCode: vendor.postalCode || '',
+      country: vendor.country || 'Indonesia',
+      description: vendor.description || '',
+      taxId: vendor.taxId || '',
+      paymentTerms: vendor.paymentTerms || '',
+      isActive: vendor.isActive !== false
+    })
     setEditingVendor(vendor)
+    setShowModal(true)
   }
 
   const handleDelete = async (id) => {
@@ -156,15 +167,6 @@ export default function VendorsPage() {
         showToast('Failed to delete vendor', 'error')
       }
     }
-  }
-      postalCode: vendor.postalCode || '',
-      country: vendor.country || 'Indonesia',
-      description: vendor.description || '',
-      taxId: vendor.taxId || '',
-      paymentTerms: vendor.paymentTerms || '',
-      isActive: vendor.isActive !== false
-    })
-    setShowModal(true)
   }
 
   const openModal = () => {
@@ -184,12 +186,6 @@ export default function VendorsPage() {
       </DashboardLayout>
     )
   }
-      icon: Building2,
-      color: 'bg-orange-500',
-      textColor: 'text-orange-600',
-      bgColor: 'bg-orange-50'
-    }
-  ]
 
   const vendorTypes = [
     { value: 'SUPPLIER', label: 'Supplier' },
@@ -206,7 +202,7 @@ export default function VendorsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-purple-100 rounded-lg">
-              <Building2 className="h-6 w-6 text-purple-600" />
+              <Building2 className="h-6 w-6 text-blue-600" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Vendors</h1>
@@ -224,7 +220,7 @@ export default function VendorsPage() {
             />
             <label
               htmlFor="csvImport"
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
             >
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
@@ -240,7 +236,7 @@ export default function VendorsPage() {
             
             <button
               onClick={openModal}
-              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Vendor
@@ -283,7 +279,7 @@ export default function VendorsPage() {
                   placeholder="Search vendors by name, code, type, contact, or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -389,7 +385,7 @@ export default function VendorsPage() {
                           <div className="flex items-center space-x-2">
                             <button
                               onClick={() => handleEdit(vendor)}
-                              className="text-purple-600 hover:text-purple-900"
+                              className="text-blue-600 hover:text-blue-900"
                             >
                               <Edit className="h-4 w-4" />
                             </button>
@@ -416,7 +412,7 @@ export default function VendorsPage() {
                         <div className="mt-6">
                           <button
                             onClick={() => setShowModal(true)}
-                            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
+                            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                           >
                             <Plus className="h-4 w-4 mr-2" />
                             Add Vendor
@@ -453,7 +449,7 @@ export default function VendorsPage() {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Enter vendor name"
                     />
                   </div>
@@ -468,7 +464,7 @@ export default function VendorsPage() {
                       value={formData.code}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="e.g., VND001"
                     />
                   </div>
@@ -482,7 +478,7 @@ export default function VendorsPage() {
                       value={formData.type}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       {vendorTypes.map(type => (
                         <option key={type.value} value={type.value}>
@@ -501,7 +497,7 @@ export default function VendorsPage() {
                       name="contactPerson"
                       value={formData.contactPerson}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Primary contact person"
                     />
                   </div>
@@ -515,7 +511,7 @@ export default function VendorsPage() {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="vendor@example.com"
                     />
                   </div>
@@ -529,7 +525,7 @@ export default function VendorsPage() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="+62 xxx xxxx xxxx"
                     />
                   </div>
@@ -543,7 +539,7 @@ export default function VendorsPage() {
                       name="website"
                       value={formData.website}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="https://www.vendor.com"
                     />
                   </div>
@@ -558,7 +554,7 @@ export default function VendorsPage() {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Street address"
                   />
                 </div>
@@ -573,7 +569,7 @@ export default function VendorsPage() {
                       name="city"
                       value={formData.city}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="City"
                     />
                   </div>
@@ -587,7 +583,7 @@ export default function VendorsPage() {
                       name="state"
                       value={formData.state}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="State"
                     />
                   </div>
@@ -601,7 +597,7 @@ export default function VendorsPage() {
                       name="postalCode"
                       value={formData.postalCode}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="12345"
                     />
                   </div>
@@ -615,7 +611,7 @@ export default function VendorsPage() {
                       name="country"
                       value={formData.country}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Country"
                     />
                   </div>
@@ -631,7 +627,7 @@ export default function VendorsPage() {
                       name="taxId"
                       value={formData.taxId}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Tax identification number"
                     />
                   </div>
@@ -645,7 +641,7 @@ export default function VendorsPage() {
                       name="paymentTerms"
                       value={formData.paymentTerms}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="e.g., NET 30, COD"
                     />
                   </div>
@@ -660,7 +656,7 @@ export default function VendorsPage() {
                     value={formData.description}
                     onChange={handleInputChange}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Optional description"
                   />
                 </div>
@@ -672,7 +668,7 @@ export default function VendorsPage() {
                     name="isActive"
                     checked={formData.isActive}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                   <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
                     Active vendor
@@ -689,7 +685,7 @@ export default function VendorsPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
                     {editingVendor ? 'Update Vendor' : 'Create Vendor'}
                   </button>

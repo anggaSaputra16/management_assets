@@ -1,14 +1,15 @@
 import { create } from 'zustand'
-import { assetService } from '@/lib/services/assetService'
+import { assetService } from '@/lib/services'
 
 interface Asset {
-  id: number
+  id: string
   name: string
   assetTag: string
-  categoryId: number
-  locationId: number
-  departmentId?: number
-  vendorId?: number
+  categoryId: string
+  locationId: string
+  departmentId?: string
+  vendorId?: string
+  assignedToId?: string
   model?: string
   serialNumber?: string
   status: string
@@ -19,28 +20,31 @@ interface Asset {
   currentValue?: number
   warrantyExpiry?: string
   description?: string
+  qrCode?: string
+  qrCodeImage?: string
   createdAt: string
   updatedAt: string
   category?: {
-    id: number
+    id: string
     name: string
   }
   location?: {
-    id: number
+    id: string
     name: string
   }
   department?: {
-    id: number
+    id: string
     name: string
   }
   vendor?: {
-    id: number
+    id: string
     name: string
   }
 }
 
 interface AssetState {
   assets: Asset[]
+  currentAsset: Asset | null
   loading: boolean
   error: string | null
   searchTerm: string
@@ -67,11 +71,28 @@ interface AssetState {
   }
 }
 
+interface ImportResult {
+  success: boolean
+  data?: Asset[]
+  errors?: string[]
+}
+
+interface ExportFilters {
+  status?: string
+  condition?: string
+  categoryId?: string
+  locationId?: string
+  departmentId?: string
+}
+
 interface AssetActions {
   fetchAssets: () => Promise<void>
+  fetchAsset: (id: string) => Promise<void>
   createAsset: (data: Partial<Asset>) => Promise<void>
-  updateAsset: (id: number, data: Partial<Asset>) => Promise<void>
-  deleteAsset: (id: number) => Promise<void>
+  updateAsset: (id: string, data: Partial<Asset>) => Promise<void>
+  deleteAsset: (id: string) => Promise<void>
+  bulkImportAssets: (assetsData: Partial<Asset>[]) => Promise<ImportResult>
+  exportAssets: (format?: string, filters?: ExportFilters) => Promise<Blob>
   setSearchTerm: (term: string) => void
   setStatusFilter: (status: string) => void
   setConditionFilter: (condition: string) => void
@@ -80,6 +101,7 @@ interface AssetActions {
   setFormData: (data: Partial<AssetState['formData']>) => void
   resetForm: () => void
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
+  handleFieldChange: (field: string, value: unknown) => void
   getFilteredAssets: () => Asset[]
   getAssetStats: () => Array<{
     title: string
@@ -111,6 +133,7 @@ const initialFormData = {
 
 export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
   assets: [],
+  currentAsset: null,
   loading: false,
   error: null,
   searchTerm: '',
@@ -130,16 +153,30 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
     }
   },
 
+  fetchAsset: async (id) => {
+    set({ loading: true, error: null })
+    try {
+      const response = await assetService.getAssetById(id)
+      set({ currentAsset: response.data || null, loading: false })
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Failed to fetch asset', loading: false })
+    }
+  },
+
   createAsset: async (data) => {
     try {
       const assetData = {
         ...data,
-        categoryId: parseInt(data.categoryId?.toString() || '0'),
-        locationId: parseInt(data.locationId?.toString() || '0'),
-        departmentId: data.departmentId ? parseInt(data.departmentId.toString()) : null,
-        vendorId: data.vendorId ? parseInt(data.vendorId.toString()) : null,
+        // Keep IDs as strings since backend uses CUID strings
+        categoryId: data.categoryId?.toString() || '',
+        locationId: data.locationId?.toString() || '',
+        departmentId: data.departmentId ? data.departmentId.toString() : null,
+        vendorId: data.vendorId ? data.vendorId.toString() : null,
+        assignedToId: data.assignedToId ? data.assignedToId.toString() : null,
         purchasePrice: data.purchasePrice ? parseFloat(data.purchasePrice.toString()) : null,
-        depreciationRate: data.depreciationRate ? parseFloat(data.depreciationRate.toString()) : null
+        currentValue: data.currentValue ? parseFloat(data.currentValue.toString()) : null,
+        // Remove assetTag from data since backend auto-generates it
+        assetTag: undefined
       }
       await assetService.createAsset(assetData)
       get().fetchAssets()
@@ -153,12 +190,14 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
     try {
       const assetData = {
         ...data,
-        categoryId: parseInt(data.categoryId?.toString() || '0'),
-        locationId: parseInt(data.locationId?.toString() || '0'),
-        departmentId: data.departmentId ? parseInt(data.departmentId.toString()) : null,
-        vendorId: data.vendorId ? parseInt(data.vendorId.toString()) : null,
+        // Keep IDs as strings since backend uses CUID strings
+        categoryId: data.categoryId?.toString() || '',
+        locationId: data.locationId?.toString() || '',
+        departmentId: data.departmentId ? data.departmentId.toString() : null,
+        vendorId: data.vendorId ? data.vendorId.toString() : null,
+        assignedToId: data.assignedToId ? data.assignedToId.toString() : null,
         purchasePrice: data.purchasePrice ? parseFloat(data.purchasePrice.toString()) : null,
-        depreciationRate: data.depreciationRate ? parseFloat(data.depreciationRate.toString()) : null
+        currentValue: data.currentValue ? parseFloat(data.currentValue.toString()) : null
       }
       await assetService.updateAsset(id, assetData)
       get().fetchAssets()
@@ -174,6 +213,24 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
       get().fetchAssets()
     } catch {
       throw new Error('Failed to delete asset')
+    }
+  },
+
+  bulkImportAssets: async (assetsData) => {
+    try {
+      const result = await assetService.bulkImport(assetsData)
+      get().fetchAssets()
+      return result
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to import assets')
+    }
+  },
+
+  exportAssets: async (format = 'csv', filters = {}) => {
+    try {
+      return await assetService.exportAssets(format, filters)
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to export assets')
     }
   },
 
@@ -226,6 +283,15 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
       formData: {
         ...state.formData,
         [name]: value
+      }
+    }))
+  },
+
+  handleFieldChange: (field, value) => {
+    set(state => ({
+      formData: {
+        ...state.formData,
+        [field]: value
       }
     }))
   },

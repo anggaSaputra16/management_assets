@@ -17,8 +17,7 @@ import {
   Calendar,
   User,
   Download,
-  X,
-  Tool
+  X
 } from 'lucide-react'
     
 const MaintenancePage = () => {
@@ -334,7 +333,7 @@ const MaintenancePage = () => {
                 </button>
                 <button
                   onClick={() => handleStatusUpdate(selectedMaintenance, 'COMPLETED')}
-                  className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                  className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                 >
                   Mark Completed
                 </button>
@@ -437,7 +436,7 @@ const MaintenancePage = () => {
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter description"
               />
             </div>
@@ -451,7 +450,7 @@ const MaintenancePage = () => {
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="SCHEDULED">Scheduled</option>
                   <option value="IN_PROGRESS">In Progress</option>
@@ -468,7 +467,7 @@ const MaintenancePage = () => {
                   name="priority"
                   value={formData.priority}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="LOW">Low</option>
                   <option value="MEDIUM">Medium</option>
@@ -802,7 +801,7 @@ const MaintenancePage = () => {
                   <tr key={maintenance.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <Tool className="h-5 w-5 text-blue-500 mr-3" />
+                        <Wrench className="h-5 w-5 text-blue-500 mr-3" />
                         <div>
                           <div className="text-sm font-medium text-gray-900">
                             {maintenance.title}
