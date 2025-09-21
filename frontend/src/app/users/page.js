@@ -449,7 +449,7 @@ export default function UsersPage() {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                       placeholder="Enter full name"
                     />
                   </div>
@@ -464,7 +464,7 @@ export default function UsersPage() {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                       placeholder="Enter email address"
                     />
                   </div>
@@ -478,10 +478,10 @@ export default function UsersPage() {
                       value={formData.role}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                     >
                       {userRoles.map(role => (
-                        <option key={role.value} value={role.value}>
+                        <option key={role.value} value={role.value} className="text-gray-900">
                           {role.label}
                         </option>
                       ))}
@@ -497,7 +497,7 @@ export default function UsersPage() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                       placeholder="Enter phone number"
                     />
                   </div>
@@ -510,11 +510,11 @@ export default function UsersPage() {
                       name="departmentId"
                       value={formData.departmentId}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                     >
-                      <option value="">Select Department</option>
+                      <option value="" className="text-gray-500">Select Department</option>
                       {departments.map(dept => (
-                        <option key={dept.id} value={dept.id.toString()}>
+                        <option key={dept.id} value={dept.id.toString()} className="text-gray-900">
                           {dept.name}
                         </option>
                       ))}
@@ -530,7 +530,7 @@ export default function UsersPage() {
                       name="position"
                       value={formData.position}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                       placeholder="Enter position/job title"
                     />
                   </div>
@@ -544,7 +544,7 @@ export default function UsersPage() {
                       name="employeeId"
                       value={formData.employeeId}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                       placeholder="Enter employee ID"
                     />
                   </div>
@@ -562,7 +562,7 @@ export default function UsersPage() {
                         value={formData.password}
                         onChange={handleInputChange}
                         required={!editingUser}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                         placeholder="Enter password"
                       />
                     </div>
@@ -577,7 +577,7 @@ export default function UsersPage() {
                         value={formData.confirmPassword}
                         onChange={handleInputChange}
                         required={!editingUser}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                         placeholder="Confirm password"
                       />
                     </div>
@@ -639,7 +639,7 @@ export default function UsersPage() {
                     value={passwordData.currentPassword}
                     onChange={handlePasswordInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                     placeholder="Enter current password"
                   />
                 </div>
@@ -654,7 +654,7 @@ export default function UsersPage() {
                     value={passwordData.newPassword}
                     onChange={handlePasswordInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                     placeholder="Enter new password"
                   />
                 </div>
@@ -669,7 +669,7 @@ export default function UsersPage() {
                     value={passwordData.confirmPassword}
                     onChange={handlePasswordInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                     placeholder="Confirm new password"
                   />
                 </div>

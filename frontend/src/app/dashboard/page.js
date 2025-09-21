@@ -7,10 +7,8 @@ import {
   Clock, 
   CheckCircle, 
   AlertTriangle,
-  TrendingUp,
   Users,
   Wrench,
-  DollarSign,
   BarChart3,
   Calendar,
   Building,
@@ -67,7 +65,20 @@ export default function DashboardPage() {
         ])
         
         // Process asset statistics
-        let newStats = { ...stats }
+        let newStats = {
+          totalAssets: 0,
+          availableAssets: 0,
+          assignedAssets: 0,
+          maintenanceAssets: 0,
+          pendingRequests: 0,
+          activeRequests: 0,
+          completedRequests: 0,
+          maintenanceDue: 0,
+          totalUsers: 0,
+          totalValue: 0,
+          utilizationRate: 0,
+          complianceRate: 0
+        }
         
         if (assetsRes.data.success) {
           const assetData = assetsRes.data.data

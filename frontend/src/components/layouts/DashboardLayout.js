@@ -19,7 +19,9 @@ import {
   LogOut,
   User,
   Shield,
-  Home
+  Home,
+  GitBranch,
+  Cog
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { getGreeting, getRoleDisplayName } from '@/lib/utils'
@@ -28,9 +30,11 @@ const menuItems = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Assets', href: '/assets', icon: Package },
   { name: 'Requests', href: '/requests', icon: FileText },
+  { name: 'Spare Parts', href: '/spare-parts', icon: Cog, roles: ['ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'] },
   { name: 'Users', href: '/users', icon: Users, roles: ['ADMIN', 'ASSET_ADMIN'] },
   { name: 'Departments', href: '/departments', icon: Building },
   { name: 'Maintenance', href: '/maintenance', icon: Wrench },
+  { name: 'Decomposition', href: '/decomposition', icon: GitBranch, roles: ['ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'] },
   { name: 'Categories', href: '/categories', icon: Settings },
   { name: 'Locations', href: '/locations', icon: MapPin },
   { name: 'Vendors', href: '/vendors', icon: Truck },

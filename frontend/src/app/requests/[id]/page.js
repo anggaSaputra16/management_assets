@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { 
   ArrowLeft, 
@@ -9,10 +9,8 @@ import {
   XCircle, 
   Clock, 
   User, 
-  Calendar, 
   Package,
   AlertCircle,
-  FileText,
   MessageSquare,
   Activity
 } from 'lucide-react'
@@ -33,9 +31,9 @@ export default function RequestDetailPage() {
     if (params.id) {
       fetchRequest()
     }
-  }, [params.id])
+  }, [params.id, fetchRequest])
 
-  const fetchRequest = async () => {
+  const fetchRequest = useCallback(async () => {
     try {
       setLoading(true)
       const response = await api.get(`/requests/${params.id}`)
@@ -49,7 +47,7 @@ export default function RequestDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id, router])
 
   const handleApproveRequest = async () => {
     if (!confirm('Are you sure you want to approve this request?')) return
@@ -153,7 +151,7 @@ export default function RequestDetailPage() {
           <div className="mt-6">
             <button
               onClick={() => router.push('/requests')}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
             >
               Back to Requests
             </button>
@@ -189,7 +187,7 @@ export default function RequestDetailPage() {
               <>
                 <button
                   onClick={handleApproveRequest}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Approve
@@ -339,13 +337,13 @@ export default function RequestDetailPage() {
                         onChange={(e) => setComment(e.target.value)}
                         placeholder="Add a comment..."
                         rows={3}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                       <div className="mt-2 flex justify-end">
                         <button
                           type="submit"
                           disabled={!comment.trim() || submittingComment}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {submittingComment ? 'Adding...' : 'Add Comment'}
                         </button>
