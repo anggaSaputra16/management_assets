@@ -412,7 +412,7 @@ const ReportsPage = () => {
             <button
               onClick={() => generateReport('requests')}
               disabled={loading}
-              className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50"
+              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Generate'}
             </button>
@@ -437,7 +437,7 @@ const ReportsPage = () => {
             <button
               onClick={() => generateReport('requestAnalytics')}
               disabled={loading}
-              className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50"
+              className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Generate'}
             </button>
@@ -579,7 +579,7 @@ const ReportsPage = () => {
           <button
             onClick={() => generateReport('department')}
             disabled={loading}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Generate Report'}
           </button>

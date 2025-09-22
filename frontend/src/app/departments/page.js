@@ -8,8 +8,7 @@ import {
   Edit,
   Trash2,
   Users,
-  User,
-  Package
+  User
 } from 'lucide-react'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { useAuthStore } from '@/stores/authStore'
@@ -32,6 +31,8 @@ export default function DepartmentsPage() {
     isActive: true
   })
 
+
+
   useEffect(() => {
     fetchDepartments()
   }, [])
@@ -40,7 +41,7 @@ export default function DepartmentsPage() {
     try {
       setLoading(true)
       const response = await departmentService.getAllDepartments()
-      setDepartments(response.data || [])
+      setDepartments(Array.isArray(response.data) ? response.data : [])
     } catch (error) {
       console.error('Failed to fetch departments:', error)
     } finally {
@@ -56,7 +57,7 @@ export default function DepartmentsPage() {
         ...formData,
         managerId: formData.managerId ? parseInt(formData.managerId) : null,
         parentId: formData.parentId ? parseInt(formData.parentId) : null,
-        budget: formData.budget ? parseFloat(formData.budget) : null
+        budget: formData.budget ? parseFloat(formData.budget.replace(/,/g, '')) : null
       }
 
       if (editingDepartment) {
@@ -77,13 +78,19 @@ export default function DepartmentsPage() {
 
   const handleEdit = (department) => {
     setEditingDepartment(department)
+    
+    // Format budget dengan koma untuk tampilan
+    const formattedBudget = department.budget 
+      ? department.budget.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+      : ''
+    
     setFormData({
       name: department.name || '',
       code: department.code || '',
       description: department.description || '',
       managerId: department.managerId || '',
       parentId: department.parentId || '',
-      budget: department.budget || '',
+      budget: formattedBudget,
       isActive: department.isActive !== false
     })
     setShowModal(true)
@@ -118,11 +125,30 @@ export default function DepartmentsPage() {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
+    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }))
   }
+
+  // Handler khusus untuk budget dengan format ribuan
+  const handleBudgetChange = (e) => {
+    const value = e.target.value
+    
+    // Hapus semua karakter non-digit
+    const numericValue = value.replace(/[^0-9]/g, '')
+    
+    // Format dengan pemisah ribuan
+    const formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    
+    setFormData(prev => ({
+      ...prev,
+      budget: formattedValue
+    }))
+  }
+
+
 
   const filteredDepartments = departments.filter(department =>
     department.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -182,7 +208,7 @@ export default function DepartmentsPage() {
           
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Department
@@ -224,7 +250,7 @@ export default function DepartmentsPage() {
                   placeholder="Search departments by name, code, or description..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -346,7 +372,7 @@ export default function DepartmentsPage() {
                         <div className="mt-6">
                           <button
                             onClick={() => setShowModal(true)}
-                            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                           >
                             <Plus className="h-4 w-4 mr-2" />
                             Add Department
@@ -383,7 +409,7 @@ export default function DepartmentsPage() {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                       placeholder="Enter department name"
                     />
                   </div>
@@ -398,7 +424,7 @@ export default function DepartmentsPage() {
                       value={formData.code}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                       placeholder="e.g., IT, HR, FIN"
                     />
                   </div>
@@ -411,12 +437,12 @@ export default function DepartmentsPage() {
                       name="managerId"
                       value={formData.managerId}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                     >
-                      <option value="">Select Manager</option>
+                      <option value="" className="text-gray-500">Select Manager</option>
                       {/* This would be populated with users from API */}
-                      <option value="1">John Doe</option>
-                      <option value="2">Jane Smith</option>
+                      <option value="1" className="text-gray-900">John Doe</option>
+                      <option value="2" className="text-gray-900">Jane Smith</option>
                     </select>
                   </div>
 
@@ -428,7 +454,7 @@ export default function DepartmentsPage() {
                       name="parentId"
                       value={formData.parentId}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                     >
                       <option value="">No Parent (Top Level)</option>
                       {departments
@@ -447,28 +473,25 @@ export default function DepartmentsPage() {
                       Budget (IDR)
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       name="budget"
                       value={formData.budget}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      placeholder="Annual budget"
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
+                      onChange={handleBudgetChange}                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
+                    placeholder="Contoh: 50,000,000"
+                  />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500 resize-vertical"
                     placeholder="Department description and responsibilities"
                   />
                 </div>
@@ -480,7 +503,7 @@ export default function DepartmentsPage() {
                     name="isActive"
                     checked={formData.isActive}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                   <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
                     Active department
@@ -497,7 +520,7 @@ export default function DepartmentsPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
                     {editingDepartment ? 'Update Department' : 'Create Department'}
                   </button>

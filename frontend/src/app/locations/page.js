@@ -18,9 +18,7 @@ export default function LocationsPage() {
   const { user } = useAuthStore()
   const {
     // State
-    locations,
     loading,
-    error,
     searchTerm,
     showModal,
     editingLocation,

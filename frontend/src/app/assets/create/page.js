@@ -1,16 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Package, ArrowLeft } from 'lucide-react'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
-import { useAuthStore } from '@/stores/authStore'
+import AssetSpecifications from '@/components/AssetSpecifications'
 import { api } from '@/lib/api'
 
 export default function CreateAssetPage() {
   const router = useRouter()
-  const { user } = useAuthStore()
   const [loading, setLoading] = useState(false)
+  const [categories, setCategories] = useState([])
+  const [locations, setLocations] = useState([])
+  const [vendors, setVendors] = useState([])
+  const [departments, setDepartments] = useState([])
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -19,24 +22,56 @@ export default function CreateAssetPage() {
     categoryId: '',
     locationId: '',
     vendorId: '',
+    departmentId: '',
     purchasePrice: '',
     currentValue: '',
     purchaseDate: '',
-    warrantyExpiry: ''
+    warrantyExpiry: '',
+    specifications: {}
   })
+
+  // Fetch master data on component mount
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      try {
+        const [categoriesRes, locationsRes, vendorsRes, departmentsRes] = await Promise.all([
+          api.get('/categories'),
+          api.get('/locations'),
+          api.get('/vendors'),
+          api.get('/departments')
+        ])
+
+        setCategories(categoriesRes.data?.data?.categories || [])
+        setLocations(locationsRes.data?.data?.locations || [])
+        setVendors(vendorsRes.data?.data?.vendors || [])
+        setDepartments(departmentsRes.data?.data?.departments || [])
+      } catch (error) {
+        console.error('Failed to fetch master data:', error)
+        alert('Failed to load form data. Please refresh the page.')
+      }
+    }
+
+    fetchMasterData()
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const response = await api.post('/assets', {
+      const payload = {
         ...formData,
-        purchasePrice: parseFloat(formData.purchasePrice),
-        currentValue: parseFloat(formData.currentValue),
-        purchaseDate: new Date(formData.purchaseDate).toISOString(),
-        warrantyExpiry: formData.warrantyExpiry ? new Date(formData.warrantyExpiry).toISOString() : null
-      })
+        purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
+        currentValue: formData.currentValue ? parseFloat(formData.currentValue) : null,
+        purchaseDate: formData.purchaseDate ? new Date(formData.purchaseDate).toISOString() : null,
+        warrantyExpiry: formData.warrantyExpiry ? new Date(formData.warrantyExpiry).toISOString() : null,
+        // Include specifications in the payload
+        specifications: formData.specifications || {}
+      }
+
+      console.log('Creating asset with payload:', payload)
+
+      const response = await api.post('/assets', payload)
 
       if (response.data.success) {
         alert('Asset created successfully!')
@@ -44,7 +79,8 @@ export default function CreateAssetPage() {
       }
     } catch (error) {
       console.error('Error creating asset:', error)
-      alert('Failed to create asset. Please try again.')
+      const errorMessage = error.response?.data?.message || 'Failed to create asset. Please try again.'
+      alert(`Error: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
@@ -94,7 +130,8 @@ export default function CreateAssetPage() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
+                  placeholder="Enter asset name"
                   required
                 />
               </div>
@@ -109,7 +146,8 @@ export default function CreateAssetPage() {
                   name="assetTag"
                   value={formData.assetTag}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
+                  placeholder="Enter asset tag (e.g., AST-001)"
                   required
                 />
               </div>
@@ -124,9 +162,10 @@ export default function CreateAssetPage() {
                   name="serialNumber"
                   value={formData.serialNumber}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
+                  placeholder="Enter serial number"
                 />
-              </div>
+              </div> 
 
               {/* Category */}
               <div>
@@ -137,13 +176,15 @@ export default function CreateAssetPage() {
                   name="categoryId"
                   value={formData.categoryId}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   required
                 >
-                  <option value="">Select Category</option>
-                  <option value="cat1">IT Equipment</option>
-                  <option value="cat2">Office Equipment</option>
-                  <option value="cat3">Furniture</option>
+                  <option value="" className="text-gray-500">Select Category</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id} className="text-gray-900">
+                      {category.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -156,13 +197,15 @@ export default function CreateAssetPage() {
                   name="locationId"
                   value={formData.locationId}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   required
                 >
-                  <option value="">Select Location</option>
-                  <option value="loc1">Main Office</option>
-                  <option value="loc2">Branch Office</option>
-                  <option value="loc3">Warehouse</option>
+                  <option value="" className="text-gray-500">Select Location</option>
+                  {locations.map(location => (
+                    <option key={location.id} value={location.id} className="text-gray-900">
+                      {location.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -175,25 +218,49 @@ export default function CreateAssetPage() {
                   name="vendorId"
                   value={formData.vendorId}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 >
-                  <option value="">Select Vendor</option>
-                  <option value="vendor1">Vendor A</option>
-                  <option value="vendor2">Vendor B</option>
+                  <option value="" className="text-gray-500">Select Vendor</option>
+                  {vendors.map(vendor => (
+                    <option key={vendor.id} value={vendor.id} className="text-gray-900">
+                      {vendor.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Department */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Department
+                </label>
+                <select
+                  name="departmentId"
+                  value={formData.departmentId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="" className="text-gray-500">Select Department</option>
+                  {departments.map(department => (
+                    <option key={department.id} value={department.id} className="text-gray-900">
+                      {department.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               {/* Purchase Price */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Purchase Price *
+                  Purchase Price (IDR) *
                 </label>
                 <input
                   type="number"
                   name="purchasePrice"
                   value={formData.purchasePrice}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
+                  placeholder="Enter purchase price"
                   required
                   min="0"
                   step="0.01"
@@ -203,14 +270,15 @@ export default function CreateAssetPage() {
               {/* Current Value */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Current Value *
+                  Current Value (IDR) *
                 </label>
                 <input
                   type="number"
                   name="currentValue"
                   value={formData.currentValue}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
+                  placeholder="Enter current value"
                   required
                   min="0"
                   step="0.01"
@@ -227,7 +295,7 @@ export default function CreateAssetPage() {
                   name="purchaseDate"
                   value={formData.purchaseDate}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   required
                 />
               </div>
@@ -242,7 +310,7 @@ export default function CreateAssetPage() {
                   name="warrantyExpiry"
                   value={formData.warrantyExpiry}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 />
               </div>
             </div>
@@ -257,8 +325,19 @@ export default function CreateAssetPage() {
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter asset description..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500 resize-vertical"
+                placeholder="Enter asset description, specifications, or other relevant details..."
+              />
+            </div>
+
+            {/* Asset Specifications */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Specifications
+              </label>
+              <AssetSpecifications
+                asset={{ specifications: formData.specifications }}
+                onUpdate={(updates) => setFormData(prev => ({ ...prev, specifications: updates.specifications }))}
               />
             </div>
 

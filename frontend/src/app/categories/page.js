@@ -9,7 +9,6 @@ import {
   Search,
   Edit,
   Trash2,
-  Eye,
   FolderOpen,
   Folder,
   CheckCircle,
@@ -342,7 +341,7 @@ const CategoriesPage = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter category name"
                   required
                 />
@@ -357,7 +356,7 @@ const CategoriesPage = () => {
                   name="code"
                   value={formData.code}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter category code"
                   required
                 />
@@ -372,7 +371,7 @@ const CategoriesPage = () => {
                   value={formData.description}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter description (optional)"
                 />
               </div>
@@ -385,7 +384,7 @@ const CategoriesPage = () => {
                   name="parentId"
                   value={formData.parentId}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">None (Main Category)</option>
                   {getParentCategories().map(cat => (

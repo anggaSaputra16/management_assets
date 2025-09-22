@@ -112,7 +112,7 @@ export const useMaintenanceStore = create<MaintenanceState & MaintenanceActions>
     set({ loading: true, error: null })
     try {
       const response = await maintenanceService.getAllMaintenance()
-      set({ maintenanceRecords: response.data || [], loading: false })
+      set({ maintenanceRecords: Array.isArray(response.data) ? response.data : [], loading: false })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch maintenance records'
       set({ error: message, loading: false })
