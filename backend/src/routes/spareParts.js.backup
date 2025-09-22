@@ -1,0 +1,1179 @@
+const express = require('express');
+const { PrismaClient, Prisma } = require('@prisma/client');
+const auth = require('../middleware/auth');
+
+const router = express.Router();
+const prisma = new PrismaClient();
+
+// Spare Parts Management Routes
+
+// Inventory Management Routes
+
+// GET /api/spare-parts/inventory - Get all spare parts with filtering
+router.get('/inventory', async (req, res) => {
+  try {
+    const {
+      search,
+      category,
+      partType,
+      status = 'ACTIVE',
+      lowStock,
+      vendorId,
+      page = 1,
+      limit = 50
+    } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    const where = {
+      isActive: true,
+      ...(search && {
+        OR: [
+          { partNumber: { contains: search, mode: 'insensitive' } },
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } }
+        ]
+      }),
+      ...(category && { category }),
+      ...(partType && { partType }),
+      ...(status && { status }),
+      ...(vendorId && { vendorId })
+    };
+
+    let spareParts;
+    if (lowStock === 'true') {
+      // First get all parts that match other criteria
+      const allParts = await prisma.sparePart.findMany({
+        where,
+        include: {
+          vendor: {
+            select: { id: true, name: true, code: true }
+          },
+          _count: {
+            select: {
+              procurements: true,
+              usages: true,
+              replacements: true
+            }
+          }
+        },
+        orderBy: { name: 'asc' }
+      });
+      
+      // Filter for low stock in application
+      const lowStockParts = allParts.filter(part => part.stockLevel <= part.minStockLevel);
+      
+      // Apply pagination
+      spareParts = lowStockParts.slice(skip, skip + take);
+    } else {
+      spareParts = await prisma.sparePart.findMany({
+        where,
+        include: {
+          vendor: {
+            select: { id: true, name: true, code: true }
+          },
+          _count: {
+            select: {
+              procurements: true,
+              usages: true,
+              replacements: true
+            }
+          }
+        },
+        skip,
+        take,
+        orderBy: { name: 'asc' }
+      });
+    }
+
+    const total = await prisma.sparePart.count({ where });
+
+    res.json({
+      success: true,
+      data: {
+        spareParts,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get spare parts error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch spare parts',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/spare-parts/inventory/:id - Get spare part by ID
+router.get('/inventory/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const sparePart = await prisma.sparePart.findUnique({
+      where: { id },
+      include: {
+        vendor: true,
+        procurements: {
+          include: {
+            vendor: { select: { name: true } },
+            orderedBy: { select: { firstName: true, lastName: true } }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10
+        },
+        usages: {
+          include: {
+            asset: { select: { assetTag: true, name: true } },
+            usedBy: { select: { firstName: true, lastName: true } }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10
+        },
+        replacements: {
+          include: {
+            asset: { select: { assetTag: true, name: true } },
+            performedBy: { select: { firstName: true, lastName: true } }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10
+        }
+      }
+    });
+
+    if (!sparePart) {
+      return res.status(404).json({
+        success: false,
+        message: 'Spare part not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: sparePart
+    });
+  } catch (error) {
+    console.error('Get spare part details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch spare part details',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/spare-parts/inventory - Create new spare part
+router.post('/inventory', auth, async (req, res) => {
+  try {
+    const {
+      partNumber,
+      name,
+      description,
+      brand,
+      model,
+      category,
+      partType,
+      unitPrice,
+      stockLevel,
+      minStockLevel,
+      maxStockLevel,
+      reorderPoint,
+      storageLocation,
+      vendorId,
+      specifications,
+      compatibleWith,
+      notes
+    } = req.body;
+
+    // Check if part number already exists
+    const existingPart = await prisma.sparePart.findUnique({
+      where: { partNumber }
+    });
+
+    if (existingPart) {
+      return res.status(400).json({
+        success: false,
+        message: 'Part number already exists'
+      });
+    }
+
+    const sparePart = await prisma.sparePart.create({
+      data: {
+        partNumber,
+        name,
+        description,
+        brand,
+        model,
+        category: category || 'HARDWARE',
+        partType: partType || 'COMPONENT',
+        unitPrice: parseFloat(unitPrice),
+        stockLevel: parseInt(stockLevel) || 0,
+        minStockLevel: parseInt(minStockLevel) || 10,
+        maxStockLevel: parseInt(maxStockLevel) || 100,
+        reorderPoint: parseInt(reorderPoint) || 15,
+        storageLocation,
+        vendorId: vendorId || null,
+        specifications: specifications || null,
+        compatibleWith: compatibleWith || [],
+        notes
+      },
+      include: {
+        vendor: {
+          select: { id: true, name: true, code: true }
+        }
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Spare part created successfully',
+      data: sparePart
+    });
+  } catch (error) {
+    console.error('Create spare part error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create spare part',
+      error: error.message
+    });
+  }
+});
+
+// PUT /api/spare-parts/inventory/:id - Update spare part
+router.put('/inventory/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      partNumber,
+      name,
+      description,
+      brand,
+      model,
+      category,
+      partType,
+      unitPrice,
+      stockLevel,
+      minStockLevel,
+      maxStockLevel,
+      reorderPoint,
+      storageLocation,
+      vendorId,
+      specifications,
+      compatibleWith,
+      notes,
+      status
+    } = req.body;
+
+    // Check if spare part exists
+    const existingSparePart = await prisma.sparePart.findUnique({
+      where: { id }
+    });
+
+    if (!existingSparePart) {
+      return res.status(404).json({
+        success: false,
+        message: 'Spare part not found'
+      });
+    }
+
+    // Check if part number already exists (excluding current part)
+    if (partNumber && partNumber !== existingSparePart.partNumber) {
+      const existingPart = await prisma.sparePart.findUnique({
+        where: { partNumber }
+      });
+
+      if (existingPart) {
+        return res.status(400).json({
+          success: false,
+          message: 'Part number already exists'
+        });
+      }
+    }
+
+    const sparePart = await prisma.sparePart.update({
+      where: { id },
+      data: {
+        ...(partNumber && { partNumber }),
+        ...(name && { name }),
+        ...(description !== undefined && { description }),
+        ...(brand !== undefined && { brand }),
+        ...(model !== undefined && { model }),
+        ...(category && { category }),
+        ...(partType && { partType }),
+        ...(unitPrice !== undefined && { unitPrice: parseFloat(unitPrice) }),
+        ...(stockLevel !== undefined && { stockLevel: parseInt(stockLevel) }),
+        ...(minStockLevel !== undefined && { minStockLevel: parseInt(minStockLevel) }),
+        ...(maxStockLevel !== undefined && { maxStockLevel: parseInt(maxStockLevel) }),
+        ...(reorderPoint !== undefined && { reorderPoint: parseInt(reorderPoint) }),
+        ...(storageLocation !== undefined && { storageLocation }),
+        ...(vendorId !== undefined && { vendorId }),
+        ...(specifications !== undefined && { specifications }),
+        ...(compatibleWith !== undefined && { compatibleWith }),
+        ...(notes !== undefined && { notes }),
+        ...(status && { status })
+      },
+      include: {
+        vendor: {
+          select: { id: true, name: true, code: true }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Spare part updated successfully',
+      data: sparePart
+    });
+  } catch (error) {
+    console.error('Update spare part error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update spare part',
+      error: error.message
+    });
+  }
+});
+
+// DELETE /api/spare-parts/inventory/:id - Delete spare part (soft delete)
+router.delete('/inventory/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const sparePart = await prisma.sparePart.findUnique({
+      where: { id }
+    });
+
+    if (!sparePart) {
+      return res.status(404).json({
+        success: false,
+        message: 'Spare part not found'
+      });
+    }
+
+    await prisma.sparePart.update({
+      where: { id },
+      data: { isActive: false }
+    });
+
+    res.json({
+      success: true,
+      message: 'Spare part deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete spare part error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete spare part',
+      error: error.message
+    });
+  }
+});
+
+// Procurement Routes
+
+// GET /api/spare-parts/procurement - Get all procurements
+router.get('/procurement', auth, async (req, res) => {
+  try {
+    const {
+      status,
+      partId,
+      vendorId,
+      page = 1,
+      limit = 50
+    } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    const where = {
+      ...(status && { status }),
+      ...(partId && { partId }),
+      ...(vendorId && { vendorId })
+    };
+
+    const procurements = await prisma.procurement.findMany({
+      where,
+      include: {
+        part: {
+          select: { partNumber: true, name: true }
+        },
+        vendor: {
+          select: { name: true }
+        },
+        orderedBy: {
+          select: { firstName: true, lastName: true }
+        }
+      },
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const total = await prisma.procurement.count({ where });
+
+    res.json({
+      success: true,
+      data: {
+        procurements,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get procurements error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch procurements',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/spare-parts/procurement - Create new procurement
+router.post('/procurement', auth, async (req, res) => {
+  try {
+    const {
+      partId,
+      quantity,
+      unitPrice,
+      vendorId,
+      expectedDate,
+      notes
+    } = req.body;
+
+    // Generate procurement number
+    const procurementCount = await prisma.procurement.count();
+    const procurementNumber = `PROC-${String(procurementCount + 1).padStart(6, '0')}`;
+
+    const procurement = await prisma.procurement.create({
+      data: {
+        procurementNumber,
+        partId,
+        quantity: parseInt(quantity),
+        unitPrice: parseFloat(unitPrice),
+        totalCost: parseFloat(unitPrice) * parseInt(quantity),
+        vendorId: vendorId || null,
+        orderedById: req.user.id,
+        expectedDate: expectedDate ? new Date(expectedDate) : null,
+        notes
+      },
+      include: {
+        part: {
+          select: { partNumber: true, name: true }
+        },
+        vendor: {
+          select: { name: true }
+        },
+        orderedBy: {
+          select: { firstName: true, lastName: true }
+        }
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Procurement created successfully',
+      data: procurement
+    });
+  } catch (error) {
+    console.error('Create procurement error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create procurement',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/spare-parts/procurement/:id/receive - Receive procurement
+router.post('/procurement/:id/receive', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { receivedQuantity, notes } = req.body;
+
+    const procurement = await prisma.procurement.findUnique({
+      where: { id },
+      include: { part: true }
+    });
+
+    if (!procurement) {
+      return res.status(404).json({
+        success: false,
+        message: 'Procurement not found'
+      });
+    }
+
+    if (procurement.status === 'RECEIVED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Procurement already received'
+      });
+    }
+
+    const receivedQty = parseInt(receivedQuantity);
+    const isFullyReceived = receivedQty >= procurement.quantity;
+    const newStatus = isFullyReceived ? 'RECEIVED' : 'PARTIALLY_RECEIVED';
+
+    // Update procurement
+    await prisma.procurement.update({
+      where: { id },
+      data: {
+        status: newStatus,
+        receivedQuantity: receivedQty,
+        receivedDate: new Date(),
+        notes: notes || procurement.notes
+      }
+    });
+
+    // Update spare part stock
+    await prisma.sparePart.update({
+      where: { id: procurement.partId },
+      data: {
+        stockLevel: {
+          increment: receivedQty
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Procurement received successfully'
+    });
+  } catch (error) {
+    console.error('Receive procurement error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to receive procurement',
+      error: error.message
+    });
+  }
+});
+
+// Usage Tracking Routes
+
+// GET /api/spare-parts/usage - Get all part usages
+router.get('/usage', auth, async (req, res) => {
+  try {
+    const {
+      partId,
+      assetId,
+      usageType,
+      page = 1,
+      limit = 50
+    } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    const where = {
+      ...(partId && { partId }),
+      ...(assetId && { assetId }),
+      ...(usageType && { usageType })
+    };
+
+    const usages = await prisma.partUsage.findMany({
+      where,
+      include: {
+        part: {
+          select: { partNumber: true, name: true }
+        },
+        asset: {
+          select: { assetTag: true, name: true }
+        },
+        usedBy: {
+          select: { firstName: true, lastName: true }
+        }
+      },
+      skip,
+      take,
+      orderBy: { usageDate: 'desc' }
+    });
+
+    const total = await prisma.partUsage.count({ where });
+
+    res.json({
+      success: true,
+      data: {
+        usages,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get part usages error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch part usages',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/spare-parts/usage - Record part usage
+router.post('/usage', auth, async (req, res) => {
+  try {
+    const {
+      partId,
+      quantity,
+      usageType,
+      assetId,
+      componentId,
+      maintenanceId,
+      notes
+    } = req.body;
+
+    // Check spare part availability
+    const sparePart = await prisma.sparePart.findUnique({
+      where: { id: partId }
+    });
+
+    if (!sparePart) {
+      return res.status(404).json({
+        success: false,
+        message: 'Spare part not found'
+      });
+    }
+
+    const usageQty = parseInt(quantity);
+    if (sparePart.stockLevel < usageQty) {
+      return res.status(400).json({
+        success: false,
+        message: 'Insufficient stock available'
+      });
+    }
+
+    // Record usage
+    const usage = await prisma.partUsage.create({
+      data: {
+        partId,
+        quantity: usageQty,
+        usageType: usageType || 'INSTALLATION',
+        assetId: assetId || null,
+        componentId: componentId || null,
+        maintenanceId: maintenanceId || null,
+        usedById: req.user.id,
+        notes
+      },
+      include: {
+        part: {
+          select: { partNumber: true, name: true }
+        },
+        asset: {
+          select: { assetTag: true, name: true }
+        },
+        usedBy: {
+          select: { firstName: true, lastName: true }
+        }
+      }
+    });
+
+    // Update spare part stock
+    await prisma.sparePart.update({
+      where: { id: partId },
+      data: {
+        stockLevel: {
+          decrement: usageQty
+        }
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Part usage recorded successfully',
+      data: usage
+    });
+  } catch (error) {
+    console.error('Record usage error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record part usage',
+      error: error.message
+    });
+  }
+});
+
+// Replacement Routes
+
+// GET /api/spare-parts/replacement - Get all replacements
+router.get('/replacement', auth, async (req, res) => {
+  try {
+    const {
+      status,
+      assetId,
+      page = 1,
+      limit = 50
+    } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    const where = {
+      ...(status && { status }),
+      ...(assetId && { assetId })
+    };
+
+    const replacements = await prisma.partReplacement.findMany({
+      where,
+      include: {
+        newPart: {
+          select: { partNumber: true, name: true }
+        },
+        asset: {
+          select: { assetTag: true, name: true }
+        },
+        oldComponent: {
+          select: { name: true, partNumber: true }
+        },
+        performedBy: {
+          select: { firstName: true, lastName: true }
+        }
+      },
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const total = await prisma.partReplacement.count({ where });
+
+    res.json({
+      success: true,
+      data: {
+        replacements,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get replacements error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch replacements',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/spare-parts/replacement - Create replacement
+router.post('/replacement', auth, async (req, res) => {
+  try {
+    const {
+      oldPartId,
+      oldComponentId,
+      newPartId,
+      assetId,
+      reason,
+      plannedDate,
+      notes
+    } = req.body;
+
+    // Generate replacement number
+    const replacementCount = await prisma.partReplacement.count();
+    const replacementNumber = `REPL-${String(replacementCount + 1).padStart(6, '0')}`;
+
+    const replacement = await prisma.partReplacement.create({
+      data: {
+        replacementNumber,
+        oldPartId: oldPartId || null,
+        oldComponentId: oldComponentId || null,
+        newPartId,
+        assetId,
+        reason,
+        plannedDate: plannedDate ? new Date(plannedDate) : null,
+        notes
+      },
+      include: {
+        newPart: {
+          select: { partNumber: true, name: true }
+        },
+        asset: {
+          select: { assetTag: true, name: true }
+        },
+        oldComponent: {
+          select: { name: true, partNumber: true }
+        }
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Replacement created successfully',
+      data: replacement
+    });
+  } catch (error) {
+    console.error('Create replacement error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create replacement',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/spare-parts/replacement/:id/complete - Complete replacement
+router.post('/replacement/:id/complete', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cost, notes } = req.body;
+
+    const replacement = await prisma.partReplacement.findUnique({
+      where: { id }
+    });
+
+    if (!replacement) {
+      return res.status(404).json({
+        success: false,
+        message: 'Replacement not found'
+      });
+    }
+
+    if (replacement.status === 'COMPLETED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Replacement already completed'
+      });
+    }
+
+    await prisma.partReplacement.update({
+      where: { id },
+      data: {
+        status: 'COMPLETED',
+        completedDate: new Date(),
+        performedById: req.user.id,
+        cost: cost ? parseFloat(cost) : null,
+        notes: notes || replacement.notes
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Replacement completed successfully'
+    });
+  } catch (error) {
+    console.error('Complete replacement error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to complete replacement',
+      error: error.message
+    });
+  }
+});
+
+// Registration Routes
+
+// GET /api/spare-parts/registration - Get all registrations
+router.get('/registration', auth, async (req, res) => {
+  try {
+    const {
+      status,
+      partId,
+      page = 1,
+      limit = 50
+    } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    const where = {
+      ...(status && { status }),
+      ...(partId && { partId })
+    };
+
+    const registrations = await prisma.newPartRegistration.findMany({
+      where,
+      include: {
+        part: {
+          select: { partNumber: true, name: true }
+        },
+        asset: {
+          select: { assetTag: true, name: true }
+        },
+        registeredBy: {
+          select: { firstName: true, lastName: true }
+        }
+      },
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const total = await prisma.newPartRegistration.count({ where });
+
+    res.json({
+      success: true,
+      data: {
+        registrations,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get registrations error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch registrations',
+      error: error.message
+    });
+  }
+});
+
+// POST /api/spare-parts/register-as-asset - Register part as asset
+router.post('/register-as-asset', auth, async (req, res) => {
+  try {
+    const {
+      partId,
+      serialNumber,
+      assetTag,
+      categoryId,
+      locationId,
+      departmentId,
+      notes
+    } = req.body;
+
+    // Generate registration number
+    const registrationCount = await prisma.newPartRegistration.count();
+    const registrationNumber = `REG-${String(registrationCount + 1).padStart(6, '0')}`;
+
+    // Check if spare part exists and has stock
+    const sparePart = await prisma.sparePart.findUnique({
+      where: { id: partId }
+    });
+
+    if (!sparePart) {
+      return res.status(404).json({
+        success: false,
+        message: 'Spare part not found'
+      });
+    }
+
+    if (sparePart.stockLevel < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'No stock available for registration'
+      });
+    }
+
+    // Create asset from spare part
+    const asset = await prisma.asset.create({
+      data: {
+        assetTag: assetTag || `${sparePart.partNumber}-${Date.now()}`,
+        name: sparePart.name,
+        description: sparePart.description,
+        serialNumber,
+        model: sparePart.model,
+        brand: sparePart.brand,
+        purchasePrice: sparePart.unitPrice,
+        categoryId,
+        locationId: locationId || null,
+        departmentId: departmentId || null,
+        status: 'AVAILABLE'
+      }
+    });
+
+    // Create registration record
+    const registration = await prisma.newPartRegistration.create({
+      data: {
+        registrationNumber,
+        partId,
+        serialNumber,
+        assetTag: asset.assetTag,
+        status: 'REGISTERED',
+        registeredDate: new Date(),
+        assetId: asset.id,
+        registeredById: req.user.id,
+        notes
+      },
+      include: {
+        part: {
+          select: { partNumber: true, name: true }
+        },
+        asset: {
+          select: { assetTag: true, name: true }
+        },
+        registeredBy: {
+          select: { firstName: true, lastName: true }
+        }
+      }
+    });
+
+    // Reduce spare part stock
+    await prisma.sparePart.update({
+      where: { id: partId },
+      data: {
+        stockLevel: {
+          decrement: 1
+        }
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Part registered as asset successfully',
+      data: registration
+    });
+  } catch (error) {
+    console.error('Register as asset error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to register part as asset',
+      error: error.message
+    });
+  }
+});
+
+// Analytics Routes
+
+// GET /api/spare-parts/analytics/inventory-stats - Get inventory statistics
+router.get('/analytics/inventory-stats', auth, async (req, res) => {
+  try {
+    // Basic stats
+    const totalParts = await prisma.sparePart.count({
+      where: { isActive: true }
+    });
+
+    const lowStockParts = await prisma.sparePart.count({
+      where: {
+        isActive: true,
+        // We'll filter this in application layer since Prisma can't compare fields directly
+      }
+    });
+
+    // Get actual low stock count by fetching all and filtering
+    const allActiveParts = await prisma.sparePart.findMany({
+      where: { isActive: true },
+      select: { stockLevel: true, minStockLevel: true }
+    });
+    
+    const actualLowStockCount = allActiveParts.filter(part => part.stockLevel <= part.minStockLevel).length;
+
+    const outOfStockParts = await prisma.sparePart.count({
+      where: {
+        isActive: true,
+        stockLevel: 0
+      }
+    });
+
+    const totalStockItems = await prisma.sparePart.aggregate({
+      where: { isActive: true },
+      _sum: {
+        stockLevel: true
+      }
+    });
+
+    // Distribution by category
+    const byCategory = await prisma.sparePart.groupBy({
+      by: ['category'],
+      where: { isActive: true },
+      _count: true,
+      _sum: {
+        stockLevel: true
+      }
+    });
+
+    // Distribution by type
+    const byType = await prisma.sparePart.groupBy({
+      by: ['partType'],
+      where: { isActive: true },
+      _count: true
+    });
+
+    // Recent activity
+    const recentUsages = await prisma.partUsage.count({
+      where: {
+        usageDate: {
+          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+        }
+      }
+    });
+
+    const pendingProcurements = await prisma.procurement.count({
+      where: {
+        status: {
+          in: ['ORDERED', 'SHIPPED']
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalParts,
+        lowStockParts: actualLowStockCount,
+        outOfStockParts,
+        totalStockItems: totalStockItems._sum.stockLevel || 0,
+        distribution: {
+          byCategory,
+          byType
+        },
+        activity: {
+          recentUsages,
+          pendingProcurements
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get inventory stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch inventory statistics',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/spare-parts/alerts/low-stock - Get low stock alerts
+router.get('/alerts/low-stock', auth, async (req, res) => {
+  try {
+    // Get all active parts
+    const allParts = await prisma.sparePart.findMany({
+      where: { isActive: true },
+      include: {
+        vendor: {
+          select: { id: true, name: true, code: true }
+        }
+      },
+      orderBy: [
+        { stockLevel: 'asc' },
+        { name: 'asc' }
+      ]
+    });
+
+    // Filter for low stock in application
+    const lowStockParts = allParts.filter(part => part.stockLevel <= part.minStockLevel);
+
+    res.json({
+      success: true,
+      data: lowStockParts
+    });
+  } catch (error) {
+    console.error('Get low stock alerts error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch low stock alerts',
+      error: error.message
+    });
+  }
+});
+
+module.exports = router;

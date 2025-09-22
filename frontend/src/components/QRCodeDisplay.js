@@ -1,14 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { QrCode, Download, X } from 'lucide-react'
+import QRCode from 'qrcode'
+import Image from 'next/image'
 
 const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
   const [qrCodeImage, setQRCodeImage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const generateQRCode = async () => {
+  useEffect(() => {
+    if (isOpen && asset) {
+      generateQRCode()
+    }
+  }, [isOpen, asset, generateQRCode])
+
+  const generateQRCode = useCallback(async () => {
     if (!asset) return
 
     setLoading(true)
@@ -41,7 +49,7 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [asset])
 
   const downloadQRCode = () => {
     if (!qrCodeImage) return
@@ -88,10 +96,12 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : qrCodeImage ? (
-              <img
+              <Image
                 src={qrCodeImage}
                 alt="QR Code"
-                className="w-64 h-64 mx-auto border rounded-lg"
+                width={256}
+                height={256}
+                className="mx-auto border rounded-lg"
               />
             ) : (
               <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center mx-auto">

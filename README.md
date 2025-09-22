@@ -590,3 +590,7 @@ Other test accounts:
 - IT Manager: it.manager@company.com / password123
 - Technician: tech1@company.com / password123
 - Auditor: auditor@company.com / password123
+
+
+
+restart docker PS D:\dev\development\management-assets> docker-compose -f docker-compose.dev.yml restart frontend

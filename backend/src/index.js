@@ -21,6 +21,10 @@ const requestRoutes = require('./routes/requests');
 const maintenanceRoutes = require('./routes/maintenance');
 const auditRoutes = require('./routes/audit');
 const notificationRoutes = require('./routes/notifications');
+const reportRoutes = require('./routes/reports');
+const inventoryRoutes = require('./routes/inventory');
+// const sparePartsRoutes = require('./routes/spareParts');
+// const componentsRoutes = require('./routes/components');
 
 const app = express();
 
@@ -73,6 +77,10 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/inventory', inventoryRoutes);
+// app.use('/api/spare-parts', sparePartsRoutes);
+// app.use('/api/components', componentsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -101,7 +109,9 @@ app.get('/api', (req, res) => {
       requests: '/api/requests',
       maintenance: '/api/maintenance',
       audit: '/api/audit',
-      notifications: '/api/notifications'
+      notifications: '/api/notifications',
+      spareParts: '/api/spare-parts',
+      components: '/api/components'
     },
     documentation: '/api/docs' // For future API documentation
   });

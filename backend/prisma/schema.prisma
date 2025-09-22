@@ -58,6 +58,68 @@ enum NotificationType {
   GENERAL
 }
 
+enum SparePartCategory {
+  HARDWARE
+  SOFTWARE
+  ACCESSORY
+  CONSUMABLE
+}
+
+enum SparePartType {
+  COMPONENT
+  ACCESSORY
+  CONSUMABLE
+  TOOL
+  SOFTWARE
+}
+
+enum SparePartStatus {
+  ACTIVE
+  DISCONTINUED
+  OUT_OF_STOCK
+  OBSOLETE
+}
+
+enum ProcurementStatus {
+  ORDERED
+  SHIPPED
+  RECEIVED
+  PARTIALLY_RECEIVED
+  CANCELLED
+}
+
+enum PartUsageType {
+  REPLACEMENT
+  UPGRADE
+  REPAIR
+  INSTALLATION
+  MAINTENANCE
+  TRANSFER
+}
+
+enum ReplacementStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REGISTERED
+  REJECTED
+}
+
+enum ComponentStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+  TRANSFERRED
+  REPLACED
+  DISPOSED
+}
+
 // User Management
 model User {
   id          String   @id @default(cuid())
@@ -85,6 +147,22 @@ model User {
   auditRecords     AuditRecord[]
   notifications    Notification[]
   
+  // Spare parts activities
+  procurementsOrdered Procurement[] @relation("ProcurementOrderedBy")
+  partUsages         PartUsage[] @relation("PartUsageUser")
+  replacementsPerformed PartReplacement[] @relation("ReplacementPerformedBy")
+  partRegistrations  NewPartRegistration[] @relation("PartRegistrationUser")
+  
+  // Component activities
+  componentTransfers ComponentTransfer[] @relation("ComponentTransferUser")
+  componentMaintenance ComponentMaintenance[] @relation("ComponentMaintenanceUser")
+  
+  // Inventory activities
+  custodiedInventories Inventory[] @relation("InventoryCustodian")
+  borrowedLoans       InventoryLoan[] @relation("LoanBorrower")
+  approvedLoans       InventoryLoan[] @relation("LoanApprover")
+  responsibleLoans    InventoryLoan[] @relation("LoanResponsible")
+  
   @@map("users")
 }
 
@@ -105,6 +183,7 @@ model Department {
   users        User[]
   assets       Asset[]
   assetRequests AssetRequest[]
+  inventories  Inventory[]    @relation("InventoryDepartment")
   
   @@map("departments")
 }
@@ -164,6 +243,8 @@ model Vendor {
   assets Asset[]
   maintenanceContracts MaintenanceContract[]
   maintenanceRecords MaintenanceRecord[] @relation("MaintenanceVendor")
+  spareParts SparePart[] @relation("SparePartVendor")
+  procurements Procurement[] @relation("ProcurementVendor")
   
   @@map("vendors")
 }
@@ -207,6 +288,18 @@ model Asset {
   maintenanceRecords MaintenanceRecord[]
   auditRecords    AuditRecord[]
   disposalRecord  DisposalRecord?
+  
+  // Spare parts and components
+  partUsages      PartUsage[] @relation("PartUsageAsset")
+  partReplacements PartReplacement[] @relation("AssetReplacement")
+  partRegistrations NewPartRegistration[] @relation("PartRegistration")
+  components      AssetComponent[] @relation("AssetComponents")
+  parentComponents AssetComponent[] @relation("ComponentParentAsset")
+  transfersFrom   ComponentTransfer[] @relation("TransferFromAsset")
+  transfersTo     ComponentTransfer[] @relation("TransferToAsset")
+  
+  // Inventory
+  inventories     Inventory[] @relation("InventoryAsset")
   
   @@map("assets")
 }
@@ -263,6 +356,7 @@ model MaintenanceRecord {
   asset           Asset     @relation(fields: [assetId], references: [id])
   technician      User?     @relation("TechnicianMaintenance", fields: [technicianId], references: [id])
   vendor          Vendor?   @relation("MaintenanceVendor", fields: [vendorId], references: [id])
+  partUsages      PartUsage[] @relation("PartUsageMaintenance")
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -371,4 +465,304 @@ model SystemSettings {
   updatedAt       DateTime @updatedAt
   
   @@map("system_settings")
+}
+
+// Spare Parts Management
+model SparePart {
+  id              String            @id @default(cuid())
+  partNumber      String            @unique
+  name            String
+  description     String?
+  brand           String?
+  model           String?
+  category        SparePartCategory @default(HARDWARE)
+  partType        SparePartType     @default(COMPONENT)
+  status          SparePartStatus   @default(ACTIVE)
+  unitPrice       Decimal           @db.Decimal(10, 2)
+  stockLevel      Int               @default(0)
+  minStockLevel   Int               @default(10)
+  maxStockLevel   Int               @default(100)
+  reorderPoint    Int               @default(15)
+  storageLocation String?
+  specifications  Json?
+  compatibleWith  String[]
+  notes           String?
+  isActive        Boolean           @default(true)
+  
+  // Foreign Keys
+  vendorId        String?
+  
+  // Relations
+  vendor          Vendor?           @relation("SparePartVendor", fields: [vendorId], references: [id])
+  procurements    Procurement[]
+  usages          PartUsage[]
+  replacements    PartReplacement[] @relation("NewPart")
+  oldReplacements PartReplacement[] @relation("OldPart")
+  registrations   NewPartRegistration[]
+  sourceComponents AssetComponent[] @relation("ComponentSourcePart")
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  @@map("spare_parts")
+}
+
+model Procurement {
+  id                String            @id @default(cuid())
+  procurementNumber String            @unique
+  quantity          Int
+  unitPrice         Decimal           @db.Decimal(10, 2)
+  totalCost         Decimal           @db.Decimal(12, 2)
+  status            ProcurementStatus @default(ORDERED)
+  orderedDate       DateTime          @default(now())
+  expectedDate      DateTime?
+  receivedDate      DateTime?
+  receivedQuantity  Int?
+  invoiceNumber     String?
+  notes             String?
+  
+  // Foreign Keys
+  partId            String
+  vendorId          String?
+  orderedById       String
+  
+  // Relations
+  part              SparePart         @relation(fields: [partId], references: [id])
+  vendor            Vendor?           @relation("ProcurementVendor", fields: [vendorId], references: [id])
+  orderedBy         User              @relation("ProcurementOrderedBy", fields: [orderedById], references: [id])
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  @@map("procurements")
+}
+
+model PartUsage {
+  id              String        @id @default(cuid())
+  quantity        Int
+  usageType       PartUsageType @default(INSTALLATION)
+  usageDate       DateTime      @default(now())
+  notes           String?
+  
+  // Foreign Keys
+  partId          String
+  assetId         String?
+  componentId     String?
+  maintenanceId   String?
+  usedById        String
+  
+  // Relations
+  part            SparePart     @relation(fields: [partId], references: [id])
+  asset           Asset?        @relation("PartUsageAsset", fields: [assetId], references: [id])
+  component       AssetComponent? @relation(fields: [componentId], references: [id])
+  maintenance     MaintenanceRecord? @relation("PartUsageMaintenance", fields: [maintenanceId], references: [id])
+  usedBy          User          @relation("PartUsageUser", fields: [usedById], references: [id])
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@map("part_usages")
+}
+
+model PartReplacement {
+  id                String            @id @default(cuid())
+  replacementNumber String            @unique
+  reason            String
+  status            ReplacementStatus @default(PLANNED)
+  plannedDate       DateTime?
+  completedDate     DateTime?
+  cost              Decimal?          @db.Decimal(10, 2)
+  notes             String?
+  
+  // Foreign Keys
+  oldPartId         String?
+  oldComponentId    String?
+  newPartId         String
+  assetId           String
+  performedById     String?
+  
+  // Relations
+  oldPart           SparePart?        @relation("OldPart", fields: [oldPartId], references: [id])
+  oldComponent      AssetComponent?   @relation("OldComponent", fields: [oldComponentId], references: [id])
+  newPart           SparePart         @relation("NewPart", fields: [newPartId], references: [id])
+  asset             Asset             @relation("AssetReplacement", fields: [assetId], references: [id])
+  performedBy       User?             @relation("ReplacementPerformedBy", fields: [performedById], references: [id])
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  @@map("part_replacements")
+}
+
+model NewPartRegistration {
+  id                String             @id @default(cuid())
+  registrationNumber String            @unique
+  serialNumber      String?
+  assetTag          String?
+  status            RegistrationStatus @default(PENDING)
+  registeredDate    DateTime?
+  notes             String?
+  
+  // Foreign Keys
+  partId            String
+  assetId           String?
+  registeredById    String
+  
+  // Relations
+  part              SparePart          @relation(fields: [partId], references: [id])
+  asset             Asset?             @relation("PartRegistration", fields: [assetId], references: [id])
+  registeredBy      User               @relation("PartRegistrationUser", fields: [registeredById], references: [id])
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  @@map("new_part_registrations")
+}
+
+// Asset Components for Decomposition
+model AssetComponent {
+  id                String          @id @default(cuid())
+  name              String
+  description       String?
+  partNumber        String?
+  serialNumber      String?
+  brand             String?
+  model             String?
+  status            ComponentStatus @default(ACTIVE)
+  purchaseDate      DateTime?
+  purchasePrice     Decimal?        @db.Decimal(10, 2)
+  warrantyExpiry    DateTime?
+  isReplaceable     Boolean         @default(true)
+  isTransferable    Boolean         @default(true)
+  notes             String?
+  specifications    Json?
+  
+  // Foreign Keys
+  assetId           String
+  parentAssetId     String?
+  sourcePartId      String?
+  
+  // Relations
+  asset             Asset           @relation("AssetComponents", fields: [assetId], references: [id])
+  parentAsset       Asset?          @relation("ComponentParentAsset", fields: [parentAssetId], references: [id])
+  sourcePart        SparePart?      @relation("ComponentSourcePart", fields: [sourcePartId], references: [id])
+  
+  // Component activities
+  usages            PartUsage[]
+  replacements      PartReplacement[] @relation("OldComponent")
+  transfers         ComponentTransfer[]
+  maintenanceRecords ComponentMaintenance[]
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  @@map("asset_components")
+}
+
+model ComponentTransfer {
+  id              String    @id @default(cuid())
+  transferNumber  String    @unique
+  reason          String
+  transferDate    DateTime  @default(now())
+  notes           String?
+  
+  // Foreign Keys
+  componentId     String
+  fromAssetId     String
+  toAssetId       String
+  transferredById String
+  
+  // Relations
+  component       AssetComponent @relation(fields: [componentId], references: [id])
+  fromAsset       Asset         @relation("TransferFromAsset", fields: [fromAssetId], references: [id])
+  toAsset         Asset         @relation("TransferToAsset", fields: [toAssetId], references: [id])
+  transferredBy   User          @relation("ComponentTransferUser", fields: [transferredById], references: [id])
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@map("component_transfers")
+}
+
+model ComponentMaintenance {
+  id              String    @id @default(cuid())
+  description     String
+  maintenanceType String
+  maintenanceDate DateTime  @default(now())
+  cost            Decimal?  @db.Decimal(10, 2)
+  notes           String?
+  
+  // Foreign Keys
+  componentId     String
+  performedById   String
+  
+  // Relations
+  component       AssetComponent @relation(fields: [componentId], references: [id])
+  performedBy     User          @relation("ComponentMaintenanceUser", fields: [performedById], references: [id])
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@map("component_maintenance_records")
+}
+
+// Inventory Management
+model Inventory {
+  id              String    @id @default(cuid())
+  inventoryTag    String    @unique
+  quantity        Int       @default(1)
+  availableQty    Int       @default(1)
+  condition       String    @default("GOOD") // GOOD, FAIR, POOR, DAMAGED
+  status          String    @default("AVAILABLE") // AVAILABLE, LOANED, MAINTENANCE, RETIRED
+  location        String?
+  notes           String?
+  minStockLevel   Int?      @default(1)
+  
+  // Foreign Keys
+  assetId         String
+  departmentId    String
+  custodianId     String?   // Person responsible for this inventory
+  
+  // Relations
+  asset           Asset     @relation("InventoryAsset", fields: [assetId], references: [id])
+  department      Department @relation("InventoryDepartment", fields: [departmentId], references: [id])
+  custodian       User?     @relation("InventoryCustodian", fields: [custodianId], references: [id])
+  loans           InventoryLoan[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("inventories")
+}
+
+// Inventory Loan Management
+model InventoryLoan {
+  id              String    @id @default(cuid())
+  loanNumber      String    @unique
+  purpose         String
+  quantity        Int       @default(1)
+  loanDate        DateTime  @default(now())
+  expectedReturnDate DateTime
+  actualReturnDate DateTime?
+  status          String    @default("ACTIVE") // ACTIVE, RETURNED, OVERDUE, LOST
+  condition       String?   // Condition when returned
+  notes           String?
+  approvalNotes   String?
+  
+  // Foreign Keys
+  inventoryId     String
+  borrowerId      String
+  approvedById    String?
+  responsibleId   String    // Person responsible for the loan
+  
+  // Relations
+  inventory       Inventory @relation(fields: [inventoryId], references: [id])
+  borrower        User      @relation("LoanBorrower", fields: [borrowerId], references: [id])
+  approvedBy      User?     @relation("LoanApprover", fields: [approvedById], references: [id])
+  responsible     User      @relation("LoanResponsible", fields: [responsibleId], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("inventory_loans")
 }

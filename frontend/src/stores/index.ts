@@ -13,6 +13,7 @@ export { useMaintenanceStore } from './maintenanceStore'
 export { useAuditStore } from './auditStore'
 export { useReportStore } from './reportStore'
 export { useNotificationStore } from './notificationStore'
+export { useInventoryStore } from './inventoryStore'
 
 // Asset components and specifications
 export { useAssetComponentStore } from './assetComponentStore'

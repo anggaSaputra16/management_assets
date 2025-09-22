@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useReportStore } from '@/stores'
+import DashboardLayout from '@/components/layouts/DashboardLayout'
 import {
   FileText,
   Download,
@@ -635,8 +636,9 @@ const ReportsPage = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
+    <DashboardLayout>
+      <div className="p-6 space-y-6">
+        {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
@@ -698,7 +700,8 @@ const ReportsPage = () => {
 
       {/* Report Content */}
       {renderContent()}
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }
 
