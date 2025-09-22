@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { BrowserQRCodeReader } from '@zxing/library'
+// import { BrowserQRCodeReader } from '@zxing/library'
 import { Camera, X, AlertCircle } from 'lucide-react'
 
 const QRCodeScanner = ({ onScan, onClose, isOpen }) => {

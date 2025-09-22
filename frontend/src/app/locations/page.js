@@ -92,20 +92,20 @@ export default function LocationsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="glass-header p-6 rounded-lg flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <MapPin className="h-6 w-6 text-blue-600" />
+            <div className="gradient-overlay p-2 rounded-lg">
+              <MapPin className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Locations</h1>
+              <h1 className="text-2xl font-bold text-gray-800">Locations</h1>
               <p className="text-gray-600">Manage office locations and facilities</p>
             </div>
           </div>
           
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="glass-button flex items-center px-4 py-2 rounded-lg hover:scale-105 transition-transform"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Location
@@ -118,14 +118,14 @@ export default function LocationsPage() {
             const IconComponent = stat.icon === 'MapPin' ? MapPin : 
                                  stat.icon === 'Building' ? Building : Package
             return (
-              <div key={index} className="bg-white rounded-lg shadow p-6">
+              <div key={index} className="glass-card p-6 hover:scale-105 transition-transform">
                 <div className="flex items-center">
-                  <div className={`${stat.bgColor} p-3 rounded-lg`}>
-                    <IconComponent className={`h-6 w-6 ${stat.textColor}`} />
+                  <div className="gradient-overlay p-3 rounded-lg">
+                    <IconComponent className="h-6 w-6 text-white" />
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
                   </div>
                 </div>
               </div>
@@ -134,10 +134,10 @@ export default function LocationsPage() {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="glass-card rounded-lg">
+          <div className="px-6 py-4 border-b border-white/20">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Locations List</h3>
+              <h3 className="text-lg font-medium text-gray-800">Locations List</h3>
             </div>
           </div>
           
@@ -151,76 +151,76 @@ export default function LocationsPage() {
                   placeholder="Search locations by name, code, city, or type..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="glass-input w-full pl-10 pr-4 py-2 rounded-lg"
                 />
               </div>
             </div>
 
             {/* Locations Table */}
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-white/20">
+                <thead className="glass-header">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Location
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Address
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Capacity
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="divide-y divide-white/10">
                   {loading ? (
                     [...Array(5)].map((_, i) => (
                       <tr key={i}>
                         <td colSpan="6" className="px-6 py-4">
                           <div className="animate-pulse flex space-x-4">
-                            <div className="h-4 bg-gray-200 rounded w-full"></div>
+                            <div className="h-4 bg-white/20 rounded w-full"></div>
                           </div>
                         </td>
                       </tr>
                     ))
                   ) : filteredLocations.length > 0 ? (
                     filteredLocations.map((location) => (
-                      <tr key={location.id} className="hover:bg-gray-50">
+                      <tr key={location.id} className="hover:bg-white/10 transition-colors">
                         <td className="px-6 py-4">
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{location.name}</div>
-                            <div className="text-sm text-gray-500">Code: {location.code}</div>
+                            <div className="text-sm font-medium text-gray-800">{location.name}</div>
+                            <div className="text-sm text-gray-600">Code: {location.code}</div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-white/20 text-gray-700 backdrop-blur-sm">
                             {location.type}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-gray-800">
                             {location.address && <div>{location.address}</div>}
                             <div>{location.city}, {location.state}</div>
-                            <div className="text-gray-500">{location.country}</div>
+                            <div className="text-gray-600">{location.country}</div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
+                        <td className="px-6 py-4 text-sm text-gray-800">
                           {location.capacity || '-'}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full backdrop-blur-sm ${
                             location.isActive !== false
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-green-500/20 text-green-700 border border-green-500/30'
+                              : 'bg-red-500/20 text-red-700 border border-red-500/30'
                           }`}>
                             {location.isActive !== false ? 'Active' : 'Inactive'}
                           </span>
@@ -229,14 +229,14 @@ export default function LocationsPage() {
                           <div className="flex items-center space-x-2">
                             <button
                               onClick={() => handleEdit(location)}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="text-blue-600 hover:text-blue-800 hover:scale-110 transition-all"
                             >
                               <Edit className="h-4 w-4" />
                             </button>
                             {['ADMIN', 'ASSET_ADMIN'].includes(user?.role) && (
                               <button
                                 onClick={() => handleDelete(location.id)}
-                                className="text-red-600 hover:text-red-900"
+                                className="text-red-600 hover:text-red-800 hover:scale-110 transition-all"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -248,15 +248,15 @@ export default function LocationsPage() {
                   ) : (
                     <tr>
                       <td colSpan="6" className="px-6 py-12 text-center">
-                        <MapPin className="mx-auto h-12 w-12 text-gray-400" />
-                        <h3 className="mt-2 text-sm font-medium text-gray-900">No locations found</h3>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <MapPin className="mx-auto h-12 w-12 text-gray-500" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-800">No locations found</h3>
+                        <p className="mt-1 text-sm text-gray-600">
                           Get started by creating a new location.
                         </p>
                         <div className="mt-6">
                           <button
                             onClick={() => setShowModal(true)}
-                            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                            className="glass-button inline-flex items-center px-4 py-2 rounded-md hover:scale-105 transition-transform"
                           >
                             <Plus className="h-4 w-4 mr-2" />
                             Add Location
@@ -273,10 +273,10 @@ export default function LocationsPage() {
 
         {/* Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-modal max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+              <div className="px-6 py-4 border-b border-white/20">
+                <h3 className="text-lg font-medium text-gray-800">
                   {editingLocation ? 'Edit Location' : 'Add New Location'}
                 </h3>
               </div>
@@ -293,7 +293,7 @@ export default function LocationsPage() {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="glass-input w-full px-3 py-2 rounded-lg"
                       placeholder="Enter location name"
                     />
                   </div>
@@ -308,7 +308,7 @@ export default function LocationsPage() {
                       value={formData.code}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="glass-input w-full px-3 py-2 rounded-lg"
                       placeholder="e.g., OFF001"
                     />
                   </div>
@@ -322,7 +322,7 @@ export default function LocationsPage() {
                       value={formData.type}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="glass-input w-full px-3 py-2 rounded-lg"
                     >
                       {locationTypes.map(type => (
                         <option key={type.value} value={type.value}>
@@ -341,7 +341,7 @@ export default function LocationsPage() {
                       name="capacity"
                       value={formData.capacity}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="glass-input w-full px-3 py-2 rounded-lg"
                       placeholder="Number of people"
                       min="1"
                     />
@@ -357,7 +357,7 @@ export default function LocationsPage() {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="glass-input w-full px-3 py-2 rounded-lg"
                     placeholder="Street address"
                   />
                 </div>
@@ -372,7 +372,7 @@ export default function LocationsPage() {
                       name="city"
                       value={formData.city}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="glass-input w-full px-3 py-2 rounded-lg"
                       placeholder="City"
                     />
                   </div>
@@ -386,7 +386,7 @@ export default function LocationsPage() {
                       name="state"
                       value={formData.state}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="glass-input w-full px-3 py-2 rounded-lg"
                       placeholder="State or Province"
                     />
                   </div>
@@ -400,7 +400,7 @@ export default function LocationsPage() {
                       name="postalCode"
                       value={formData.postalCode}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="glass-input w-full px-3 py-2 rounded-lg"
                       placeholder="Postal code"
                     />
                   </div>
@@ -415,7 +415,7 @@ export default function LocationsPage() {
                     name="country"
                     value={formData.country}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="glass-input w-full px-3 py-2 rounded-lg"
                     placeholder="Country"
                   />
                 </div>
@@ -429,7 +429,7 @@ export default function LocationsPage() {
                     value={formData.description}
                     onChange={handleInputChange}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="glass-input w-full px-3 py-2 rounded-lg"
                     placeholder="Optional description"
                   />
                 </div>
@@ -443,22 +443,22 @@ export default function LocationsPage() {
                     onChange={handleInputChange}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
+                  <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700">
                     Active location
                   </label>
                 </div>
 
-                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-white/20">
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="glass-button px-4 py-2 rounded-lg hover:scale-105 transition-transform"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="gradient-overlay px-4 py-2 text-white rounded-lg hover:scale-105 transition-transform"
                   >
                     {editingLocation ? 'Update Location' : 'Create Location'}
                   </button>

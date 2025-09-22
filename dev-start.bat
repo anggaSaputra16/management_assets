@@ -15,13 +15,13 @@ REM Check if PostgreSQL is running (optional - can use mock data)
 echo 📋 Note: This will run with mock data. For full functionality, setup PostgreSQL database.
 
 echo 🔧 Starting Backend API...
-start "Backend API" cmd /k "cd /d c:\Users\LENOVO\Documents\development\management-assets\backend && npm run dev"
+start "Backend API" cmd /k "cd /d d:\dev\development\management-assets\backend && npm run dev"
 
 echo ⏳ Waiting for backend to start...
 timeout /t 5 /nobreak >nul
 
 echo 🎨 Starting Frontend Application...
-start "Frontend App" cmd /k "cd /d c:\Users\LENOVO\Documents\development\management-assets\frontend && npm run dev"
+start "Frontend App" cmd /k "cd /d d:\dev\development\management-assets\frontend && npm run dev"
 
 echo ⏳ Waiting for frontend to start...
 timeout /t 10 /nobreak >nul

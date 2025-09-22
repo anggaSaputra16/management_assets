@@ -203,13 +203,13 @@ export default function VendorsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="glass-header p-6 rounded-lg flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Building2 className="h-6 w-6 text-blue-600" />
+            <div className="gradient-overlay p-2 rounded-lg">
+              <Building2 className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Vendors</h1>
+              <h1 className="text-2xl font-bold text-gray-800">Vendors</h1>
               <p className="text-gray-600">Manage suppliers and service providers</p>
             </div>
           </div>
@@ -224,7 +224,7 @@ export default function VendorsPage() {
             />
             <label
               htmlFor="csvImport"
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+              className="glass-button flex items-center px-4 py-2 rounded-lg hover:scale-105 transition-transform cursor-pointer"
             >
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
@@ -232,7 +232,7 @@ export default function VendorsPage() {
             
             <button
               onClick={exportToCSV}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="glass-button flex items-center px-4 py-2 rounded-lg hover:scale-105 transition-transform"
             >
               <Download className="h-4 w-4 mr-2" />
               Export CSV
@@ -240,7 +240,7 @@ export default function VendorsPage() {
             
             <button
               onClick={openModal}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="glass-button flex items-center px-4 py-2 rounded-lg hover:scale-105 transition-transform"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Vendor
@@ -251,14 +251,14 @@ export default function VendorsPage() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {vendorStats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-lg shadow p-6">
+            <div key={index} className="glass-card p-6 hover:scale-105 transition-transform">
               <div className="flex items-center">
-                <div className={`${stat.bgColor} p-3 rounded-lg`}>
-                  <stat.icon className={`h-6 w-6 ${stat.textColor}`} />
+                <div className="gradient-overlay p-3 rounded-lg">
+                  <stat.icon className="h-6 w-6 text-white" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
                 </div>
               </div>
             </div>
@@ -266,10 +266,10 @@ export default function VendorsPage() {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="glass-card rounded-lg">
+          <div className="px-6 py-4 border-b border-white/20">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Vendors List</h3>
+              <h3 className="text-lg font-medium text-gray-800">Vendors List</h3>
             </div>
           </div>
           
@@ -283,20 +283,20 @@ export default function VendorsPage() {
                   placeholder="Search vendors by name, code, type, contact, or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="glass-input w-full pl-10 pr-4 py-2 rounded-lg"
                 />
               </div>
             </div>
 
             {/* Vendors Table */}
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-white/20">
+                <thead className="glass-header">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Vendor
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

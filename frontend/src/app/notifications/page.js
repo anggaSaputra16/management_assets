@@ -108,11 +108,13 @@ export default function NotificationsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="glass-header p-6 rounded-lg flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Bell className="h-8 w-8 text-blue-600" />
+            <div className="gradient-overlay p-2 rounded-lg">
+              <Bell className="h-6 w-6 text-white" />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+              <h1 className="text-2xl font-bold text-gray-800">Notifications</h1>
               <p className="text-gray-600">
                 {unreadCount > 0 ? `${unreadCount} unread notifications` : 'All caught up!'}
               </p>
@@ -122,7 +124,7 @@ export default function NotificationsPage() {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="glass-button flex items-center px-4 py-2 rounded-lg hover:scale-105 transition-transform"
             >
               <CheckCheck className="h-4 w-4 mr-2" />
               Mark All Read
@@ -131,10 +133,10 @@ export default function NotificationsPage() {
         </div>
 
         {/* Filters and Search */}
-        <div className="bg-white rounded-lg shadow border border-gray-200 p-4">
+        <div className="glass-card p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Filter tabs */}
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            <div className="flex space-x-1 bg-white/20 backdrop-blur-sm rounded-lg p-1">
               {[
                 { key: 'all', label: 'All', count: notifications.length },
                 { key: 'unread', label: 'Unread', count: unreadCount },
@@ -143,10 +145,10 @@ export default function NotificationsPage() {
                 <button
                   key={tab.key}
                   onClick={() => setFilter(tab.key)}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
                     filter === tab.key
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'bg-white/30 text-gray-800 backdrop-blur-sm shadow-sm scale-105'
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-white/10'
                   }`}
                 >
                   {tab.label} ({tab.count})
@@ -162,7 +164,7 @@ export default function NotificationsPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search notifications..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="glass-input w-full pl-10 pr-4 py-2 rounded-lg"
               />
             </div>
           </div>
@@ -171,10 +173,10 @@ export default function NotificationsPage() {
         {/* Notifications List */}
         <div className="space-y-2">
           {filteredNotifications.length === 0 ? (
-            <div className="bg-white rounded-lg shadow border border-gray-200 p-8 text-center">
-              <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
-              <p className="text-gray-500">
+            <div className="glass-card p-8 text-center">
+              <Bell className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-800 mb-2">No notifications</h3>
+              <p className="text-gray-600">
                 {filter === 'all' 
                   ? "You don't have any notifications yet."
                   : `No ${filter} notifications found.`}

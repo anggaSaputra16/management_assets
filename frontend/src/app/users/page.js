@@ -180,13 +180,13 @@ export default function UsersPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="glass-header p-6 rounded-lg flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="h-6 w-6 text-blue-600" />
+            <div className="gradient-overlay p-2 rounded-lg">
+              <Users className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+              <h1 className="text-2xl font-bold text-gray-800">Users</h1>
               <p className="text-gray-600">Manage system users and permissions</p>
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function UsersPage() {
           {['ADMIN'].includes(currentUser?.role) && (
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="glass-button flex items-center px-4 py-2 rounded-lg hover:scale-105 transition-transform"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add User
@@ -209,14 +209,14 @@ export default function UsersPage() {
                                  stat.icon === 'UserCheck' ? UserCheck :
                                  stat.icon === 'Shield' ? Shield : Activity
             return (
-              <div key={index} className="bg-white rounded-lg shadow p-6">
+              <div key={index} className="glass-card p-6 hover:scale-105 transition-transform">
                 <div className="flex items-center">
-                  <div className={`${stat.bgColor} p-3 rounded-lg`}>
-                    <IconComponent className={`h-6 w-6 ${stat.textColor}`} />
+                  <div className="gradient-overlay p-3 rounded-lg">
+                    <IconComponent className="h-6 w-6 text-white" />
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
                   </div>
                 </div>
               </div>
@@ -225,10 +225,10 @@ export default function UsersPage() {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="glass-card rounded-lg">
+          <div className="px-6 py-4 border-b border-white/20">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Users List</h3>
+              <h3 className="text-lg font-medium text-gray-800">Users List</h3>
             </div>
           </div>
           
@@ -242,14 +242,14 @@ export default function UsersPage() {
                   placeholder="Search users by name, email, employee ID, or position..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="glass-input w-full pl-10 pr-4 py-2 rounded-lg"
                 />
               </div>
               
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="glass-input px-3 py-2 rounded-lg"
               >
                 <option value="">All Roles</option>
                 {userRoles.map(role => (
@@ -262,7 +262,7 @@ export default function UsersPage() {
               <select
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="glass-input px-3 py-2 rounded-lg"
               >
                 <option value="">All Departments</option>
                 {departments.map(dept => (
@@ -275,7 +275,7 @@ export default function UsersPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="glass-input px-3 py-2 rounded-lg"
               >
                 <option value="">All Status</option>
                 <option value="active">Active</option>

@@ -74,14 +74,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center">
-            <Building2 className="h-8 w-8 text-white" />
+          <div className="mx-auto h-16 w-16 glass-card rounded-full flex items-center justify-center">
+            <Building2 className="h-8 w-8 text-gray-700" />
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          <h2 className="mt-6 text-3xl font-bold text-gray-800">
             Asset Management System
           </h2>
           <p className="mt-2 text-sm text-gray-600">
@@ -90,10 +91,10 @@ export default function LoginPage() {
         </div>
 
         {/* Form */}
-        <div className="bg-white shadow-lg rounded-lg p-8">
+        <div className="glass-card p-8">
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             {errors.root && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+              <div className="bg-red-500/20 border border-red-400/30 text-red-300 px-4 py-3 rounded-md text-sm">
                 {errors.root.message}
               </div>
             )}
@@ -107,7 +108,7 @@ export default function LoginPage() {
                   {...register('email')}
                   type="email"
                   autoComplete="email"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="glass-input w-full px-3 py-2 rounded-md placeholder-gray-500"
                   placeholder="your@email.com"
                 />
                 {errors.email && (
@@ -125,7 +126,7 @@ export default function LoginPage() {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 pr-10"
+                  className="glass-input w-full px-3 py-2 rounded-md placeholder-gray-500 pr-10"
                   placeholder="••••••••"
                 />
                 <button
@@ -134,9 +135,9 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
+                    <EyeOff className="h-4 w-4 text-gray-500" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
+                    <Eye className="h-4 w-4 text-gray-500" />
                   )}
                 </button>
                 {errors.password && (
@@ -149,7 +150,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="glass-button w-full py-2 px-4 rounded-md text-sm font-medium text-gray-700 hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Masuk...' : 'Masuk'}
               </button>
@@ -158,7 +159,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="text-center text-sm text-gray-600">
+        <div className="text-center text-sm text-gray-500">
           <p>&copy; 2024 Asset Management System By Nuii. All rights reserved.</p>
         </div>
       </div>

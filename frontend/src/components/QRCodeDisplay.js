@@ -63,16 +63,16 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="glass-card p-6 max-w-md w-full mx-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold flex items-center">
+          <h3 className="text-lg font-semibold text-gray-800 flex items-center">
             <QrCode className="h-5 w-5 mr-2" />
             Asset QR Code
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-500 hover:text-gray-700 transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -80,20 +80,20 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
 
         <div className="text-center">
           <div className="mb-4">
-            <h4 className="font-medium text-gray-900">{asset?.name}</h4>
+            <h4 className="font-medium text-gray-800">{asset?.name}</h4>
             <p className="text-sm text-gray-600">{asset?.assetTag}</p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+            <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
               {error}
             </div>
           )}
 
           <div className="mb-6">
             {loading ? (
-              <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center mx-auto">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="w-64 h-64 glass-button rounded-lg flex items-center justify-center mx-auto">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-500"></div>
               </div>
             ) : qrCodeImage ? (
               <Image
@@ -101,13 +101,13 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
                 alt="QR Code"
                 width={256}
                 height={256}
-                className="mx-auto border rounded-lg"
+                className="mx-auto border border-gray-200 rounded-lg shadow-sm"
               />
             ) : (
-              <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center mx-auto">
+              <div className="w-64 h-64 glass-button rounded-lg flex items-center justify-center mx-auto">
                 <button
                   onClick={generateQRCode}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="glass-button px-4 py-2 text-gray-700 rounded-lg hover:scale-105 transition-transform"
                 >
                   Generate QR Code
                 </button>
@@ -126,7 +126,7 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
           {qrCodeImage && (
             <button
               onClick={downloadQRCode}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
+              className="glass-button px-4 py-2 text-gray-700 rounded-lg hover:scale-105 transition-transform flex items-center"
             >
               <Download className="h-4 w-4 mr-2" />
               Download
@@ -134,7 +134,7 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
           )}
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            className="glass-button px-4 py-2 text-gray-700 rounded-lg hover:scale-105 transition-transform"
           >
             Close
           </button>

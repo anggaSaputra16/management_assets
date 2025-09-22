@@ -594,3 +594,7 @@ Other test accounts:
 
 
 restart docker PS D:\dev\development\management-assets> docker-compose -f docker-compose.dev.yml restart frontend
+
+PS D:\dev\development\management-assets> docker logs --tail 20 management-assets-backend-dev
+
+PS D:\dev\development\management-assets> docker logs --tail 20 management-assets-frontend-dev

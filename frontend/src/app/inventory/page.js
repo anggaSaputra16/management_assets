@@ -107,76 +107,89 @@ export default function InventoryPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
-            <p className="text-gray-600">Manage inventory items and track loans</p>
-          </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={() => router.push('/inventory/loans')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-            >
-              <Archive className="h-4 w-4" />
-              <span>Manage Loans</span>
-            </button>
-            <button
-              onClick={() => router.push('/inventory/create')}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Inventory</span>
-            </button>
+        <div className="glass-card p-6 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400"></div>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Inventory Management</h1>
+              <p className="text-gray-600">Manage inventory items and track loans</p>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => router.push('/inventory/loans')}
+                className="glass-button px-4 py-2 rounded-lg text-gray-700 flex items-center space-x-2 hover:scale-105 transition-transform relative overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 to-amber-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <Archive className="h-4 w-4 relative z-10" />
+                <span className="relative z-10">Manage Loans</span>
+              </button>
+              <button
+                onClick={() => router.push('/inventory/create')}
+                className="glass-button px-4 py-2 rounded-lg text-gray-700 flex items-center space-x-2 hover:scale-105 transition-transform relative overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/10 to-green-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <Plus className="h-4 w-4 relative z-10" />
+                <span className="relative z-10">Add Inventory</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="flex items-center justify-between">
+            <div className="glass-card p-6 relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-400"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-indigo-400/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Inventory</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalInventory}</p>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{stats.totalInventory}</p>
                 </div>
-                <Package className="h-8 w-8 text-blue-600" />
+                <Package className="h-8 w-8 text-blue-500" />
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="flex items-center justify-between">
+            <div className="glass-card p-6 relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-emerald-400"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-emerald-400/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Available</p>
-                  <p className="text-2xl font-bold text-green-600">{stats.availableInventory}</p>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{stats.availableInventory}</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <CheckCircle className="h-8 w-8 text-green-500" />
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="flex items-center justify-between">
+            <div className="glass-card p-6 relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-violet-400"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-violet-400/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Loaned</p>
-                  <p className="text-2xl font-bold text-blue-600">{stats.loanedInventory}</p>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">{stats.loanedInventory}</p>
                 </div>
-                <Archive className="h-8 w-8 text-blue-600" />
+                <Archive className="h-8 w-8 text-purple-500" />
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="flex items-center justify-between">
+            <div className="glass-card p-6 relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-red-400"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-red-400/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Loans</p>
-                  <p className="text-2xl font-bold text-orange-600">{stats.activeLoans}</p>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">{stats.activeLoans}</p>
                 </div>
-                <Clock className="h-8 w-8 text-orange-600" />
+                <Clock className="h-8 w-8 text-orange-500" />
               </div>
             </div>
           </div>
         )}
 
         {/* Filters */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="glass-card p-6 rounded-lg shadow-sm border border-white/20">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -241,7 +254,7 @@ export default function InventoryPage() {
         )}
 
         {/* Inventory Table */}
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <div className="glass-card rounded-lg shadow-sm border border-white/20 overflow-hidden">
           {inventoryLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

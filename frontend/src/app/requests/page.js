@@ -581,9 +581,9 @@ const RequestsPage = () => {
     <DashboardLayout>
       <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="glass-header p-6 rounded-lg flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Asset Requests</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Asset Requests</h1>
           <p className="text-gray-600">
             Manage asset requests and allocations
           </p>
@@ -591,7 +591,7 @@ const RequestsPage = () => {
         <div className="flex space-x-3">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            className="glass-button inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium hover:scale-105 transition-transform"
           >
             <Filter className="h-4 w-4 mr-2" />
             Filters
@@ -601,7 +601,7 @@ const RequestsPage = () => {
               resetForm()
               setShowModal(true)
             }}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="glass-button inline-flex items-center px-4 py-2 rounded-lg hover:scale-105 transition-transform"
           >
             <Plus className="h-4 w-4 mr-2" />
             New Request
@@ -621,14 +621,14 @@ const RequestsPage = () => {
           }[stat.icon] || FileText
 
           return (
-            <div key={index} className={`${stat.bgColor} rounded-lg p-6`}>
+            <div key={index} className="glass-card p-6 hover:scale-105 transition-transform">
               <div className="flex items-center">
-                <div className={`${stat.color} rounded-lg p-3`}>
+                <div className="gradient-overlay rounded-lg p-3">
                   <IconComponent className="h-6 w-6 text-white" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className={`text-2xl font-bold ${stat.textColor}`}>
+                  <p className="text-2xl font-bold text-gray-800">
                     {stat.value.toLocaleString()}
                   </p>
                 </div>
@@ -642,7 +642,7 @@ const RequestsPage = () => {
 
       {/* Filters */}
       {showFilters && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="glass-card p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -655,7 +655,7 @@ const RequestsPage = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search requests..."
-                  className="pl-10 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  className="glass-input pl-10 w-full rounded-lg px-3 py-2 text-sm"
                 />
               </div>
             </div>
@@ -667,7 +667,7 @@ const RequestsPage = () => {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="glass-input w-full rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">All Types</option>
                 <option value="ASSET_REQUEST">Asset Request</option>

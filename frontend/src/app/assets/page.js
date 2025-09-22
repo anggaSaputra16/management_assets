@@ -413,11 +413,11 @@ const AssetsPage = () => {
     if (!showModal) return null
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6 border-b border-gray-200">
+      <div className="fixed inset-0 glass-modal-backdrop flex items-center justify-center p-4 z-50">
+        <div className="glass-modal rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b border-gray-200/30">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-800">
                 {editingAsset ? 'Edit Asset' : 'Add New Asset'}
               </h3>
               <button
@@ -425,7 +425,7 @@ const AssetsPage = () => {
                   setShowModal(false)
                   resetForm()
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-500 hover:text-gray-700 glass-button p-2 rounded-lg transition-all"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -718,12 +718,12 @@ const AssetsPage = () => {
     if (!showDeleteModal) return null
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-md w-full">
+      <div className="fixed inset-0 glass-modal-backdrop flex items-center justify-center p-4 z-50">
+        <div className="glass-modal max-w-md w-full">
           <div className="p-6">
             <div className="flex items-center mb-4">
               <AlertCircle className="h-6 w-6 text-red-600 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900">Delete Asset</h3>
+              <h3 className="text-lg font-semibold text-gray-800">Delete Asset</h3>
             </div>
             <p className="text-gray-600 mb-6">
               Are you sure you want to delete &quot;{assetToDelete?.name}&quot;? This action cannot be undone.
@@ -731,13 +731,13 @@ const AssetsPage = () => {
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                className="glass-button px-4 py-2 rounded-lg text-gray-700 hover:text-gray-800 transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="px-4 py-2 bg-red-500/80 backdrop-blur-sm text-white rounded-lg hover:bg-red-600/80 transition-all"
               >
                 Delete
               </button>
@@ -752,18 +752,18 @@ const AssetsPage = () => {
     if (!showImportModal) return null
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6 border-b border-gray-200">
+      <div className="fixed inset-0 glass-modal-backdrop flex items-center justify-center p-4 z-50">
+        <div className="glass-modal max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b border-gray-200/30">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Import Assets</h3>
+              <h3 className="text-lg font-semibold text-gray-800">Import Assets</h3>
               <button
                 onClick={() => {
                   setShowImportModal(false)
                   setImportData('')
                   setImportResults(null)
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-500 hover:text-gray-700 glass-button p-2 rounded-lg transition-all"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -839,14 +839,14 @@ const AssetsPage = () => {
     if (!showQRModal || !selectedAssetForQR) return null
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-md w-full">
+      <div className="fixed inset-0 glass-modal-backdrop flex items-center justify-center p-4 z-50">
+        <div className="glass-modal max-w-md w-full">
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">QR Code</h3>
+              <h3 className="text-lg font-semibold text-gray-800">QR Code</h3>
               <button
                 onClick={() => setShowQRModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-500 hover:text-gray-700 glass-button p-2 rounded-lg transition-all"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -898,52 +898,60 @@ const AssetsPage = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Asset Management</h1>
-          <p className="text-gray-600">
-            Manage and track all organizational assets
-          </p>
-        </div>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </button>
-          <button 
-            onClick={() => setShowImportModal(true)}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Import
-          </button>
-          <button 
-            onClick={handleExport}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </button>
-          <button
-            onClick={() => {
-              resetForm()
-              setShowModal(true)
-            }}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Asset
-          </button>
-          <button
-            onClick={() => setShowQRScanner(true)}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <QrCode className="h-4 w-4 mr-2" />
-            Scan QR
-          </button>
+      <div className="glass-card p-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400"></div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Asset Management</h1>
+            <p className="text-gray-600">
+              Manage and track all organizational assets
+            </p>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="glass-button px-4 py-2 rounded-lg text-gray-700 flex items-center space-x-2 hover:scale-105 transition-transform relative overflow-hidden group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 to-purple-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <Filter className="h-4 w-4 relative z-10" />
+              <span className="relative z-10">Filters</span>
+            </button>
+            <button 
+              onClick={() => setShowImportModal(true)}
+              className="glass-button px-4 py-2 rounded-lg text-gray-700 flex items-center space-x-2 hover:scale-105 transition-transform relative overflow-hidden group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-green-400/10 to-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <Upload className="h-4 w-4 relative z-10" />
+              <span className="relative z-10">Import</span>
+            </button>
+            <button 
+              onClick={handleExport}
+              className="glass-button px-4 py-2 rounded-lg text-gray-700 flex items-center space-x-2 hover:scale-105 transition-transform relative overflow-hidden group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 to-red-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <Download className="h-4 w-4 relative z-10" />
+              <span className="relative z-10">Export</span>
+            </button>
+            <button
+              onClick={() => {
+                resetForm()
+                setShowModal(true)
+              }}
+              className="glass-button px-4 py-2 rounded-lg text-gray-700 flex items-center space-x-2 hover:scale-105 transition-transform relative overflow-hidden group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 to-indigo-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <Plus className="h-4 w-4 relative z-10" />
+              <span className="relative z-10">Add Asset</span>
+            </button>
+            <button
+              onClick={() => setShowQRScanner(true)}
+              className="glass-button px-4 py-2 rounded-lg text-gray-700 flex items-center space-x-2 hover:scale-105 transition-transform relative overflow-hidden group"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/10 to-pink-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <QrCode className="h-4 w-4 relative z-10" />
+              <span className="relative z-10">Scan QR</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -958,14 +966,14 @@ const AssetsPage = () => {
           }[stat.icon]
 
           return (
-            <div key={index} className={`${stat.bgColor} rounded-lg p-6`}>
+            <div key={index} className="glass-card p-6">
               <div className="flex items-center">
-                <div className={`${stat.color} rounded-lg p-3`}>
+                <div className={`bg-gradient-to-r ${stat.color} rounded-lg p-3 shadow-lg`}>
                   <IconComponent className="h-6 w-6 text-white" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className={`text-2xl font-bold ${stat.textColor}`}>
+                  <p className="text-sm font-medium text-white/70">{stat.title}</p>
+                  <p className="text-2xl font-bold text-white">
                     {stat.value.toLocaleString()}
                   </p>
                 </div>
@@ -977,32 +985,32 @@ const AssetsPage = () => {
 
       {/* Filters */}
       {showFilters && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="glass-card p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white/90 mb-2">
                 Search
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search assets..."
-                  className="pl-10 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  className="glass-input pl-10 w-full rounded-lg px-3 py-2 text-sm placeholder-white/60"
                 />
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white/90 mb-2">
                 Status
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="glass-input w-full rounded-lg px-3 py-2 text-sm text-white"
               >
                 <option value="">All Status</option>
                 <option value="ACTIVE">Active</option>
@@ -1014,13 +1022,13 @@ const AssetsPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white/90 mb-2">
                 Condition
               </label>
               <select
                 value={conditionFilter}
                 onChange={(e) => setConditionFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="glass-input w-full rounded-lg px-3 py-2 text-sm text-white"
               >
                 <option value="">All Conditions</option>
                 <option value="EXCELLENT">Excellent</option>
@@ -1039,7 +1047,7 @@ const AssetsPage = () => {
                   setConditionFilter('')
                   showInfo('Filters cleared')
                 }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+                className="glass-button w-full px-4 py-2 rounded-lg text-sm text-white hover:scale-105 transition-transform"
               >
                 Clear Filters
               </button>
@@ -1049,38 +1057,38 @@ const AssetsPage = () => {
       )}
 
       {/* Assets Table */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-white/20">
+            <thead className="glass-button">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/90 uppercase tracking-wider">
                   Asset
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/90 uppercase tracking-wider">
                   Category
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/90 uppercase tracking-wider">
                   Location
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/90 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/90 uppercase tracking-wider">
                   Condition
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/90 uppercase tracking-wider">
                   Value
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white/90 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-white/10">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-4 text-center text-white/70">
                     <div className="flex items-center justify-center">
                       <Package className="animate-spin h-5 w-5 mr-2" />
                       Loading assets...
@@ -1089,33 +1097,33 @@ const AssetsPage = () => {
                 </tr>
               ) : paginatedAssets.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-4 text-center text-white/70">
                     No assets found
                   </td>
                 </tr>
               ) : (
                 paginatedAssets.map((asset) => (
-                  <tr key={asset.id} className="hover:bg-gray-50">
+                  <tr key={asset.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="flex items-center">
-                          <span className="text-sm font-medium text-gray-900">{asset.name}</span>
+                          <span className="text-sm font-medium text-white">{asset.name}</span>
                           {asset.qrCodeImage && (
-                            <QrCode className="h-4 w-4 ml-2 text-green-500" title="QR Code Available" />
+                            <QrCode className="h-4 w-4 ml-2 text-green-400" title="QR Code Available" />
                           )}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-white/60">
                           <Tag className="inline h-3 w-3 mr-1" />
                           {asset.assetTag}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                       {asset.category?.name || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-900">
-                        <MapPin className="h-4 w-4 mr-1 text-gray-400" />
+                      <div className="flex items-center text-sm text-white">
+                        <MapPin className="h-4 w-4 mr-1 text-white/60" />
                         {asset.location?.name || '-'}
                       </div>
                     </td>
@@ -1129,14 +1137,14 @@ const AssetsPage = () => {
                         {asset.condition}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                       {asset.purchasePrice ? `$${asset.purchasePrice.toLocaleString()}` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEdit(asset)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-blue-400 hover:text-blue-300 transition-colors"
                           title="Edit Asset"
                         >
                           <Edit className="h-4 w-4" />
@@ -1144,7 +1152,7 @@ const AssetsPage = () => {
                         {asset.qrCodeImage ? (
                           <button
                             onClick={() => handleViewQR(asset)}
-                            className="text-green-600 hover:text-green-900"
+                            className="text-green-400 hover:text-green-300 transition-colors"
                             title="View QR Code"
                           >
                             <Eye className="h-4 w-4" />
@@ -1152,7 +1160,7 @@ const AssetsPage = () => {
                         ) : (
                           <button
                             onClick={() => handleGenerateQR(asset.id)}
-                            className="text-blue-600 hover:text-blue-900"
+                            className="text-purple-400 hover:text-purple-300 transition-colors"
                             title="Generate QR Code"
                           >
                             <QrCode className="h-4 w-4" />
@@ -1160,7 +1168,7 @@ const AssetsPage = () => {
                         )}
                         <button
                           onClick={() => handleDelete(asset)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-400 hover:text-red-300 transition-colors"
                           title="Delete Asset"
                         >
                           <Trash2 className="h-4 w-4" />

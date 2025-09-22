@@ -126,16 +126,16 @@ const CategoriesPage = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="glass-header p-6 rounded-lg flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Categories</h1>
           <p className="text-gray-600">
             Manage asset categories and subcategories
           </p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="glass-button inline-flex items-center px-4 py-2 rounded-lg hover:scale-105 transition-transform"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Category
@@ -153,14 +153,14 @@ const CategoriesPage = () => {
           }[stat.icon]
 
           return (
-            <div key={index} className={`${stat.bgColor} rounded-lg p-6`}>
+            <div key={index} className="glass-card p-6 hover:scale-105 transition-transform">
               <div className="flex items-center">
-                <div className={`${stat.color} rounded-lg p-3`}>
+                <div className="gradient-overlay rounded-lg p-3">
                   <IconComponent className="h-6 w-6 text-white" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className={`text-2xl font-bold ${stat.textColor}`}>
+                  <p className="text-2xl font-bold text-gray-800">
                     {stat.value}
                   </p>
                 </div>
@@ -171,7 +171,7 @@ const CategoriesPage = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="glass-card p-6">
         <div className="flex space-x-4">
           <div className="flex-1">
             <div className="relative">
@@ -181,7 +181,7 @@ const CategoriesPage = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search categories..."
-                className="pl-10 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="glass-input pl-10 w-full rounded-lg px-3 py-2 text-sm"
               />
             </div>
           </div>
@@ -189,7 +189,7 @@ const CategoriesPage = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="glass-input rounded-lg px-3 py-2 text-sm"
             >
               <option value="">All Status</option>
               <option value="active">Active</option>
@@ -200,32 +200,32 @@ const CategoriesPage = () => {
       </div>
 
       {/* Categories Table */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="glass-card rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-white/20">
+            <thead className="glass-header">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Category
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Code
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Parent
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Assets
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-white/10">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
@@ -243,7 +243,7 @@ const CategoriesPage = () => {
                 </tr>
               ) : (
                 getFilteredAndSortedCategories().map((category) => (
-                  <tr key={category.id} className="hover:bg-gray-50">
+                  <tr key={category.id} className="hover:bg-white/10 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {category.parentId ? (
@@ -252,11 +252,11 @@ const CategoriesPage = () => {
                           <FolderOpen className="h-5 w-5 text-blue-500 mr-3" />
                         )}
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-800">
                             {category.name}
                           </div>
                           {category.description && (
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-gray-600">
                               {category.description}
                             </div>
                           )}
@@ -264,24 +264,24 @@ const CategoriesPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-800 rounded-full">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold bg-white/20 text-gray-700 rounded-full backdrop-blur-sm">
                         {category.code}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       {category.parent ? category.parent.name : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       <div className="flex items-center">
-                        <Package className="h-4 w-4 text-gray-400 mr-1" />
+                        <Package className="h-4 w-4 text-gray-500 mr-1" />
                         {category._count?.assets || 0}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full backdrop-blur-sm ${
                         category.isActive !== false 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-green-500/20 text-green-700 border border-green-500/30' 
+                          : 'bg-red-500/20 text-red-700 border border-red-500/30'
                       }`}>
                         {category.isActive !== false ? 'Active' : 'Inactive'}
                       </span>
@@ -290,14 +290,14 @@ const CategoriesPage = () => {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEdit(category)}
-                          className="text-green-600 hover:text-green-900"
+                          className="text-green-600 hover:text-green-800 hover:scale-110 transition-all"
                           title="Edit Category"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(category)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:text-red-800 hover:scale-110 transition-all"
                           title="Delete Category"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -314,10 +314,10 @@ const CategoriesPage = () => {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="glass-modal max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-800">
                 {editingCategory ? 'Edit Category' : 'Add New Category'}
               </h3>
               <button
@@ -325,7 +325,7 @@ const CategoriesPage = () => {
                   setShowModal(false)
                   resetForm()
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-500 hover:text-gray-700 hover:scale-110 transition-all"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -341,7 +341,7 @@ const CategoriesPage = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="glass-input w-full rounded-lg px-3 py-2 text-sm"
                   placeholder="Enter category name"
                   required
                 />
@@ -356,7 +356,7 @@ const CategoriesPage = () => {
                   name="code"
                   value={formData.code}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="glass-input w-full rounded-lg px-3 py-2 text-sm"
                   placeholder="Enter category code"
                   required
                 />
@@ -371,7 +371,7 @@ const CategoriesPage = () => {
                   value={formData.description}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="glass-input w-full rounded-lg px-3 py-2 text-sm"
                   placeholder="Enter description (optional)"
                 />
               </div>
@@ -384,7 +384,7 @@ const CategoriesPage = () => {
                   name="parentId"
                   value={formData.parentId}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="glass-input w-full rounded-lg px-3 py-2 text-sm"
                 >
                   <option value="">None (Main Category)</option>
                   {getParentCategories().map(cat => (
@@ -402,7 +402,7 @@ const CategoriesPage = () => {
                     name="isActive"
                     checked={formData.isActive}
                     onChange={handleInputChange}
-                    className="mr-2"
+                    className="mr-2 rounded"
                   />
                   <span className="text-sm text-gray-700">Active</span>
                 </label>
@@ -415,13 +415,13 @@ const CategoriesPage = () => {
                     setShowModal(false)
                     resetForm()
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="flex-1 glass-button px-4 py-2 rounded-lg text-sm font-medium hover:scale-105 transition-transform"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                  className="flex-1 gradient-overlay px-4 py-2 text-white rounded-lg text-sm font-medium hover:scale-105 transition-transform"
                 >
                   {editingCategory ? 'Update' : 'Create'}
                 </button>
