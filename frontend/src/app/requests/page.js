@@ -614,10 +614,11 @@ const RequestsPage = () => {
         {stats.map((stat, index) => {
           const IconComponent = {
             FileText,
+            ClipboardList: FileText,
             Clock,
             CheckCircle,
             XCircle
-          }[stat.icon]
+          }[stat.icon] || FileText
 
           return (
             <div key={index} className={`${stat.bgColor} rounded-lg p-6`}>

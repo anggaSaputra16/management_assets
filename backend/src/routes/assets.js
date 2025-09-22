@@ -7,7 +7,6 @@ const router = express.Router();
 
 // Validation schemas
 const createAssetSchema = Joi.object({
-  assetTag: Joi.string().required(),
   name: Joi.string().required(),
   description: Joi.string().optional(),
   serialNumber: Joi.string().optional(),
@@ -209,18 +208,6 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       });
     }
 
-    // Check if asset tag already exists
-    const existingAsset = await prisma.asset.findUnique({
-      where: { assetTag: value.assetTag }
-    });
-
-    if (existingAsset) {
-      return res.status(400).json({
-        success: false,
-        message: 'Asset tag already exists'
-      });
-    }
-
     // Validate foreign keys
     const [category, vendor, location, department] = await Promise.all([
       prisma.category.findUnique({ where: { id: value.categoryId } }),
@@ -257,9 +244,38 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       });
     }
 
+    // Generate unique asset tag
+    const generateAssetTag = async () => {
+      const count = await prisma.asset.count();
+      let assetTag;
+      let attempts = 0;
+      
+      do {
+        const tagNumber = String(count + 1 + attempts).padStart(6, '0');
+        assetTag = `AST-${tagNumber}`;
+        
+        const existingAsset = await prisma.asset.findUnique({
+          where: { assetTag }
+        });
+        
+        if (!existingAsset) {
+          return assetTag;
+        }
+        
+        attempts++;
+      } while (attempts < 100); // Prevent infinite loop
+      
+      throw new Error('Unable to generate unique asset tag');
+    };
+
+    const assetTag = await generateAssetTag();
+
     // Create asset
     const asset = await prisma.asset.create({
-      data: value,
+      data: {
+        ...value,
+        assetTag
+      },
       include: {
         category: {
           select: { id: true, name: true, code: true }

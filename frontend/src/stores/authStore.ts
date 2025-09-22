@@ -24,13 +24,19 @@ export const useAuthStore = create<AuthState>()(
         // Also store in localStorage for axios interceptor
         if (typeof window !== 'undefined') {
           localStorage.setItem('token', token)
-          localStorage.setItem('user', JSON.stringify(user))
+          // Map the backend user shape to include a 'name' for UI usage
+          const uu = user as unknown as Record<string, unknown>
+          const firstName = typeof uu['firstName'] === 'string' ? (uu['firstName'] as string) : ''
+          const lastName = typeof uu['lastName'] === 'string' ? (uu['lastName'] as string) : ''
+          const username = typeof uu['username'] === 'string' ? (uu['username'] as string) : ''
+          const email = typeof uu['email'] === 'string' ? (uu['email'] as string) : ''
+          const nameFromParts = `${firstName} ${lastName}`.trim()
+          const name = typeof uu['name'] === 'string' ? (uu['name'] as string) : (nameFromParts || username || email)
+          const mappedUser = { ...uu, name }
+          localStorage.setItem('user', JSON.stringify(mappedUser))
         }
-        set({
-          user,
-          token,
-          isAuthenticated: true
-        })
+        // Keep the typed `user` in state as provided by backend
+        set({ user, token, isAuthenticated: true })
       },
       logout: () => {
         // Clear localStorage

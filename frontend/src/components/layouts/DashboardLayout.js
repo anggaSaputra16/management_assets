@@ -28,6 +28,7 @@ import { getGreeting, getRoleDisplayName } from '@/lib/utils'
 
 const menuItems = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Inventory', href: '/inventory', icon: Package, roles: ['ADMIN', 'ASSET_ADMIN', 'MANAGER', 'DEPARTMENT_USER', 'TECHNICIAN'] },
   { name: 'Assets', href: '/assets', icon: Package },
   { name: 'Requests', href: '/requests', icon: FileText },
   { name: 'Spare Parts', href: '/spare-parts', icon: Cog, roles: ['ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'] },

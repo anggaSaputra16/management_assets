@@ -1,24 +1,26 @@
 import { api } from '@/lib/api'
 
 export const reportService = {
-  // Asset Reports
-  getAssetReport: async (filters = {}) => {
-    const params = new URLSearchParams()
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value)
-    })
-    
-    const response = await api.get(`/api/reports/assets?${params}`)
+  // KPI Metrics
+  getKPIMetrics: async () => {
+    const response = await api.get('/api/reports/kpi')
     return response.data
   },
 
-  getAssetDepreciationReport: async (filters = {}) => {
-    const params = new URLSearchParams()
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value)
-    })
-    
-    const response = await api.get(`/api/reports/assets/depreciation?${params}`)
+  // Executive Summary
+  getExecutiveSummary: async () => {
+    const response = await api.get('/api/reports/executive-summary')
+    return response.data
+  },
+
+  // Asset Reports
+  generateAssetReport: async (filters = {}) => {
+    const response = await api.post('/api/reports/generate/assets', filters)
+    return response.data
+  },
+
+  generateDepreciationReport: async (filters = {}) => {
+    const response = await api.post('/api/reports/generate/depreciation', filters)
     return response.data
   },
 
@@ -33,13 +35,8 @@ export const reportService = {
   },
 
   // Request Reports
-  getRequestReport: async (filters = {}) => {
-    const params = new URLSearchParams()
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value)
-    })
-    
-    const response = await api.get(`/api/reports/requests?${params}`)
+  generateRequestReport: async (filters = {}) => {
+    const response = await api.post('/api/reports/generate/requests', filters)
     return response.data
   },
 
@@ -49,13 +46,8 @@ export const reportService = {
   },
 
   // Maintenance Reports
-  getMaintenanceReport: async (filters = {}) => {
-    const params = new URLSearchParams()
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value)
-    })
-    
-    const response = await api.get(`/api/reports/maintenance?${params}`)
+  generateMaintenanceReport: async (filters = {}) => {
+    const response = await api.post('/api/reports/generate/maintenance', filters)
     return response.data
   },
 
@@ -70,13 +62,8 @@ export const reportService = {
   },
 
   // Financial Reports
-  getFinancialSummary: async (filters = {}) => {
-    const params = new URLSearchParams()
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.append(key, value)
-    })
-    
-    const response = await api.get(`/api/reports/financial?${params}`)
+  generateFinancialSummary: async (filters = {}) => {
+    const response = await api.post('/api/reports/generate/financial', filters)
     return response.data
   },
 

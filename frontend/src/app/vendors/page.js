@@ -141,8 +141,12 @@ export default function VendorsPage() {
   const handleEdit = (vendor) => {
     setFormData({
       name: vendor.name || '',
+      code: vendor.code || '',
+      type: vendor.type || 'Supplier',
+      contactPerson: vendor.contactPerson || '',
       email: vendor.email || '',
       phone: vendor.phone || '',
+      website: vendor.website || '',
       address: vendor.address || '',
       city: vendor.city || '',
       state: vendor.state || '',
@@ -177,6 +181,14 @@ export default function VendorsPage() {
   const filteredVendors = getFilteredVendors()
   const vendorStats = getVendorStats()
 
+  const vendorTypes = [
+    { value: 'SUPPLIER', label: 'Supplier' },
+    { value: 'SERVICE_PROVIDER', label: 'Service Provider' },
+    { value: 'CONTRACTOR', label: 'Contractor' },
+    { value: 'CONSULTANT', label: 'Consultant' },
+    { value: 'MAINTENANCE', label: 'Maintenance' }
+  ]
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -186,14 +198,6 @@ export default function VendorsPage() {
       </DashboardLayout>
     )
   }
-
-  const vendorTypes = [
-    { value: 'SUPPLIER', label: 'Supplier' },
-    { value: 'SERVICE_PROVIDER', label: 'Service Provider' },
-    { value: 'CONTRACTOR', label: 'Contractor' },
-    { value: 'CONSULTANT', label: 'Consultant' },
-    { value: 'MAINTENANCE', label: 'Maintenance' }
-  ]
 
   return (
     <DashboardLayout>
