@@ -1,10 +1,13 @@
 import { create } from 'zustand'
 import { userService } from '@/lib/services/userService'
+import { toast } from '@/hooks/useToast'
 
 interface User {
   id: number
-  name: string
+  firstName: string
+  lastName: string
   email: string
+  username: string
   role: string
   phone?: string
   departmentId?: number
@@ -32,8 +35,10 @@ interface UserState {
   showPasswordModal: boolean
   editingUser: User | null
   formData: {
-    name: string
+    firstName: string
+    lastName: string
     email: string
+    username: string
     role: string
     phone: string
     departmentId: string
@@ -82,8 +87,10 @@ interface UserActions {
 }
 
 const initialFormData = {
-  name: '',
+  firstName: '',
+  lastName: '',
   email: '',
+  username: '',
   role: 'USER',
   phone: '',
   departmentId: '',
@@ -133,10 +140,13 @@ export const useUserStore = create<UserState & UserActions>((set, get) => ({
         departmentId: data.departmentId ? parseInt(data.departmentId.toString()) : null
       }
       await userService.createUser(userData)
-      get().fetchUsers()
+      await get().fetchUsers()
       get().resetForm()
+      toast.success('User created successfully!')
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to create user')
+      const message = error instanceof Error ? error.message : 'Failed to create user'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
@@ -147,19 +157,25 @@ export const useUserStore = create<UserState & UserActions>((set, get) => ({
         departmentId: data.departmentId ? parseInt(data.departmentId.toString()) : null
       }
       await userService.updateUser(id, userData)
-      get().fetchUsers()
+      await get().fetchUsers()
       get().resetForm()
+      toast.success('User updated successfully!')
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to update user')
+      const message = error instanceof Error ? error.message : 'Failed to update user'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
   deleteUser: async (id) => {
     try {
       await userService.deleteUser(id)
-      get().fetchUsers()
-    } catch {
-      throw new Error('Failed to delete user')
+      await get().fetchUsers()
+      toast.success('User deleted successfully!')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete user'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
@@ -167,8 +183,11 @@ export const useUserStore = create<UserState & UserActions>((set, get) => ({
     try {
       await userService.changePassword(id, passwordData)
       get().resetPasswordForm()
+      toast.success('Password changed successfully!')
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to change password')
+      const message = error instanceof Error ? error.message : 'Failed to change password'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
@@ -193,8 +212,10 @@ export const useUserStore = create<UserState & UserActions>((set, get) => ({
     if (user) {
       set({
         formData: {
-          name: user.name || '',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
           email: user.email || '',
+          username: user.username || '',
           role: user.role || 'USER',
           phone: user.phone || '',
           departmentId: user.departmentId?.toString() || '',
@@ -257,8 +278,10 @@ export const useUserStore = create<UserState & UserActions>((set, get) => ({
     if (!Array.isArray(users)) return []
     return users.filter(user => {
       const matchesSearch = !searchTerm || 
-        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.employeeId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.position?.toLowerCase().includes(searchTerm.toLowerCase())
       

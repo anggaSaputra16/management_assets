@@ -1,7 +1,16 @@
 'use client'
 
 import React, { useRef, useEffect, useState } from 'react'
-import Lottie from 'lottie-react'
+import Lottie, { LottieRefCurrentProps } from 'lottie-react'
+
+interface LottieBackgroundProps {
+  animationData: object;
+  speed?: number;
+  loop?: boolean;
+  autoplay?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+}
 
 const LottieBackground = ({
   animationData,
@@ -10,8 +19,8 @@ const LottieBackground = ({
   autoplay = true,
   className = '',
   style = {}
-}) => {
-  const lottieRef = useRef(null)
+}: LottieBackgroundProps) => {
+  const lottieRef = useRef<LottieRefCurrentProps>(null)
   const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
@@ -20,7 +29,7 @@ const LottieBackground = ({
     }
   }, [speed])
 
-  const defaultStyle = {
+  const defaultStyle: React.CSSProperties = {
     position: 'fixed',
     top: 0,
     left: 0,
@@ -29,7 +38,7 @@ const LottieBackground = ({
     zIndex: 1,
     pointerEvents: 'none',
     opacity: 0.8,
-    mixBlendMode: 'multiply',
+    mixBlendMode: 'multiply' as const,
     ...style
   }
 
@@ -53,7 +62,6 @@ const LottieBackground = ({
         }}
         rendererSettings={{
           preserveAspectRatio: 'xMidYMid slice',
-          clearCanvas: false,
           progressiveLoad: true,
           hideOnTransparent: false
         }}

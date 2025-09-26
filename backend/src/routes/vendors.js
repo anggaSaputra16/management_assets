@@ -9,19 +9,22 @@ const router = express.Router();
 const createVendorSchema = Joi.object({
   name: Joi.string().required(),
   code: Joi.string().required(),
-  email: Joi.string().email().optional(),
-  phone: Joi.string().optional(),
-  address: Joi.string().optional(),
-  contactPerson: Joi.string().optional()
+  email: Joi.string().email().allow('').optional(),
+  phone: Joi.string().allow('').optional(),
+  address: Joi.string().allow('').optional(),
+  contactPerson: Joi.string().allow('').optional(),
+  companyId: Joi.string().optional(),
+  isActive: Joi.boolean().optional()
 });
 
 const updateVendorSchema = Joi.object({
   name: Joi.string().optional(),
   code: Joi.string().optional(),
-  email: Joi.string().email().optional(),
-  phone: Joi.string().optional(),
-  address: Joi.string().optional(),
-  contactPerson: Joi.string().optional(),
+  email: Joi.string().email().allow('').optional(),
+  phone: Joi.string().allow('').optional(),
+  address: Joi.string().allow('').optional(),
+  contactPerson: Joi.string().allow('').optional(),
+  companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional()
 });
 
@@ -31,7 +34,9 @@ router.get('/', authenticate, async (req, res, next) => {
     const { page = 1, limit = 10, search, status } = req.query;
     const skip = (page - 1) * limit;
 
-    const where = {};
+    const where = {
+      companyId: req.user.companyId // Filter by user's company
+    };
 
     if (search) {
       where.OR = [
@@ -50,6 +55,13 @@ router.get('/', authenticate, async (req, res, next) => {
       prisma.vendor.findMany({
         where,
         include: {
+          company: {
+            select: {
+              id: true,
+              name: true,
+              code: true
+            }
+          },
           _count: {
             select: {
               assets: true,

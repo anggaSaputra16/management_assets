@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { User } from '@/types'
+import { toast } from '@/hooks/useToast'
 
 interface AuthState {
   user: User | null
@@ -50,6 +51,7 @@ export const useAuthStore = create<AuthState>()(
           token: null,
           isAuthenticated: false
         })
+        toast.info('Logged out successfully')
       },
       updateUser: (user) => set((state) => ({ ...state, user })),
       setHydrated: () => {

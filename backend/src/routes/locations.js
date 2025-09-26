@@ -8,20 +8,39 @@ const router = express.Router();
 // Validation schemas
 const createLocationSchema = Joi.object({
   name: Joi.string().required(),
-  building: Joi.string().optional(),
-  floor: Joi.string().optional(),
-  room: Joi.string().optional(),
-  address: Joi.string().optional(),
-  description: Joi.string().optional()
+  code: Joi.string().allow('').optional(),
+  building: Joi.string().allow('').optional(),
+  floor: Joi.string().allow('').optional(),
+  room: Joi.string().allow('').optional(),
+  address: Joi.string().allow('').optional(),
+  city: Joi.string().allow('').optional(),
+  state: Joi.string().allow('').optional(),
+  country: Joi.string().allow('').optional(),
+  postalCode: Joi.string().allow('').optional(),
+  capacity: Joi.number().integer().min(0).allow(null).optional(),
+  type: Joi.string().valid('OFFICE', 'WAREHOUSE', 'FACTORY', 'RETAIL', 'DATA_CENTER', 'OTHER').optional(),
+  managerId: Joi.string().allow(null, '').optional(),
+  description: Joi.string().allow('').optional(),
+  companyId: Joi.string().optional(),
+  isActive: Joi.boolean().optional()
 });
 
 const updateLocationSchema = Joi.object({
   name: Joi.string().optional(),
-  building: Joi.string().optional(),
-  floor: Joi.string().optional(),
-  room: Joi.string().optional(),
-  address: Joi.string().optional(),
-  description: Joi.string().optional(),
+  code: Joi.string().allow('').optional(),
+  building: Joi.string().allow('').optional(),
+  floor: Joi.string().allow('').optional(),
+  room: Joi.string().allow('').optional(),
+  address: Joi.string().allow('').optional(),
+  city: Joi.string().allow('').optional(),
+  state: Joi.string().allow('').optional(),
+  country: Joi.string().allow('').optional(),
+  postalCode: Joi.string().allow('').optional(),
+  capacity: Joi.number().integer().min(0).allow(null).optional(),
+  type: Joi.string().valid('OFFICE', 'WAREHOUSE', 'FACTORY', 'RETAIL', 'DATA_CENTER', 'OTHER').optional(),
+  managerId: Joi.string().allow(null, '').optional(),
+  description: Joi.string().allow('').optional(),
+  companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional()
 });
 
@@ -31,7 +50,9 @@ router.get('/', authenticate, async (req, res, next) => {
     const { page = 1, limit = 10, search, building, status } = req.query;
     const skip = (page - 1) * limit;
 
-    const where = {};
+    const where = {
+      companyId: req.user.companyId // Filter by user's company
+    };
 
     if (search) {
       where.OR = [
@@ -55,6 +76,13 @@ router.get('/', authenticate, async (req, res, next) => {
       prisma.location.findMany({
         where,
         include: {
+          company: {
+            select: {
+              id: true,
+              name: true,
+              code: true
+            }
+          },
           _count: {
             select: {
               assets: true
@@ -92,7 +120,10 @@ router.get('/', authenticate, async (req, res, next) => {
 router.get('/by-building', authenticate, async (req, res, next) => {
   try {
     const locations = await prisma.location.findMany({
-      where: { isActive: true },
+      where: { 
+        isActive: true,
+        companyId: req.user.companyId // Filter by user's company
+      },
       include: {
         _count: {
           select: {
@@ -131,9 +162,19 @@ router.get('/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const location = await prisma.location.findUnique({
-      where: { id },
+    const location = await prisma.location.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      },
       include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         assets: {
           select: {
             id: true,
@@ -189,26 +230,53 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       });
     }
 
-    // Check if location with same name in same building/floor/room exists
+    const { name, building, floor, room, address, description, companyId } = value;
+
+    // Determine final companyId
+    let finalCompanyId = companyId;
+    if (!finalCompanyId) {
+      // If no companyId provided, use the creating user's companyId
+      finalCompanyId = req.user.companyId;
+    }
+
+    // Check if location with same name in same building/floor/room exists within the company
     const existingLocation = await prisma.location.findFirst({
       where: {
-        name: value.name,
-        building: value.building || null,
-        floor: value.floor || null,
-        room: value.room || null
+        companyId: finalCompanyId,
+        name,
+        building: building || null,
+        floor: floor || null,
+        room: room || null
       }
     });
 
     if (existingLocation) {
       return res.status(400).json({
         success: false,
-        message: 'Location with same details already exists'
+        message: 'Location with same details already exists in this company'
       });
     }
 
     // Create location
     const location = await prisma.location.create({
-      data: value
+      data: {
+        name,
+        building,
+        floor,
+        room,
+        address,
+        description,
+        companyId: finalCompanyId
+      },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        }
+      }
     });
 
     res.status(201).json({
@@ -236,8 +304,11 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
     }
 
     // Check if location exists
-    const existingLocation = await prisma.location.findUnique({
-      where: { id }
+    const existingLocation = await prisma.location.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      }
     });
 
     if (!existingLocation) {
@@ -260,6 +331,7 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
         where: {
           AND: [
             { id: { not: id } },
+            { companyId: req.user.companyId },
             {
               name: checkData.name,
               building: checkData.building,
@@ -273,7 +345,7 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       if (conflict) {
         return res.status(400).json({
           success: false,
-          message: 'Location with same details already exists'
+          message: 'Location with same details already exists in this company'
         });
       }
     }
@@ -283,6 +355,13 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       where: { id },
       data: value,
       include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         _count: {
           select: {
             assets: true

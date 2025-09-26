@@ -31,16 +31,22 @@ const menuItems = [
   { name: 'Inventory', href: '/inventory', icon: Package, roles: ['ADMIN', 'ASSET_ADMIN', 'MANAGER', 'DEPARTMENT_USER', 'TECHNICIAN'] },
   { name: 'Assets', href: '/assets', icon: Package },
   { name: 'Requests', href: '/requests', icon: FileText },
-  { name: 'Users', href: '/users', icon: Users, roles: ['ADMIN', 'ASSET_ADMIN'] },
-  { name: 'Departments', href: '/departments', icon: Building },
   { name: 'Maintenance', href: '/maintenance', icon: Wrench },
   { name: 'Decomposition', href: '/decomposition', icon: GitBranch, roles: ['ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'] },
-  { name: 'Categories', href: '/categories', icon: Settings },
-  { name: 'Locations', href: '/locations', icon: MapPin },
-  { name: 'Vendors', href: '/vendors', icon: Truck },
   { name: 'Audit', href: '/audit', icon: Shield, roles: ['ADMIN', 'AUDITOR'] },
   { name: 'Notifications', href: '/notifications', icon: Bell },
-  { name: 'Reports', href: '/reports', icon: BarChart3 }
+  { name: 'Reports', href: '/reports', icon: BarChart3 },
+  // Master Data Section
+  { name: 'Master Data', href: '/master', icon: Settings, roles: ['ADMIN', 'ASSET_ADMIN'], isSection: true },
+  { name: 'Companies', href: '/master/companies', icon: Building, roles: ['ADMIN'], parent: 'Master Data' },
+  { name: 'Users', href: '/users', icon: Users, roles: ['ADMIN', 'ASSET_ADMIN'], parent: 'Master Data' },
+  { name: 'Departments', href: '/departments', icon: Building, parent: 'Master Data' },
+  { name: 'Positions', href: '/master/positions', icon: User, roles: ['ADMIN', 'ASSET_ADMIN'], parent: 'Master Data' },
+  { name: 'Categories', href: '/categories', icon: Settings, parent: 'Master Data' },
+  { name: 'Locations', href: '/locations', icon: MapPin, parent: 'Master Data' },
+  { name: 'Vendors', href: '/vendors', icon: Truck, parent: 'Master Data' },
+  { name: 'Software Assets', href: '/master/software-assets', icon: Package, roles: ['ADMIN', 'ASSET_ADMIN'], parent: 'Master Data' },
+  { name: 'Spare Parts', href: '/master/spare-parts', icon: Settings, roles: ['ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'], parent: 'Master Data' }
 ]
 
 export default function DashboardLayout({ children, title }) {

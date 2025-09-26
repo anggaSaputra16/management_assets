@@ -1,7 +1,7 @@
 import { api } from '../api'
 
 export const notificationService = {
-  // Get all notifications for current user
+  // Get all notifications for current user - companyId auto-injected by api interceptor
   getNotifications: async (params = {}) => {
     const { page = 1, limit = 20, isRead, type } = params
     const queryParams = new URLSearchParams({
@@ -21,31 +21,31 @@ export const notificationService = {
     return response.data
   },
 
-  // Get notification by ID
+  // Get notification by ID - companyId validation on backend
   getNotification: async (id) => {
     const response = await api.get(`/notifications/${id}`)
     return response.data
   },
 
-  // Create notification (Admin/Asset Admin only)
+  // Create notification - companyId auto-injected (Admin/Asset Admin only)
   createNotification: async (notificationData) => {
     const response = await api.post('/notifications', notificationData)
     return response.data
   },
 
-  // Broadcast notification to multiple users (Admin/Asset Admin only)
+  // Broadcast notification to multiple users - companyId context (Admin/Asset Admin only)
   broadcastNotification: async (broadcastData) => {
     const response = await api.post('/notifications/broadcast', broadcastData)
     return response.data
   },
 
-  // Broadcast to role (Admin/Asset Admin only)
+  // Broadcast to role - companyId context (Admin/Asset Admin only)
   broadcastToRole: async (roleData) => {
     const response = await api.post('/notifications/broadcast-role', roleData)
     return response.data
   },
 
-  // Mark notifications as read
+  // Mark notifications as read - companyId validation on backend
   markAsRead: async (notificationIds) => {
     const response = await api.put('/notifications/mark-read', {
       notificationIds

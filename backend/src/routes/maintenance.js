@@ -14,7 +14,8 @@ const createMaintenanceSchema = Joi.object({
   technicianId: Joi.string().optional(),
   vendorId: Joi.string().optional(),
   cost: Joi.number().positive().optional(),
-  notes: Joi.string().optional()
+  notes: Joi.string().optional(),
+  companyId: Joi.string().optional()
 });
 
 const updateMaintenanceSchema = Joi.object({
@@ -43,13 +44,17 @@ router.get('/', authenticate, async (req, res, next) => {
     } = req.query;
     
     const skip = (page - 1) * limit;
-    const where = {};
+    const companyId = req.user.companyId;
+    const where = {
+      asset: { companyId }
+    };
 
     // Role-based filtering
     if (req.user.role === 'TECHNICIAN') {
       where.technicianId = req.user.id;
     } else if (req.user.role === 'DEPARTMENT_USER') {
       where.asset = {
+        companyId,
         departmentId: req.user.departmentId
       };
     }

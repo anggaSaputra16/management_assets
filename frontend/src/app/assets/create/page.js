@@ -19,6 +19,7 @@ export default function CreateAssetPage() {
     description: '',
     assetTag: '',
     serialNumber: '',
+    poNumber: '',
     categoryId: '',
     locationId: '',
     vendorId: '',
@@ -164,6 +165,21 @@ export default function CreateAssetPage() {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                   placeholder="Enter serial number"
+                />
+              </div>
+
+              {/* PO Number */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  PO Number
+                </label>
+                <input
+                  type="text"
+                  name="poNumber"
+                  value={formData.poNumber}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
+                  placeholder="Enter purchase order number"
                 />
               </div> 
 

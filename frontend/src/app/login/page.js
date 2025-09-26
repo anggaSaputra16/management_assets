@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { Eye, EyeOff, Building2 } from 'lucide-react'
 import api from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
+import { toast } from '@/hooks/useToast'
 
 const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
@@ -45,17 +46,19 @@ export default function LoginPage() {
       if (response.data.success) {
         const { user, token } = response.data.data
         login(user, token)
+        toast.success('Login successful!')
         
         // Force navigation to dashboard
         window.location.href = '/dashboard'
       } else {
+        toast.error(response.data.message || 'Login gagal')
         setError('root', { message: response.data.message || 'Login gagal' })
       }
     } catch (error) {
       console.error('Login error:', error)
-      setError('root', { 
-        message: error.response?.data?.message || 'Gagal terhubung ke server. Pastikan backend berjalan.' 
-      })
+      const errorMessage = error.response?.data?.message || 'Gagal terhubung ke server. Pastikan backend berjalan.'
+      // API interceptor will show the toast, but we still want to set form error
+      setError('root', { message: errorMessage })
     } finally {
       setIsLoading(false)
     }

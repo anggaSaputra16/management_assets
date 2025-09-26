@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   // Enable hot reload in Docker
   experimental: {
     // Enable hot reload for Docker development
+    optimizePackageImports: ['lucide-react']
   },
   // Configure for Docker development
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
@@ -13,6 +14,7 @@ const nextConfig: NextConfig = {
       config.watchOptions = {
         poll: 1000,
         aggregateTimeout: 300,
+        ignored: /node_modules/,
       };
     }
     return config;

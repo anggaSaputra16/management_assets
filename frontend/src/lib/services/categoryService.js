@@ -1,7 +1,7 @@
 import { api } from '../api'
 
 export const categoryService = {
-  // Get all categories
+  // Get all categories - companyId auto-injected by api interceptor
   getAllCategories: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString()
     const url = queryString ? `/categories?${queryString}` : '/categories'
@@ -9,25 +9,25 @@ export const categoryService = {
     return response.data
   },
 
-  // Get category by ID
+  // Get category by ID - companyId validation on backend
   getCategoryById: async (id) => {
     const response = await api.get(`/categories/${id}`)
     return response.data
   },
 
-  // Create new category
+  // Create new category - companyId auto-injected
   createCategory: async (categoryData) => {
     const response = await api.post('/categories', categoryData)
     return response.data
   },
 
-  // Update category
+  // Update category - companyId auto-injected
   updateCategory: async (id, categoryData) => {
     const response = await api.put(`/categories/${id}`, categoryData)
     return response.data
   },
 
-  // Delete category
+  // Delete category - companyId validation on backend
   deleteCategory: async (id) => {
     const response = await api.delete(`/categories/${id}`)
     return response.data

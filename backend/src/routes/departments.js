@@ -9,17 +9,22 @@ const router = express.Router();
 const createDepartmentSchema = Joi.object({
   name: Joi.string().required(),
   code: Joi.string().required(),
-  description: Joi.string().optional(),
-  managerId: Joi.string().optional(),
-  budgetLimit: Joi.number().positive().optional()
+  description: Joi.string().allow('').optional(),
+  managerId: Joi.string().allow(null, '').optional(),
+  parentId: Joi.string().allow(null, '').optional(),
+  budgetLimit: Joi.number().positive().allow(null).optional(),
+  companyId: Joi.string().optional(),
+  isActive: Joi.boolean().optional()
 });
 
 const updateDepartmentSchema = Joi.object({
   name: Joi.string().optional(),
   code: Joi.string().optional(),
-  description: Joi.string().optional(),
-  managerId: Joi.string().optional(),
-  budgetLimit: Joi.number().positive().optional(),
+  description: Joi.string().allow('').optional(),
+  managerId: Joi.string().allow(null, '').optional(),
+  parentId: Joi.string().allow(null, '').optional(),
+  budgetLimit: Joi.number().positive().allow(null).optional(),
+  companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional()
 });
 
@@ -29,7 +34,9 @@ router.get('/', authenticate, async (req, res, next) => {
     const { page = 1, limit = 10, search, status } = req.query;
     const skip = (page - 1) * limit;
 
-    const where = {};
+    const where = {
+      companyId: req.user.companyId // Filter by user's company
+    };
 
     if (search) {
       where.OR = [
@@ -47,6 +54,13 @@ router.get('/', authenticate, async (req, res, next) => {
       prisma.department.findMany({
         where,
         include: {
+          company: {
+            select: {
+              id: true,
+              name: true,
+              code: true
+            }
+          },
           manager: {
             select: {
               id: true,
@@ -90,9 +104,19 @@ router.get('/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const department = await prisma.department.findUnique({
-      where: { id },
+    const department = await prisma.department.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      },
       include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         manager: {
           select: {
             id: true,
@@ -158,11 +182,19 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       });
     }
 
-    const { name, code, description, managerId, budgetLimit } = value;
+    const { name, code, description, managerId, budgetLimit, companyId } = value;
 
-    // Check if department name or code already exists
+    // Determine final companyId
+    let finalCompanyId = companyId;
+    if (!finalCompanyId) {
+      // If no companyId provided, use the creating user's companyId
+      finalCompanyId = req.user.companyId;
+    }
+
+    // Check if department name or code already exists within the company
     const existingDepartment = await prisma.department.findFirst({
       where: {
+        companyId: finalCompanyId,
         OR: [
           { name },
           { code }
@@ -173,14 +205,17 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
     if (existingDepartment) {
       return res.status(400).json({
         success: false,
-        message: 'Department with this name or code already exists'
+        message: 'Department with this name or code already exists in this company'
       });
     }
 
-    // If managerId provided, check if user exists and is eligible
+    // If managerId provided, check if user exists and is eligible within the same company
     if (managerId) {
-      const manager = await prisma.user.findUnique({
-        where: { id: managerId }
+      const manager = await prisma.user.findFirst({
+        where: { 
+          id: managerId,
+          companyId: finalCompanyId
+        }
       });
 
       if (!manager || !['MANAGER', 'ADMIN'].includes(manager.role)) {
@@ -198,9 +233,17 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         code,
         description,
         managerId,
-        budgetLimit
+        budgetLimit,
+        companyId: finalCompanyId
       },
       include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         manager: {
           select: {
             id: true,
@@ -237,8 +280,11 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
     }
 
     // Check if department exists
-    const existingDepartment = await prisma.department.findUnique({
-      where: { id }
+    const existingDepartment = await prisma.department.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      }
     });
 
     if (!existingDepartment) {
@@ -248,12 +294,13 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       });
     }
 
-    // Check for name/code conflicts (excluding current department)
+    // Check for name/code conflicts (excluding current department, within same company)
     if (value.name || value.code) {
       const conflicts = await prisma.department.findFirst({
         where: {
           AND: [
             { id: { not: id } },
+            { companyId: req.user.companyId },
             {
               OR: [
                 ...(value.name ? [{ name: value.name }] : []),
@@ -267,15 +314,18 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       if (conflicts) {
         return res.status(400).json({
           success: false,
-          message: 'Department name or code already exists'
+          message: 'Department name or code already exists in this company'
         });
       }
     }
 
-    // If managerId provided, validate manager
+    // If managerId provided, validate manager within same company
     if (value.managerId) {
-      const manager = await prisma.user.findUnique({
-        where: { id: value.managerId }
+      const manager = await prisma.user.findFirst({
+        where: { 
+          id: value.managerId,
+          companyId: req.user.companyId
+        }
       });
 
       if (!manager || !['MANAGER', 'ADMIN'].includes(manager.role)) {
@@ -291,6 +341,13 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       where: { id },
       data: value,
       include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         manager: {
           select: {
             id: true,
@@ -324,8 +381,11 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res, next) =
     const { id } = req.params;
 
     // Check if department exists
-    const department = await prisma.department.findUnique({
-      where: { id },
+    const department = await prisma.department.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      },
       include: {
         _count: {
           select: {
@@ -372,8 +432,11 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
     const { id } = req.params;
 
     // Check if department exists
-    const department = await prisma.department.findUnique({
-      where: { id }
+    const department = await prisma.department.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      }
     });
 
     if (!department) {
@@ -384,6 +447,8 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
     }
 
     // Get various statistics
+    const companyFilter = { companyId: req.user.companyId };
+    
     const [
       totalUsers,
       totalAssets,
@@ -393,24 +458,24 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       totalAssetValue
     ] = await Promise.all([
       prisma.user.count({
-        where: { departmentId: id, isActive: true }
+        where: { ...companyFilter, departmentId: id, isActive: true }
       }),
       prisma.asset.count({
-        where: { departmentId: id, isActive: true }
+        where: { ...companyFilter, departmentId: id, isActive: true }
       }),
       prisma.assetRequest.count({
-        where: { departmentId: id, status: 'PENDING' }
+        where: { ...companyFilter, departmentId: id, status: 'PENDING' }
       }),
       prisma.assetRequest.count({
-        where: { departmentId: id, status: 'APPROVED' }
+        where: { ...companyFilter, departmentId: id, status: 'APPROVED' }
       }),
       prisma.asset.groupBy({
         by: ['status'],
-        where: { departmentId: id, isActive: true },
+        where: { ...companyFilter, departmentId: id, isActive: true },
         _count: true
       }),
       prisma.asset.aggregate({
-        where: { departmentId: id, isActive: true },
+        where: { ...companyFilter, departmentId: id, isActive: true },
         _sum: { currentValue: true }
       })
     ]);

@@ -1,7 +1,7 @@
 import { api } from '../api'
 
 export const maintenanceService = {
-  // Get all maintenance records
+  // Get all maintenance records - companyId auto-injected by api interceptor
   getAllMaintenance: async () => {
     try {
       const response = await api.get('/maintenance')
@@ -12,7 +12,7 @@ export const maintenanceService = {
     }
   },
 
-  // Get maintenance by ID
+  // Get maintenance by ID - companyId validation on backend
   getMaintenanceById: async (id) => {
     try {
       const response = await api.get(`/maintenance/${id}`)
@@ -23,7 +23,7 @@ export const maintenanceService = {
     }
   },
 
-  // Create new maintenance record
+  // Create new maintenance record - companyId auto-injected
   createMaintenance: async (maintenanceData) => {
     try {
       const response = await api.post('/maintenance', maintenanceData)
@@ -34,7 +34,7 @@ export const maintenanceService = {
     }
   },
 
-  // Update maintenance record
+  // Update maintenance record - companyId auto-injected
   updateMaintenance: async (id, maintenanceData) => {
     try {
       const response = await api.put(`/maintenance/${id}`, maintenanceData)
@@ -45,7 +45,7 @@ export const maintenanceService = {
     }
   },
 
-  // Delete maintenance record
+  // Delete maintenance record - companyId validation on backend
   deleteMaintenance: async (id) => {
     try {
       const response = await api.delete(`/maintenance/${id}`)

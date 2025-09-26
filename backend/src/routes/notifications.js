@@ -10,7 +10,8 @@ const createNotificationSchema = Joi.object({
   title: Joi.string().required(),
   message: Joi.string().required(),
   type: Joi.string().valid('REQUEST_APPROVAL', 'ASSET_ALLOCATION', 'MAINTENANCE_DUE', 'AUDIT_SCHEDULED', 'GENERAL').required(),
-  userId: Joi.string().required()
+  userId: Joi.string().required(),
+  companyId: Joi.string().optional()
 });
 
 const markAsReadSchema = Joi.object({
@@ -24,7 +25,8 @@ router.get('/', authenticate, async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const where = {
-      userId: req.user.id
+      userId: req.user.id,
+      companyId: req.user.companyId
     };
 
     if (isRead !== undefined) {
@@ -46,6 +48,7 @@ router.get('/', authenticate, async (req, res, next) => {
       prisma.notification.count({
         where: {
           userId: req.user.id,
+          companyId: req.user.companyId,
           isRead: false
         }
       })

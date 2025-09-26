@@ -1,8 +1,10 @@
-import type { Metadata } from "next";
+import React from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/contexts/ToastContext";
+import ToastContainer from "@/components/ToastContainer";
 import WaveBackground from "@/components/WaveBackground";
+import HydrationProvider from "@/components/HydrationProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,16 +16,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Asset Management System",
   description: "Comprehensive Asset Management System",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
@@ -31,7 +29,10 @@ export default function RootLayout({
       >
         <WaveBackground opacity={0.9} speed={0.3} />
         <ToastProvider>
-          {children}
+          <HydrationProvider>
+            {children}
+            <ToastContainer />
+          </HydrationProvider>
         </ToastProvider>
       </body>
     </html>

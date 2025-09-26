@@ -16,6 +16,7 @@ interface Maintenance {
   actualCost?: number
   notes?: string
   attachments?: string[]
+  companyId: number // Added for multi-company support
   createdAt: string
   updatedAt: string
   asset?: {

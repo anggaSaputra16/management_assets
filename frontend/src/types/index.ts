@@ -2,8 +2,27 @@ export interface User {
   id: string
   email: string
   name: string
+  firstName?: string
+  lastName: string
+  username?: string
   role: 'ADMIN' | 'ASSET_ADMIN' | 'MANAGER' | 'DEPARTMENT_USER' | 'TECHNICIAN' | 'AUDITOR' | 'TOP_MANAGEMENT'
   department?: string
+  departmentId?: string
+  companyId: string
+  company?: Company
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Company {
+  id: string
+  name: string
+  description?: string
+  address?: string
+  phone?: string
+  email?: string
+  website?: string
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -13,18 +32,43 @@ export interface Asset {
   id: string
   name: string
   description?: string
-  serialNumber: string
+  serialNumber?: string
   assetTag: string
   status: 'AVAILABLE' | 'IN_USE' | 'MAINTENANCE' | 'RETIRED' | 'LOST'
   condition: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR'
-  purchaseDate: string
-  purchasePrice: number
-  currentValue: number
+  purchaseDate?: string
+  purchasePrice?: number
+  currentValue?: number
   warrantyExpiry?: string
+  
+  // Multi-company support
+  companyId: string
+  company?: Company
+  
+  // Relations - ID fields
+  categoryId: string
+  locationId: string
+  departmentId?: string
+  vendorId?: string
+  assignedToId?: string
+  
+  // Relations - object fields
   category?: Category
   location?: Location
   vendor?: Vendor
   assignedUser?: User
+  department?: Department
+  
+  // Additional fields
+  model?: string
+  brand?: string
+  poNumber?: string
+  depreciationRate?: number
+  qrCode?: string
+  qrCodeImage?: string
+  imageUrl?: string
+  specifications?: Record<string, string>
+  
   createdAt: string
   updatedAt: string
 }
@@ -34,6 +78,10 @@ export interface Category {
   name: string
   description?: string
   color: string
+  parentId?: string
+  parent?: Category
+  companyId: string
+  company?: Company
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -44,6 +92,11 @@ export interface Location {
   name: string
   address?: string
   description?: string
+  building?: string
+  floor?: string
+  room?: string
+  companyId: string
+  company?: Company
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -53,8 +106,14 @@ export interface Department {
   id: string
   name: string
   description?: string
+  code: string
   budget?: number
+  parentId?: string
+  parent?: Department
+  managerId?: string
   manager?: User
+  companyId: string
+  company?: Company
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -63,11 +122,14 @@ export interface Department {
 export interface Vendor {
   id: string
   name: string
+  code: string
   contactPerson?: string
   email?: string
   phone?: string
   address?: string
   website?: string
+  companyId: string
+  company?: Company
   isActive: boolean
   createdAt: string
   updatedAt: string

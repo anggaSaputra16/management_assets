@@ -18,3 +18,5 @@ export { useInventoryStore } from './inventoryStore'
 // Asset components and specifications
 export { useAssetComponentStore } from './assetComponentStore'
 export { useAssetSpecificationStore } from './assetSpecificationStore'
+export { useDepreciationStore } from './depreciationStore'
+export { useTransferStore } from './transferStore'

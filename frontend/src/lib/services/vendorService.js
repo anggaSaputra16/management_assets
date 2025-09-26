@@ -1,7 +1,7 @@
 import { api } from '../api'
 
 export const vendorService = {
-  // Get all vendors
+  // Get all vendors - companyId auto-injected by api interceptor
   getAllVendors: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString()
     const url = queryString ? `/vendors?${queryString}` : '/vendors'
@@ -9,43 +9,43 @@ export const vendorService = {
     return response.data
   },
 
-  // Get vendor by ID
+  // Get vendor by ID - companyId validation on backend
   getVendorById: async (id) => {
     const response = await api.get(`/vendors/${id}`)
     return response.data
   },
 
-  // Create new vendor
+  // Create new vendor - companyId auto-injected
   createVendor: async (vendorData) => {
     const response = await api.post('/vendors', vendorData)
     return response.data
   },
 
-  // Update vendor
+  // Update vendor - companyId auto-injected
   updateVendor: async (id, vendorData) => {
     const response = await api.put(`/vendors/${id}`, vendorData)
     return response.data
   },
 
-  // Delete vendor
+  // Delete vendor - companyId validation on backend
   deleteVendor: async (id) => {
     const response = await api.delete(`/vendors/${id}`)
     return response.data
   },
 
-  // Get vendor statistics
+  // Get vendor statistics - companyId filtered
   getVendorStats: async () => {
     const response = await api.get('/vendors/stats')
     return response.data
   },
 
-  // Search vendors
+  // Search vendors - companyId filtered
   searchVendors: async (searchTerm) => {
     const response = await api.get(`/vendors/search?q=${encodeURIComponent(searchTerm)}`)
     return response.data
   },
 
-  // Get vendors by type
+  // Get vendors by type - companyId filtered
   getVendorsByType: async (type) => {
     const response = await api.get(`/vendors?type=${type}`)
     return response.data

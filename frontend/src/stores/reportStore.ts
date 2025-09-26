@@ -154,7 +154,7 @@ export const useReportStore = create<ReportState & ReportActions>((set, get) => 
         priority: filters.priority ?? currentFilters.priority,
         type: filters.type ?? currentFilters.type,
       }
-      const response = await reportService.getAssetReport(finalFilters)
+      const response = await reportService.generateAssetReport(finalFilters)
       set(state => ({
         reports: {
           ...state.reports,
@@ -188,7 +188,7 @@ export const useReportStore = create<ReportState & ReportActions>((set, get) => 
         priority: filters.priority ?? currentFilters.priority,
         type: filters.type ?? currentFilters.type,
       }
-      const response = await reportService.getAssetDepreciationReport(finalFilters)
+      const response = await reportService.generateDepreciationReport(finalFilters)
       set(state => ({
         reports: {
           ...state.reports,
@@ -257,7 +257,7 @@ export const useReportStore = create<ReportState & ReportActions>((set, get) => 
         priority: filters.priority ?? currentFilters.priority,
         type: filters.type ?? currentFilters.type,
       }
-      const response = await reportService.getRequestReport(finalFilters)
+      const response = await reportService.generateRequestReport(finalFilters)
       set(state => ({
         reports: {
           ...state.reports,
@@ -316,7 +316,7 @@ export const useReportStore = create<ReportState & ReportActions>((set, get) => 
         priority: filters.priority ?? currentFilters.priority,
         type: filters.type ?? currentFilters.type,
       }
-      const response = await reportService.getMaintenanceReport(finalFilters)
+      const response = await reportService.generateMaintenanceReport(finalFilters)
       set(state => ({
         reports: {
           ...state.reports,
@@ -385,7 +385,7 @@ export const useReportStore = create<ReportState & ReportActions>((set, get) => 
         priority: filters.priority ?? currentFilters.priority,
         type: filters.type ?? currentFilters.type,
       }
-      const response = await reportService.getFinancialSummary(finalFilters)
+      const response = await reportService.generateFinancialSummary(finalFilters)
       set(state => ({
         reports: {
           ...state.reports,

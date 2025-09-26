@@ -252,6 +252,40 @@ export default function AssetDetailPage() {
           </div>
           <div className="flex items-center space-x-3">
             <button
+              onClick={() => router.push(`/assets/${currentAsset.id}/qr-code`)}
+              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="5" height="5" strokeWidth={2} />
+                <rect x="3" y="16" width="5" height="5" strokeWidth={2} />
+                <rect x="16" y="3" width="5" height="5" strokeWidth={2} />
+                <line x1="9" y1="9" x2="9" y2="10" strokeWidth={2} />
+                <line x1="9" y1="13" x2="9" y2="14" strokeWidth={2} />
+                <line x1="12" y1="9" x2="13" y2="9" strokeWidth={2} />
+                <line x1="12" y1="12" x2="12" y2="13" strokeWidth={2} />
+                <line x1="12" y1="16" x2="12" y2="17" strokeWidth={2} />
+                <line x1="16" y1="12" x2="17" y2="12" strokeWidth={2} />
+                <line x1="11" y1="17" x2="12" y2="17" strokeWidth={2} />
+              </svg>
+              QR Code
+            </button>
+            <button
+              onClick={() => router.push(`/assets/transfer?assetId=${currentAsset.id}`)}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              <ArrowRightLeft className="h-4 w-4 mr-2" />
+              Transfer
+            </button>
+            <button
+              onClick={() => router.push(`/assets/depreciation?assetId=${currentAsset.id}`)}
+              className="flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+            >
+              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLineJoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+              </svg>
+              Depreciation
+            </button>
+            <button
               onClick={() => router.push(`/assets/${currentAsset.id}/edit`)}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >

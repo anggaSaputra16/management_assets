@@ -1,10 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { useAssetStore, useCategoryStore, useLocationStore, useDepartmentStore, useVendorStore } from '@/stores'
 import { useToast } from '@/contexts/ToastContext'
 import QRCodeScanner from '@/components/QRCodeScanner'
+import QRCodeDisplay from '@/components/QRCodeDisplay'
 import AssetSpecifications from '@/components/AssetSpecifications'
+import AssetDetailModal from '@/components/AssetDetailModal'
+import TransferModal from '@/components/TransferModal'
+import DepreciationModal from '@/components/DepreciationModal'
 import {
   Package,
   Plus,
@@ -68,6 +73,10 @@ const AssetsPage = () => {
   const [showImportModal, setShowImportModal] = useState(false)
   const [importData, setImportData] = useState('')
   const [importResults, setImportResults] = useState(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [selectedAssetId, setSelectedAssetId] = useState(null)
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [showDepreciationModal, setShowDepreciationModal] = useState(false)
   const itemsPerPage = 10
 
   const filteredAssets = getFilteredAssets()
@@ -117,22 +126,73 @@ const AssetsPage = () => {
     }
 
     try {
+      // Clean up form data before sending
+      const dataToSend = {
+        name: formData.name?.trim(),
+        description: formData.description?.trim() || null,
+        serialNumber: formData.serialNumber?.trim() || null,
+        model: formData.model?.trim() || null,
+        brand: formData.brand?.trim() || null,
+        poNumber: formData.poNumber?.trim() || null,
+        categoryId: formData.categoryId,
+        locationId: formData.locationId,
+        departmentId: formData.departmentId || null,
+        vendorId: formData.vendorId || null,
+        status: formData.status || 'ACTIVE',
+        condition: formData.condition || 'GOOD',
+        purchaseDate: formData.purchaseDate || null,
+        purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
+        warrantyExpiry: formData.warrantyExpiry || null,
+        specifications: formData.specifications || {}
+      }
+
       if (editingAsset) {
-        await updateAsset(editingAsset.id, formData)
+        await updateAsset(editingAsset.id, dataToSend)
         showSuccess('Asset updated successfully!')
       } else {
-        await createAsset(formData)
+        await createAsset(dataToSend)
         showSuccess('Asset created successfully!')
       }
       setShowModal(false)
     } catch (error) {
       console.error('Failed to save asset:', error)
-      showError('Failed to save asset. Please try again.')
+      showError(error.message || 'Failed to save asset. Please try again.')
     }
   }
 
   const handleEdit = (asset) => {
     setEditingAsset(asset)
+    setFormData({
+      name: asset.name || '',
+      description: asset.description || '',
+      assetTag: asset.assetTag || '',
+      categoryId: asset.categoryId || '',
+      locationId: asset.locationId || '',
+      departmentId: asset.departmentId || '',
+      vendorId: asset.vendorId || '',
+      model: asset.model || '',
+      serialNumber: asset.serialNumber || '',
+      brand: asset.brand || '',
+      poNumber: asset.poNumber || '',
+      status: asset.status || 'ACTIVE',
+      condition: asset.condition || 'GOOD',
+      purchaseDate: asset.purchaseDate || '',
+      purchasePrice: asset.purchasePrice || '',
+      warrantyExpiry: asset.warrantyExpiry || '',
+      specifications: asset.specifications || {}
+    })
+    setShowModal(true)
+  }
+  
+  const handleImageUpload = async (assetId, file) => {
+    try {
+      await assetService.uploadAssetImage(assetId, file)
+      await fetchAssets() // Refresh to get updated image URL
+      showSuccess('Image uploaded successfully')
+    } catch (error) {
+      console.error('Image upload error:', error)
+      showError('Failed to upload image')
+    }
   }
 
   const handleDelete = (asset) => {
@@ -274,68 +334,89 @@ const AssetsPage = () => {
   }
 
   // QR Code handlers
-  const handleQRScan = async (qrData) => {
+  const handleQRScan = async (scanResult) => {
     try {
-      const response = await fetch('/api/assets/scan-qr', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          qrData: typeof qrData === 'string' ? qrData : JSON.stringify(qrData),
-          scanLocation: 'Assets List',
-          scanContext: 'SEARCH'
-        })
-      })
-
-      const result = await response.json()
+      setShowQRScanner(false);
       
-      if (result.success) {
-        setShowQRScanner(false)
-        // Navigate to asset details or show in modal
-        if (result.data?.id) {
-          showInfo(`Found asset: ${result.data.name} (${result.data.assetTag})`)
-          // Scroll to asset or highlight it
-          const assetElement = document.querySelector(`[data-asset-id="${result.data.id}"]`)
+      if (scanResult.success) {
+        // If we have an asset object in the scan result
+        if (scanResult.asset && scanResult.asset.id) {
+          const { asset } = scanResult;
+          showInfo(`Found asset: ${asset.name} (${asset.assetTag})`);
+          
+          // Scroll to and highlight the asset in the list
+          const assetElement = document.querySelector(`[data-asset-id="${asset.id}"]`);
           if (assetElement) {
-            assetElement.scrollIntoView({ behavior: 'smooth' })
-            assetElement.classList.add('ring-2', 'ring-blue-500')
+            assetElement.scrollIntoView({ behavior: 'smooth' });
+            assetElement.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
             setTimeout(() => {
-              assetElement.classList.remove('ring-2', 'ring-blue-500')
-            }, 3000)
+              assetElement.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
+            }, 3000);
+          } else {
+            // If asset not visible in current filtered list, reset filters
+            setSearchTerm('');
+            setStatusFilter('');
+            setConditionFilter('');
+            showInfo('Filters reset to show the scanned asset');
+            
+            // Fetch the asset and then scroll to it
+            setTimeout(() => {
+              const updatedAssetElement = document.querySelector(`[data-asset-id="${asset.id}"]`);
+              if (updatedAssetElement) {
+                updatedAssetElement.scrollIntoView({ behavior: 'smooth' });
+                updatedAssetElement.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
+                setTimeout(() => {
+                  updatedAssetElement.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
+                }, 3000);
+              }
+            }, 500);
           }
+        } else if (scanResult.id) {
+          // Just got an ID, search for it in our assets
+          const asset = assets.find(a => a.id === scanResult.id);
+          if (asset) {
+            showInfo(`Found asset: ${asset.name} (${asset.assetTag})`);
+            // Same highlighting logic
+            const assetElement = document.querySelector(`[data-asset-id="${asset.id}"]`);
+            if (assetElement) {
+              assetElement.scrollIntoView({ behavior: 'smooth' });
+              assetElement.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
+              setTimeout(() => {
+                assetElement.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
+              }, 3000);
+            }
+          } else {
+            // Asset ID from QR not found in current list
+            showError('Asset not found in current view. Try refreshing the list.');
+          }
+        } else {
+          showInfo('QR code scanned, but no asset information found.');
         }
       } else {
-        showError(result.message || 'QR code scan failed')
+        showError(scanResult.error || 'QR code scan failed');
       }
     } catch (error) {
-      console.error('QR scan error:', error)
-      showError('Failed to process QR code')
+      console.error('QR scan handling error:', error);
+      showError('Failed to process QR code');
     }
   }
 
   const handleGenerateQR = async (assetId) => {
     try {
-      const response = await fetch(`/api/assets/${assetId}/generate-qr`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-
-      const result = await response.json()
+      // Use the store's filtered assets function to find the asset
+      const assets = getFilteredAssets();
+      const asset = assets.find(a => a.id === assetId);
       
-      if (result.success) {
-        showSuccess('QR code generated successfully!')
-        await fetchAssets()
+      if (asset) {
+        setSelectedAssetForQR(asset);
+        setShowQRModal(true);
+        showSuccess('QR code viewer opened');
       } else {
-        showError(result.message || 'Failed to generate QR code')
+        showError('Asset not found');
       }
     } catch (error) {
-      console.error('QR generation error:', error)
-      showError('Failed to generate QR code')
+      console.error('QR generation error:', error);
+      showError('Failed to generate QR code');
     }
   }
 
@@ -574,6 +655,34 @@ const AssetsPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Brand
+                </label>
+                <input
+                  type="text"
+                  name="brand"
+                  value={formData.brand}
+                  onChange={handleFormChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  PO Number
+                </label>
+                <input
+                  type="text"
+                  name="poNumber"
+                  value={formData.poNumber}
+                  onChange={handleFormChange}
+                  placeholder="Purchase Order Number"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Status
                 </label>
                 <select
@@ -677,15 +786,58 @@ const AssetsPage = () => {
               />
             </div>
 
+            {/* Image Upload */}
+            {editingAsset && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Asset Image
+                </label>
+                <div className="flex items-center space-x-4">
+                  {editingAsset.imageUrl && (
+                    <div className="w-24 h-24 border rounded-lg overflow-hidden flex-shrink-0">
+                      <Image 
+                        src={editingAsset.imageUrl} 
+                        alt={editingAsset.name}
+                        width={96}
+                        height={96}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-grow">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleImageUpload(editingAsset.id, e.target.files[0]);
+                        }
+                      }}
+                      className="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Upload an image for this asset (JPEG, PNG, WebP)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Asset Specifications */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Specifications
               </label>
               <AssetSpecifications
+                asset={editingAsset || { specifications: formData.specifications || {} }}
                 category={selectedCategory}
-                specifications={formData.specifications || {}}
-                onChange={(specs) => handleFormChange('specifications', specs)}
+                onUpdate={(specData) => handleFormChange('specifications', specData.specifications)}
+                readOnly={false}
               />
             </div>
 
@@ -836,62 +988,12 @@ const AssetsPage = () => {
   }
 
   const renderQRModal = () => {
-    if (!showQRModal || !selectedAssetForQR) return null
-
     return (
-      <div className="fixed inset-0 glass-modal-backdrop flex items-center justify-center p-4 z-50">
-        <div className="glass-modal max-w-md w-full">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">QR Code</h3>
-              <button
-                onClick={() => setShowQRModal(false)}
-                className="text-gray-500 hover:text-gray-700 glass-button p-2 rounded-lg transition-all"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="text-center">
-              <h4 className="text-md font-medium text-gray-900 mb-2">
-                {selectedAssetForQR.name}
-              </h4>
-              <p className="text-sm text-gray-600 mb-4">
-                Asset Tag: {selectedAssetForQR.assetTag}
-              </p>
-              
-              <div className="flex justify-center mb-4">
-                <img 
-                  src={`/api${selectedAssetForQR.qrCodeImage}`}
-                  alt="QR Code"
-                  className="max-w-xs max-h-xs border border-gray-200 rounded"
-                />
-              </div>
-              
-              <div className="flex justify-center space-x-3">
-                <button
-                  onClick={() => {
-                    const link = document.createElement('a')
-                    link.href = `/api${selectedAssetForQR.qrCodeImage}`
-                    link.download = `qr-${selectedAssetForQR.assetTag}.png`
-                    link.click()
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  <Download className="h-4 w-4 mr-2 inline" />
-                  Download
-                </button>
-                <button
-                  onClick={() => window.print()}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Print
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <QRCodeDisplay 
+        asset={selectedAssetForQR} 
+        isOpen={showQRModal} 
+        onClose={() => setShowQRModal(false)}
+      />
     )
   }
 
@@ -1112,7 +1214,14 @@ const AssetsPage = () => {
                             <QrCode className="h-4 w-4 ml-2 text-green-400" title="QR Code Available" />
                           )}
                         </div>
-                        <div className="text-sm text-white/60">
+                        <div 
+                          className="text-sm text-white/60 cursor-pointer hover:text-white/80"
+                          onClick={() => {
+                            setSelectedAssetId(asset.id);
+                            setShowDetailModal(true);
+                          }}
+                          title="Click to view asset details"
+                        >
                           <Tag className="inline h-3 w-3 mr-1" />
                           {asset.assetTag}
                         </div>
@@ -1149,13 +1258,23 @@ const AssetsPage = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </button>
+                        <button
+                          onClick={() => {
+                            setSelectedAssetId(asset.id);
+                            setShowDetailModal(true);
+                          }}
+                          className="text-blue-400 hover:text-blue-300 transition-colors"
+                          title="View Asset Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
                         {asset.qrCodeImage ? (
                           <button
                             onClick={() => handleViewQR(asset)}
                             className="text-green-400 hover:text-green-300 transition-colors"
                             title="View QR Code"
                           >
-                            <Eye className="h-4 w-4" />
+                            <QrCode className="h-4 w-4" />
                           </button>
                         ) : (
                           <button
@@ -1166,6 +1285,30 @@ const AssetsPage = () => {
                             <QrCode className="h-4 w-4" />
                           </button>
                         )}
+                        <button
+                          onClick={() => {
+                            setSelectedAssetId(asset.id);
+                            setShowTransferModal(true);
+                          }}
+                          className="text-orange-400 hover:text-orange-300 transition-colors"
+                          title="Transfer Asset"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedAssetId(asset.id);
+                            setShowDepreciationModal(true);
+                          }}
+                          className="text-cyan-400 hover:text-cyan-300 transition-colors"
+                          title="Set Depreciation"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
                         <button
                           onClick={() => handleDelete(asset)}
                           className="text-red-400 hover:text-red-300 transition-colors"
@@ -1237,6 +1380,35 @@ const AssetsPage = () => {
           onClose={() => setShowQRScanner(false)}
         />
       )}
+      
+      {/* Asset Detail Modal */}
+      <AssetDetailModal 
+        assetId={selectedAssetId}
+        isOpen={showDetailModal} 
+        onClose={() => setShowDetailModal(false)} 
+      />
+      
+      {/* Transfer Modal */}
+      <TransferModal 
+        assetId={selectedAssetId}
+        isOpen={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        onTransferComplete={() => {
+          fetchAssets();
+          showSuccess('Asset transferred successfully');
+        }}
+      />
+      
+      {/* Depreciation Modal */}
+      <DepreciationModal 
+        assetId={selectedAssetId}
+        isOpen={showDepreciationModal}
+        onClose={() => setShowDepreciationModal(false)}
+        onComplete={() => {
+          fetchAssets();
+          showSuccess('Depreciation settings saved');
+        }}
+      />
     </div>
   )
 }

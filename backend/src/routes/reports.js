@@ -1,24 +1,34 @@
 const express = require('express');
 const Joi = require('joi');
-const { PrismaClient } = require('@prisma/client');
-const { authenticate } = require('../middleware/auth');
+const { prisma } = require('../config/database');
+const { authenticate, authorize } = require('../middleware/auth');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get KPI metrics
 router.get('/kpi', authenticate, async (req, res, next) => {
   try {
+    const companyId = req.user.companyId;
+    
     const [
       totalAssets,
       totalRequests,
       totalMaintenance,
       totalValue
     ] = await Promise.all([
-      prisma.asset.count(),
-      prisma.request.count(),
-      prisma.maintenance.count(),
+      prisma.asset.count({
+        where: { companyId }
+      }),
+      prisma.assetRequest.count({
+        where: { companyId }
+      }),
+      prisma.maintenanceRecord.count({
+        where: { 
+          asset: { companyId }
+        }
+      }),
       prisma.asset.aggregate({
+        where: { companyId },
         _sum: {
           purchasePrice: true
         }
@@ -42,6 +52,8 @@ router.get('/kpi', authenticate, async (req, res, next) => {
 // Get executive summary
 router.get('/executive-summary', authenticate, async (req, res, next) => {
   try {
+    const companyId = req.user.companyId;
+    
     const [
       assetsStatus,
       requestsStatus,
@@ -50,24 +62,30 @@ router.get('/executive-summary', authenticate, async (req, res, next) => {
     ] = await Promise.all([
       prisma.asset.groupBy({
         by: ['status'],
+        where: { companyId },
         _count: {
           id: true
         }
       }),
-      prisma.request.groupBy({
+      prisma.assetRequest.groupBy({
         by: ['status'],
+        where: { companyId },
         _count: {
           id: true
         }
       }),
-      prisma.maintenance.groupBy({
+      prisma.maintenanceRecord.groupBy({
         by: ['status'],
+        where: {
+          asset: { companyId }
+        },
         _count: {
           id: true
         }
       }),
       prisma.asset.groupBy({
         by: ['departmentId'],
+        where: { companyId },
         _count: {
           id: true
         },
@@ -95,8 +113,9 @@ router.get('/executive-summary', authenticate, async (req, res, next) => {
 router.post('/generate/assets', authenticate, async (req, res, next) => {
   try {
     const { startDate, endDate, departmentId, categoryId } = req.body;
+    const companyId = req.user.companyId;
 
-    const whereClause = {};
+    const whereClause = { companyId };
     
     if (startDate && endDate) {
       whereClause.createdAt = {
@@ -170,8 +189,11 @@ router.post('/generate/assets', authenticate, async (req, res, next) => {
 // Generate depreciation report
 router.post('/generate/depreciation', authenticate, async (req, res, next) => {
   try {
+    const companyId = req.user.companyId;
+    
     const assets = await prisma.asset.findMany({
       where: {
+        companyId,
         purchasePrice: {
           not: null
         }
@@ -239,12 +261,13 @@ router.post('/generate/depreciation', authenticate, async (req, res, next) => {
 // Generate requests report
 router.post('/generate/requests', authenticate, async (req, res, next) => {
   try {
-    const { startDate, endDate, status, type } = req.body;
+    const { startDate, endDate, status, requestType } = req.body;
+    const companyId = req.user.companyId;
 
-    const whereClause = {};
+    const whereClause = { companyId };
     
     if (startDate && endDate) {
-      whereClause.requestDate = {
+      whereClause.requestedDate = {
         gte: new Date(startDate),
         lte: new Date(endDate)
       };
@@ -254,22 +277,24 @@ router.post('/generate/requests', authenticate, async (req, res, next) => {
       whereClause.status = status;
     }
 
-    if (type) {
-      whereClause.type = type;
+    if (requestType) {
+      whereClause.requestType = requestType;
     }
 
-    const requests = await prisma.request.findMany({
+    const requests = await prisma.assetRequest.findMany({
       where: whereClause,
       include: {
         requester: {
           select: {
-            name: true,
+            firstName: true,
+            lastName: true,
             email: true
           }
         },
-        assignee: {
+        approvedBy: {
           select: {
-            name: true
+            firstName: true,
+            lastName: true
           }
         },
         asset: {
@@ -280,21 +305,21 @@ router.post('/generate/requests', authenticate, async (req, res, next) => {
         }
       },
       orderBy: {
-        requestDate: 'desc'
+        requestedDate: 'desc'
       }
     });
 
     const reportData = requests.map(request => ({
-      title: request.title,
-      type: request.type,
+      requestNumber: request.requestNumber,
+      requestType: request.requestType,
       status: request.status,
       priority: request.priority,
-      requester: request.requester?.name,
-      assignee: request.assignee?.name,
+      requester: `${request.requester?.firstName || ''} ${request.requester?.lastName || ''}`.trim(),
+      approver: request.approvedBy ? `${request.approvedBy.firstName || ''} ${request.approvedBy.lastName || ''}`.trim() : null,
       asset: request.asset ? `${request.asset.name} (${request.asset.assetTag})` : null,
-      requestDate: request.requestDate,
-      dueDate: request.dueDate,
-      estimatedCost: request.estimatedCost
+      requestedDate: request.requestedDate,
+      approvedDate: request.approvedDate,
+      description: request.description
     }));
 
     res.json({
@@ -302,11 +327,13 @@ router.post('/generate/requests', authenticate, async (req, res, next) => {
       data: {
         title: 'Requests Report',
         generatedAt: new Date().toISOString(),
-        filters: { startDate, endDate, status, type },
+        filters: { startDate, endDate, status, requestType },
         data: reportData,
         summary: {
           totalRequests: requests.length,
-          totalEstimatedCost: requests.reduce((sum, req) => sum + (req.estimatedCost || 0), 0)
+          pendingRequests: requests.filter(r => r.status === 'PENDING').length,
+          approvedRequests: requests.filter(r => r.status === 'APPROVED').length,
+          rejectedRequests: requests.filter(r => r.status === 'REJECTED').length
         }
       }
     });
@@ -318,9 +345,12 @@ router.post('/generate/requests', authenticate, async (req, res, next) => {
 // Generate maintenance report
 router.post('/generate/maintenance', authenticate, async (req, res, next) => {
   try {
-    const { startDate, endDate, status, type } = req.body;
+    const { startDate, endDate, status, maintenanceType } = req.body;
+    const companyId = req.user.companyId;
 
-    const whereClause = {};
+    const whereClause = {
+      asset: { companyId }
+    };
     
     if (startDate && endDate) {
       whereClause.scheduledDate = {
@@ -333,11 +363,11 @@ router.post('/generate/maintenance', authenticate, async (req, res, next) => {
       whereClause.status = status;
     }
 
-    if (type) {
-      whereClause.type = type;
+    if (maintenanceType) {
+      whereClause.maintenanceType = maintenanceType;
     }
 
-    const maintenance = await prisma.maintenance.findMany({
+    const maintenance = await prisma.maintenanceRecord.findMany({
       where: whereClause,
       include: {
         asset: {
@@ -346,7 +376,13 @@ router.post('/generate/maintenance', authenticate, async (req, res, next) => {
             assetTag: true
           }
         },
-        assignedTo: {
+        technician: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        },
+        vendor: {
           select: {
             name: true
           }
@@ -358,16 +394,15 @@ router.post('/generate/maintenance', authenticate, async (req, res, next) => {
     });
 
     const reportData = maintenance.map(maint => ({
-      title: maint.title,
-      type: maint.type,
+      description: maint.description,
+      maintenanceType: maint.maintenanceType,
       status: maint.status,
-      priority: maint.priority,
       asset: `${maint.asset.name} (${maint.asset.assetTag})`,
-      assignedTo: maint.assignedTo?.name,
+      technician: maint.technician ? `${maint.technician.firstName || ''} ${maint.technician.lastName || ''}`.trim() : null,
+      vendor: maint.vendor?.name || null,
       scheduledDate: maint.scheduledDate,
       completedDate: maint.completedDate,
-      estimatedCost: maint.estimatedCost,
-      actualCost: maint.actualCost
+      cost: maint.cost
     }));
 
     res.json({
@@ -375,12 +410,14 @@ router.post('/generate/maintenance', authenticate, async (req, res, next) => {
       data: {
         title: 'Maintenance Report',
         generatedAt: new Date().toISOString(),
-        filters: { startDate, endDate, status, type },
+        filters: { startDate, endDate, status, maintenanceType },
         data: reportData,
         summary: {
           totalMaintenance: maintenance.length,
-          totalEstimatedCost: maintenance.reduce((sum, maint) => sum + (maint.estimatedCost || 0), 0),
-          totalActualCost: maintenance.reduce((sum, maint) => sum + (maint.actualCost || 0), 0)
+          scheduledCount: maintenance.filter(m => m.status === 'SCHEDULED').length,
+          inProgressCount: maintenance.filter(m => m.status === 'IN_PROGRESS').length,
+          completedCount: maintenance.filter(m => m.status === 'COMPLETED').length,
+          totalCost: maintenance.reduce((sum, maint) => sum + (maint.cost || 0), 0)
         }
       }
     });
@@ -392,30 +429,30 @@ router.post('/generate/maintenance', authenticate, async (req, res, next) => {
 // Generate financial summary
 router.post('/generate/financial', authenticate, async (req, res, next) => {
   try {
+    const companyId = req.user.companyId;
+    
     const [
       assetValue,
       maintenanceCost,
-      requestCost,
       assetsByCategory
     ] = await Promise.all([
       prisma.asset.aggregate({
+        where: { companyId },
         _sum: {
           purchasePrice: true
         }
       }),
-      prisma.maintenance.aggregate({
+      prisma.maintenanceRecord.aggregate({
+        where: {
+          asset: { companyId }
+        },
         _sum: {
-          actualCost: true,
-          estimatedCost: true
-        }
-      }),
-      prisma.request.aggregate({
-        _sum: {
-          estimatedCost: true
+          cost: true
         }
       }),
       prisma.asset.groupBy({
         by: ['categoryId'],
+        where: { companyId },
         _sum: {
           purchasePrice: true
         },
@@ -432,9 +469,7 @@ router.post('/generate/financial', authenticate, async (req, res, next) => {
         generatedAt: new Date().toISOString(),
         data: {
           totalAssetValue: assetValue._sum.purchasePrice || 0,
-          totalMaintenanceCost: maintenanceCost._sum.actualCost || 0,
-          estimatedMaintenanceCost: maintenanceCost._sum.estimatedCost || 0,
-          totalRequestCost: requestCost._sum.estimatedCost || 0,
+          totalMaintenanceCost: maintenanceCost._sum.cost || 0,
           assetsByCategory
         }
       }

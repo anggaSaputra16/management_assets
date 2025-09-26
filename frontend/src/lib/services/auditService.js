@@ -1,7 +1,7 @@
 import { api } from '../api'
 
 export const auditService = {
-  // Get all audit logs
+  // Get all audit logs - companyId auto-injected by api interceptor
   getAllAudits: async () => {
     try {
       const response = await api.get('/audit')
@@ -12,7 +12,7 @@ export const auditService = {
     }
   },
 
-  // Get audit by ID
+  // Get audit by ID - companyId validation on backend
   getAuditById: async (id) => {
     try {
       const response = await api.get(`/audit/${id}`)
@@ -23,7 +23,7 @@ export const auditService = {
     }
   },
 
-  // Create new audit log
+  // Create new audit log - companyId auto-injected
   createAudit: async (auditData) => {
     try {
       const response = await api.post('/audit', auditData)
@@ -34,7 +34,7 @@ export const auditService = {
     }
   },
 
-  // Get audit logs by entity type
+  // Get audit logs by entity type - companyId filtered
   getAuditsByEntity: async (entityType, entityId) => {
     try {
       const response = await api.get(`/audit/entity/${entityType}/${entityId}`)
@@ -45,7 +45,7 @@ export const auditService = {
     }
   },
 
-  // Get audit logs by user
+  // Get audit logs by user - companyId filtered
   getAuditsByUser: async (userId) => {
     try {
       const response = await api.get(`/audit/user/${userId}`)

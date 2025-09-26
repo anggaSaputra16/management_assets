@@ -60,6 +60,7 @@ const AssetSpecifications = ({ asset, onUpdate, readOnly = false }) => {
         <h4 className="text-sm font-medium text-gray-900">Specifications</h4>
         {!readOnly && (
           <button
+            type="button"
             onClick={() => setShowAddForm(true)}
             className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100"
           >
@@ -108,12 +109,14 @@ const AssetSpecifications = ({ asset, onUpdate, readOnly = false }) => {
                   {!readOnly && (
                     <div className="flex items-center space-x-1">
                       <button
+                        type="button"
                         onClick={() => setEditingKey(key)}
                         className="p-1 text-gray-400 hover:text-blue-600"
                       >
                         <Edit className="h-3 w-3" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDeleteSpec(key)}
                         className="p-1 text-gray-400 hover:text-red-600"
                       >
@@ -152,6 +155,7 @@ const AssetSpecifications = ({ asset, onUpdate, readOnly = false }) => {
             />
             <div className="flex justify-end space-x-2">
               <button
+                type="button"
                 onClick={() => {
                   setShowAddForm(false)
                   setNewSpec({ key: '', value: '' })
@@ -161,6 +165,7 @@ const AssetSpecifications = ({ asset, onUpdate, readOnly = false }) => {
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleAddSpec}
                 disabled={!newSpec.key.trim() || !newSpec.value.trim()}
                 className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"

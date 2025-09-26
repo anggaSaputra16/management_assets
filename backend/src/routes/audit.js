@@ -10,7 +10,8 @@ const createAuditSchema = Joi.object({
   auditType: Joi.string().valid('PHYSICAL', 'FINANCIAL', 'COMPLIANCE').required(),
   scheduledDate: Joi.date().required(),
   assetId: Joi.string().optional(),
-  auditorId: Joi.string().required()
+  auditorId: Joi.string().required(),
+  companyId: Joi.string().optional()
 });
 
 const updateAuditSchema = Joi.object({
@@ -36,19 +37,20 @@ router.get('/', authenticate, async (req, res, next) => {
     } = req.query;
     
     const skip = (page - 1) * limit;
-    const where = {};
+    const companyId = req.user.companyId;
+    const where = { companyId };
 
     // Role-based filtering
     if (req.user.role === 'AUDITOR') {
       where.auditorId = req.user.id;
     } else if (req.user.role === 'DEPARTMENT_USER') {
       where.OR = [
-        { asset: { departmentId: req.user.departmentId } },
+        { asset: { departmentId: req.user.departmentId, companyId } },
         { assetId: null } // General audits
       ];
     } else if (req.user.role === 'MANAGER' && req.user.departmentId) {
       where.OR = [
-        { asset: { departmentId: req.user.departmentId } },
+        { asset: { departmentId: req.user.departmentId, companyId } },
         { assetId: null } // General audits
       ];
     }

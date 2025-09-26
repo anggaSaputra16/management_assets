@@ -1,7 +1,7 @@
 import { api } from '../api'
 
 export const userService = {
-  // Get all users
+  // Get all users - companyId auto-injected by api interceptor
   getAllUsers: async () => {
     try {
       const response = await api.get('/users')
@@ -12,7 +12,7 @@ export const userService = {
     }
   },
 
-  // Get user by ID
+  // Get user by ID - companyId validation on backend
   getUserById: async (id) => {
     try {
       const response = await api.get(`/users/${id}`)
@@ -23,7 +23,7 @@ export const userService = {
     }
   },
 
-  // Create new user
+  // Create new user - companyId auto-injected
   createUser: async (userData) => {
     try {
       const response = await api.post('/users', userData)
@@ -34,7 +34,7 @@ export const userService = {
     }
   },
 
-  // Update user
+  // Update user - companyId auto-injected
   updateUser: async (id, userData) => {
     try {
       const response = await api.put(`/users/${id}`, userData)
@@ -45,7 +45,7 @@ export const userService = {
     }
   },
 
-  // Delete user
+  // Delete user - companyId validation on backend
   deleteUser: async (id) => {
     try {
       const response = await api.delete(`/users/${id}`)

@@ -1,46 +1,6 @@
 import { create } from 'zustand'
 import { assetService } from '@/lib/services'
-
-interface Asset {
-  id: string
-  name: string
-  assetTag: string
-  categoryId: string
-  locationId: string
-  departmentId?: string
-  vendorId?: string
-  assignedToId?: string
-  model?: string
-  serialNumber?: string
-  status: string
-  condition: string
-  purchaseDate?: string
-  purchasePrice?: number
-  depreciationRate?: number
-  currentValue?: number
-  warrantyExpiry?: string
-  description?: string
-  qrCode?: string
-  qrCodeImage?: string
-  createdAt: string
-  updatedAt: string
-  category?: {
-    id: string
-    name: string
-  }
-  location?: {
-    id: string
-    name: string
-  }
-  department?: {
-    id: string
-    name: string
-  }
-  vendor?: {
-    id: string
-    name: string
-  }
-}
+import { Asset } from '@/types'
 
 interface AssetState {
   assets: Asset[]
@@ -61,6 +21,8 @@ interface AssetState {
     vendorId: string
     model: string
     serialNumber: string
+    brand: string
+    poNumber: string
     status: string
     condition: string
     purchaseDate: string
@@ -68,6 +30,7 @@ interface AssetState {
     depreciationRate: string
     warrantyExpiry: string
     description: string
+    specifications?: Record<string, string>
   }
 }
 
@@ -88,6 +51,7 @@ interface ExportFilters {
 interface AssetActions {
   fetchAssets: () => Promise<void>
   fetchAsset: (id: string) => Promise<void>
+  fetchMultipleAssets: (ids: string[]) => Promise<void>
   createAsset: (data: Partial<Asset>) => Promise<void>
   updateAsset: (id: string, data: Partial<Asset>) => Promise<void>
   deleteAsset: (id: string) => Promise<void>
@@ -122,13 +86,16 @@ const initialFormData = {
   vendorId: '',
   model: '',
   serialNumber: '',
+  brand: '',
+  poNumber: '',
   status: 'ACTIVE',
   condition: 'GOOD',
   purchaseDate: '',
   purchasePrice: '',
   depreciationRate: '',
   warrantyExpiry: '',
-  description: ''
+  description: '',
+  specifications: {}
 }
 
 export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
@@ -163,6 +130,18 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
     }
   },
 
+  fetchMultipleAssets: async (ids) => {
+    set({ loading: true, error: null })
+    try {
+      const assetPromises = ids.map(id => assetService.getAssetById(id))
+      const responses = await Promise.all(assetPromises)
+      const fetchedAssets = responses.map(response => response.data).filter(Boolean)
+      set({ assets: fetchedAssets, loading: false })
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Failed to fetch assets', loading: false })
+    }
+  },
+
   createAsset: async (data) => {
     try {
       const assetData = {
@@ -173,10 +152,17 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
         departmentId: data.departmentId ? data.departmentId.toString() : null,
         vendorId: data.vendorId ? data.vendorId.toString() : null,
         assignedToId: data.assignedToId ? data.assignedToId.toString() : null,
-        purchasePrice: data.purchasePrice ? parseFloat(data.purchasePrice.toString()) : null,
-        currentValue: data.currentValue ? parseFloat(data.currentValue.toString()) : null,
-        // Remove assetTag from data since backend auto-generates it
-        assetTag: undefined
+        // Send prices as strings (backend will convert)
+        purchasePrice: data.purchasePrice ? data.purchasePrice.toString() : null,
+        currentValue: data.currentValue ? data.currentValue.toString() : null,
+        // Format dates properly
+        purchaseDate: data.purchaseDate ? data.purchaseDate.toString() : null,
+        warrantyExpiry: data.warrantyExpiry ? data.warrantyExpiry.toString() : null,
+        // Ensure specifications is properly passed
+        specifications: data.specifications || {},
+        // Remove fields that shouldn't be sent to create endpoint
+        assetTag: undefined,
+        depreciationRate: undefined // This should be handled in depreciation module, not asset creation
       }
       await assetService.createAsset(assetData)
       get().fetchAssets()
@@ -191,13 +177,21 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
       const assetData = {
         ...data,
         // Keep IDs as strings since backend uses CUID strings
-        categoryId: data.categoryId?.toString() || '',
-        locationId: data.locationId?.toString() || '',
+        categoryId: data.categoryId?.toString() || undefined,
+        locationId: data.locationId?.toString() || undefined,
         departmentId: data.departmentId ? data.departmentId.toString() : null,
         vendorId: data.vendorId ? data.vendorId.toString() : null,
         assignedToId: data.assignedToId ? data.assignedToId.toString() : null,
-        purchasePrice: data.purchasePrice ? parseFloat(data.purchasePrice.toString()) : null,
-        currentValue: data.currentValue ? parseFloat(data.currentValue.toString()) : null
+        // Send prices as strings (backend will convert)
+        purchasePrice: data.purchasePrice ? data.purchasePrice.toString() : null,
+        currentValue: data.currentValue ? data.currentValue.toString() : null,
+        // Format dates properly
+        purchaseDate: data.purchaseDate ? data.purchaseDate.toString() : null,
+        warrantyExpiry: data.warrantyExpiry ? data.warrantyExpiry.toString() : null,
+        // Make sure specifications is properly passed
+        specifications: data.specifications || undefined,
+        // Remove fields that shouldn't be sent to update endpoint
+        depreciationRate: undefined // This should be handled in depreciation module, not asset update
       }
       await assetService.updateAsset(id, assetData)
       get().fetchAssets()
@@ -252,13 +246,16 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
           vendorId: asset.vendorId?.toString() || '',
           model: asset.model || '',
           serialNumber: asset.serialNumber || '',
+          brand: asset.brand || '',
+          poNumber: asset.poNumber || '',
           status: asset.status || 'ACTIVE',
           condition: asset.condition || 'GOOD',
           purchaseDate: asset.purchaseDate ? asset.purchaseDate.split('T')[0] : '',
           purchasePrice: asset.purchasePrice?.toString() || '',
           depreciationRate: asset.depreciationRate?.toString() || '',
           warrantyExpiry: asset.warrantyExpiry ? asset.warrantyExpiry.split('T')[0] : '',
-          description: asset.description || ''
+          description: asset.description || '',
+          specifications: asset.specifications || {}
         },
         showModal: true
       })
@@ -325,7 +322,7 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
       },
       {
         title: 'Active Assets',
-        value: assets.filter(a => a.status === 'ACTIVE').length,
+        value: assets.filter(a => a.status === 'AVAILABLE').length,
         icon: 'CheckCircle',
         color: 'bg-green-500',
         textColor: 'text-green-600',

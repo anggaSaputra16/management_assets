@@ -16,7 +16,8 @@ const registerSchema = Joi.object({
   lastName: Joi.string().required(),
   phone: Joi.string().optional(),
   role: Joi.string().valid('ADMIN', 'ASSET_ADMIN', 'MANAGER', 'DEPARTMENT_USER', 'TECHNICIAN', 'AUDITOR', 'TOP_MANAGEMENT').default('DEPARTMENT_USER'),
-  departmentId: Joi.string().optional()
+  departmentId: Joi.string().optional(),
+  companyId: Joi.string().optional()
 });
 
 const loginSchema = Joi.object({
@@ -36,14 +37,29 @@ router.post('/register', async (req, res, next) => {
       });
     }
 
-    const { email, username, password, firstName, lastName, phone, role, departmentId } = value;
+    const { email, username, password, firstName, lastName, phone, role, departmentId, companyId } = value;
 
-    // Check if user exists
+    // Get default company if companyId not provided
+    let finalCompanyId = companyId;
+    if (!finalCompanyId) {
+      const defaultCompany = await prisma.company.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'asc' }
+      });
+      finalCompanyId = defaultCompany?.id;
+    }
+
+    // Check if user exists in the same company
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email },
-          { username }
+        AND: [
+          { companyId: finalCompanyId },
+          {
+            OR: [
+              { email },
+              { username }
+            ]
+          }
         ]
       }
     });
@@ -68,7 +84,8 @@ router.post('/register', async (req, res, next) => {
         lastName,
         phone,
         role,
-        departmentId
+        departmentId,
+        companyId: finalCompanyId
       },
       select: {
         id: true,
@@ -77,6 +94,13 @@ router.post('/register', async (req, res, next) => {
         firstName: true,
         lastName: true,
         role: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         department: {
           select: {
             id: true,

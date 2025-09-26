@@ -1,7 +1,7 @@
 import { api } from '../api'
 
 export const assetService = {
-  // Get all assets
+  // Get all assets - companyId auto-injected by api interceptor
   getAllAssets: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString()
     const url = queryString ? `/assets?${queryString}` : '/assets'
@@ -9,25 +9,25 @@ export const assetService = {
     return response.data
   },
 
-  // Get asset by ID
+  // Get asset by ID - companyId validation on backend
   getAssetById: async (id) => {
     const response = await api.get(`/assets/${id}`)
     return response.data
   },
 
-  // Create new asset
+  // Create new asset - companyId auto-injected
   createAsset: async (assetData) => {
     const response = await api.post('/assets', assetData)
     return response.data
   },
 
-  // Update asset
+  // Update asset - companyId auto-injected
   updateAsset: async (id, assetData) => {
     const response = await api.put(`/assets/${id}`, assetData)
     return response.data
   },
 
-  // Delete asset
+  // Delete asset - companyId validation on backend
   deleteAsset: async (id) => {
     const response = await api.delete(`/assets/${id}`)
     return response.data
@@ -102,6 +102,18 @@ export const assetService = {
     const response = await api.get(`/assets/${id}/history`)
     return response.data
   },
+  
+  // Get all transfers
+  getTransfers: async () => {
+    const response = await api.get('/transfers')
+    return response.data
+  },
+  
+  // Get asset transfers
+  getAssetTransfers: async (id) => {
+    const response = await api.get(`/assets/${id}/transfers`)
+    return response.data
+  },
 
   // Get asset maintenance records
   getAssetMaintenance: async (id) => {
@@ -140,13 +152,15 @@ export const assetService = {
   },
 
   // QR Code related methods
-  generateQRCode: async (id, format = 'file') => {
-    const response = await api.post(`/assets/${id}/generate-qr`, { format })
-    return response.data
+  generateQRCode: async (id, format = 'png', size = 256) => {
+    const response = await api.get(`/qr-codes/asset/${id}?format=${format}&size=${size}`, {
+      responseType: 'blob'
+    })
+    return response
   },
 
   scanQRCode: async (qrData, scanLocation = '', scanContext = 'SEARCH') => {
-    const response = await api.post('/assets/scan-qr', { 
+    const response = await api.post('/qr-codes/scan', { 
       qrData, 
       scanLocation, 
       scanContext 

@@ -13,9 +13,11 @@ const createUserSchema = Joi.object({
   password: Joi.string().min(6).required(),
   firstName: Joi.string().required(),
   lastName: Joi.string().required(),
-  phone: Joi.string().optional(),
+  phone: Joi.string().allow('').optional(),
   role: Joi.string().valid('ADMIN', 'ASSET_ADMIN', 'MANAGER', 'DEPARTMENT_USER', 'TECHNICIAN', 'AUDITOR', 'TOP_MANAGEMENT').required(),
-  departmentId: Joi.string().optional()
+  departmentId: Joi.string().allow(null, '').optional(),
+  companyId: Joi.string().optional(),
+  isActive: Joi.boolean().optional()
 });
 
 const updateUserSchema = Joi.object({
@@ -23,9 +25,10 @@ const updateUserSchema = Joi.object({
   username: Joi.string().min(3).max(30).optional(),
   firstName: Joi.string().optional(),
   lastName: Joi.string().optional(),
-  phone: Joi.string().optional(),
+  phone: Joi.string().allow('').optional(),
   role: Joi.string().valid('ADMIN', 'ASSET_ADMIN', 'MANAGER', 'DEPARTMENT_USER', 'TECHNICIAN', 'AUDITOR', 'TOP_MANAGEMENT').optional(),
-  departmentId: Joi.string().optional(),
+  departmentId: Joi.string().allow(null, '').optional(),
+  companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional()
 });
 
@@ -35,7 +38,9 @@ router.get('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res
     const { page = 1, limit = 10, search, role, department, status } = req.query;
     const skip = (page - 1) * limit;
 
-    const where = {};
+    const where = {
+      companyId: req.user.companyId // Filter by user's company
+    };
 
     if (search) {
       where.OR = [
@@ -71,6 +76,13 @@ router.get('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res
           role: true,
           isActive: true,
           createdAt: true,
+          company: {
+            select: {
+              id: true,
+              name: true,
+              code: true
+            }
+          },
           department: {
             select: {
               id: true,
@@ -107,8 +119,11 @@ router.get('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), a
   try {
     const { id } = req.params;
 
-    const user = await prisma.user.findUnique({
-      where: { id },
+    const user = await prisma.user.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      },
       select: {
         id: true,
         email: true,
@@ -120,6 +135,13 @@ router.get('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), a
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         department: {
           select: {
             id: true,
@@ -158,11 +180,19 @@ router.post('/', authenticate, authorize('ADMIN'), async (req, res, next) => {
       });
     }
 
-    const { email, username, password, firstName, lastName, phone, role, departmentId } = value;
+    const { email, username, password, firstName, lastName, phone, role, departmentId, companyId } = value;
 
-    // Check if user exists
+    // Determine final companyId
+    let finalCompanyId = companyId;
+    if (!finalCompanyId) {
+      // If no companyId provided, use the creating user's companyId
+      finalCompanyId = req.user.companyId;
+    }
+
+    // Check if user exists within the company
     const existingUser = await prisma.user.findFirst({
       where: {
+        companyId: finalCompanyId,
         OR: [
           { email },
           { username }
@@ -173,7 +203,7 @@ router.post('/', authenticate, authorize('ADMIN'), async (req, res, next) => {
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'User with this email or username already exists'
+        message: 'User with this email or username already exists in this company'
       });
     }
 
@@ -190,7 +220,8 @@ router.post('/', authenticate, authorize('ADMIN'), async (req, res, next) => {
         lastName,
         phone,
         role,
-        departmentId
+        departmentId,
+        companyId: finalCompanyId
       },
       select: {
         id: true,
@@ -201,6 +232,13 @@ router.post('/', authenticate, authorize('ADMIN'), async (req, res, next) => {
         phone: true,
         role: true,
         isActive: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         department: {
           select: {
             id: true,
@@ -236,8 +274,11 @@ router.put('/:id', authenticate, authorize('ADMIN'), async (req, res, next) => {
     }
 
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id }
+    const existingUser = await prisma.user.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      }
     });
 
     if (!existingUser) {
@@ -247,12 +288,13 @@ router.put('/:id', authenticate, authorize('ADMIN'), async (req, res, next) => {
       });
     }
 
-    // Check for email/username conflicts (excluding current user)
+    // Check for email/username conflicts (excluding current user, within same company)
     if (value.email || value.username) {
       const conflicts = await prisma.user.findFirst({
         where: {
           AND: [
             { id: { not: id } },
+            { companyId: req.user.companyId },
             {
               OR: [
                 ...(value.email ? [{ email: value.email }] : []),
@@ -266,7 +308,7 @@ router.put('/:id', authenticate, authorize('ADMIN'), async (req, res, next) => {
       if (conflicts) {
         return res.status(400).json({
           success: false,
-          message: 'Email or username already exists'
+          message: 'Email or username already exists in this company'
         });
       }
     }
@@ -285,6 +327,13 @@ router.put('/:id', authenticate, authorize('ADMIN'), async (req, res, next) => {
         role: true,
         isActive: true,
         updatedAt: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         department: {
           select: {
             id: true,
@@ -311,8 +360,11 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res, next) =
     const { id } = req.params;
 
     // Check if user exists
-    const user = await prisma.user.findUnique({
-      where: { id }
+    const user = await prisma.user.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      }
     });
 
     if (!user) {
@@ -355,8 +407,11 @@ router.post('/:id/reset-password', authenticate, authorize('ADMIN'), async (req,
     }
 
     // Check if user exists
-    const user = await prisma.user.findUnique({
-      where: { id }
+    const user = await prisma.user.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      }
     });
 
     if (!user) {
@@ -384,14 +439,66 @@ router.post('/:id/reset-password', authenticate, authorize('ADMIN'), async (req,
   }
 });
 
+// Change user password (Admin only) - alias for reset-password
+router.put('/:id/password', authenticate, authorize('ADMIN'), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const changePasswordSchema = Joi.object({
+      newPassword: Joi.string().min(6).required()
+    });
+
+    const { error, value } = changePasswordSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        error: error.details[0].message
+      });
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(value.newPassword, 12);
+
+    // Update password
+    await prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword }
+    });
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get user statistics
 router.get('/stats', authenticate, async (req, res, next) => {
   try {
+    const companyFilter = { companyId: req.user.companyId };
+    
     const [total, active, inactive, adminCount] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { isActive: true } }),
-      prisma.user.count({ where: { isActive: false } }),
-      prisma.user.count({ where: { role: { in: ['ADMIN', 'ASSET_ADMIN'] } } })
+      prisma.user.count({ where: companyFilter }),
+      prisma.user.count({ where: { ...companyFilter, isActive: true } }),
+      prisma.user.count({ where: { ...companyFilter, isActive: false } }),
+      prisma.user.count({ where: { ...companyFilter, role: { in: ['ADMIN', 'ASSET_ADMIN'] } } })
     ]);
 
     res.json({

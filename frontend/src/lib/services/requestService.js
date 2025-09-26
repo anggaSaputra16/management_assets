@@ -1,7 +1,7 @@
 import { api } from '../api'
 
 export const requestService = {
-  // Get all requests
+  // Get all requests - companyId auto-injected by api interceptor
   getAllRequests: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString()
     const url = queryString ? `/requests?${queryString}` : '/requests'
@@ -9,43 +9,43 @@ export const requestService = {
     return response.data
   },
 
-  // Get request by ID
+  // Get request by ID - companyId validation on backend
   getRequestById: async (id) => {
     const response = await api.get(`/requests/${id}`)
     return response.data
   },
 
-  // Create new request
+  // Create new request - companyId auto-injected
   createRequest: async (requestData) => {
     const response = await api.post('/requests', requestData)
     return response.data
   },
 
-  // Update request
+  // Update request - companyId auto-injected
   updateRequest: async (id, requestData) => {
     const response = await api.put(`/requests/${id}`, requestData)
     return response.data
   },
 
-  // Delete request
+  // Delete request - companyId validation on backend
   deleteRequest: async (id) => {
     const response = await api.delete(`/requests/${id}`)
     return response.data
   },
 
-  // Approve request
+  // Approve request - companyId validation on backend
   approveRequest: async (id, approvalData = {}) => {
     const response = await api.post(`/requests/${id}/approve`, approvalData)
     return response.data
   },
 
-  // Reject request
+  // Reject request - companyId validation on backend
   rejectRequest: async (id, rejectionData) => {
     const response = await api.post(`/requests/${id}/reject`, rejectionData)
     return response.data
   },
 
-  // Add comment to request
+  // Add comment to request - companyId validation on backend
   addComment: async (id, commentData) => {
     const response = await api.post(`/requests/${id}/comments`, commentData)
     return response.data

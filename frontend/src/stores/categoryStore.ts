@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { categoryService } from '@/lib/services/categoryService'
+import { toast } from '@/hooks/useToast'
 
 interface Category {
   id: number
@@ -8,6 +9,7 @@ interface Category {
   description?: string
   parentId?: number
   isActive: boolean
+  companyId: number // Added for multi-company support
   createdAt: string
   updatedAt: string
   children?: Category[]
@@ -27,6 +29,7 @@ interface CategoryState {
     description: string
     parentId: string
     isActive: boolean
+    // companyId will be auto-injected by API interceptor
   }
 }
 
@@ -88,10 +91,13 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
         parentId: data.parentId ? parseInt(data.parentId.toString()) : null
       }
       await categoryService.createCategory(categoryData)
-      get().fetchCategories()
+      await get().fetchCategories()
       get().resetForm()
+      toast.success('Category created successfully!')
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to create category')
+      const message = error instanceof Error ? error.message : 'Failed to create category'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
@@ -102,19 +108,25 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
         parentId: data.parentId ? parseInt(data.parentId.toString()) : null
       }
       await categoryService.updateCategory(id, categoryData)
-      get().fetchCategories()
+      await get().fetchCategories()
       get().resetForm()
+      toast.success('Category updated successfully!')
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to update category')
+      const message = error instanceof Error ? error.message : 'Failed to update category'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
   deleteCategory: async (id) => {
     try {
       await categoryService.deleteCategory(id)
-      get().fetchCategories()
-    } catch {
-      throw new Error('Failed to delete category')
+      await get().fetchCategories()
+      toast.success('Category deleted successfully!')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete category'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 

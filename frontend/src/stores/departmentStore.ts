@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { departmentService } from '@/lib/services/departmentService'
+import { toast } from '@/hooks/useToast'
 
 interface Department {
   id: number
@@ -9,6 +10,7 @@ interface Department {
   managerId?: number
   parentId?: number
   isActive: boolean
+  companyId: number // Added for multi-company support
   createdAt: string
   updatedAt: string
   manager?: {
@@ -31,6 +33,7 @@ interface DepartmentState {
     managerId: string
     parentId: string
     isActive: boolean
+    // companyId will be auto-injected by API interceptor
   }
 }
 
@@ -82,46 +85,81 @@ export const useDepartmentStore = create<DepartmentState & DepartmentActions>((s
       const departments = response.data?.departments || response.departments || response.data || []
       set({ departments: Array.isArray(departments) ? departments : [], loading: false })
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to fetch departments', loading: false })
+      const message = error instanceof Error ? error.message : 'Failed to fetch departments'
+      set({ error: message, loading: false })
+      toast.error(message)
     }
   },
 
   createDepartment: async (data) => {
     try {
-      const departmentData = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const departmentData: any = {
         ...data,
-        managerId: data.managerId ? parseInt(data.managerId.toString()) : null,
-        parentId: data.parentId ? parseInt(data.parentId.toString()) : null
+        managerId: data.managerId && data.managerId.toString().trim() !== '' 
+          ? data.managerId.toString()
+          : undefined,
+        parentId: data.parentId && data.parentId.toString().trim() !== '' 
+          ? data.parentId.toString() 
+          : undefined
       }
+      // Remove undefined fields to avoid sending them
+      Object.keys(departmentData).forEach(key => {
+        if (departmentData[key] === undefined) {
+          delete departmentData[key]
+        }
+      })
+      
       await departmentService.createDepartment(departmentData)
-      get().fetchDepartments()
+      await get().fetchDepartments()
       get().resetForm()
+      toast.success('Department created successfully!')
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to create department')
+      const message = error instanceof Error ? error.message : 'Failed to create department'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
   updateDepartment: async (id, data) => {
     try {
-      const departmentData = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const departmentData: any = {
         ...data,
-        managerId: data.managerId ? parseInt(data.managerId.toString()) : null,
-        parentId: data.parentId ? parseInt(data.parentId.toString()) : null
+        managerId: data.managerId && data.managerId.toString().trim() !== '' 
+          ? data.managerId.toString()
+          : undefined,
+        parentId: data.parentId && data.parentId.toString().trim() !== '' 
+          ? data.parentId.toString() 
+          : undefined
       }
+      // Remove undefined fields to avoid sending them
+      Object.keys(departmentData).forEach(key => {
+        if (departmentData[key] === undefined) {
+          delete departmentData[key]
+        }
+      })
+      
       await departmentService.updateDepartment(id, departmentData)
-      get().fetchDepartments()
+      await get().fetchDepartments()
       get().resetForm()
+      toast.success('Department updated successfully!')
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to update department')
+      const message = error instanceof Error ? error.message : 'Failed to update department'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
   deleteDepartment: async (id) => {
     try {
       await departmentService.deleteDepartment(id)
-      get().fetchDepartments()
-    } catch {
-      throw new Error('Failed to delete department')
+      await get().fetchDepartments()
+      toast.success('Department deleted successfully!')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete department'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 

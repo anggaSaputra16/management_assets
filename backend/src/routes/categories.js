@@ -9,17 +9,24 @@ const router = express.Router();
 const createCategorySchema = Joi.object({
   name: Joi.string().required(),
   code: Joi.string().required(),
-  description: Joi.string().optional(),
-  parentId: Joi.string().optional()
-});
+  description: Joi.string().allow('').optional(),
+  parentId: Joi.string().allow(null, '').optional(),
+  companyId: Joi.string().optional(),
+  isActive: Joi.boolean().optional(),
+  depreciation_rate: Joi.number().min(0).max(100).optional(),
+  useful_life_years: Joi.number().integer().min(1).optional()
+}).unknown(true);
 
 const updateCategorySchema = Joi.object({
   name: Joi.string().optional(),
   code: Joi.string().optional(),
-  description: Joi.string().optional(),
-  parentId: Joi.string().optional(),
-  isActive: Joi.boolean().optional()
-});
+  description: Joi.string().allow('').optional(),
+  parentId: Joi.string().allow(null, '').optional(),
+  companyId: Joi.string().optional(),
+  isActive: Joi.boolean().optional(),
+  depreciation_rate: Joi.number().min(0).max(100).optional(),
+  useful_life_years: Joi.number().integer().min(1).optional()
+}).unknown(true);
 
 // Get all categories
 router.get('/', authenticate, async (req, res, next) => {
@@ -27,7 +34,9 @@ router.get('/', authenticate, async (req, res, next) => {
     const { page = 1, limit = 10, search, status, parent } = req.query;
     const skip = (page - 1) * limit;
 
-    const where = {};
+    const where = {
+      companyId: req.user.companyId // Filter by user's company
+    };
 
     if (search) {
       where.OR = [
@@ -49,6 +58,13 @@ router.get('/', authenticate, async (req, res, next) => {
       prisma.category.findMany({
         where,
         include: {
+          company: {
+            select: {
+              id: true,
+              name: true,
+              code: true
+            }
+          },
           parent: {
             select: {
               id: true,
@@ -100,7 +116,8 @@ router.get('/tree', authenticate, async (req, res, next) => {
     const categories = await prisma.category.findMany({
       where: { 
         parentId: null,
-        isActive: true 
+        isActive: true,
+        companyId: req.user.companyId // Filter by user's company
       },
       include: {
         children: {
@@ -206,11 +223,19 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       });
     }
 
-    const { name, code, description, parentId } = value;
+    const { name, code, description, parentId, companyId } = value;
 
-    // Check if category name or code already exists
+    // Determine final companyId
+    let finalCompanyId = companyId;
+    if (!finalCompanyId) {
+      // If no companyId provided, use the creating user's companyId
+      finalCompanyId = req.user.companyId;
+    }
+
+    // Check if category name or code already exists within the company
     const existingCategory = await prisma.category.findFirst({
       where: {
+        companyId: finalCompanyId,
         OR: [
           { name },
           { code }
@@ -221,14 +246,17 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
     if (existingCategory) {
       return res.status(400).json({
         success: false,
-        message: 'Category with this name or code already exists'
+        message: 'Category with this name or code already exists in this company'
       });
     }
 
-    // If parentId provided, check if parent exists
+    // If parentId provided, check if parent exists within the same company
     if (parentId) {
-      const parent = await prisma.category.findUnique({
-        where: { id: parentId }
+      const parent = await prisma.category.findFirst({
+        where: { 
+          id: parentId,
+          companyId: finalCompanyId
+        }
       });
 
       if (!parent || !parent.isActive) {
@@ -245,9 +273,17 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         name,
         code,
         description,
-        parentId
+        parentId,
+        companyId: finalCompanyId
       },
       include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         parent: {
           select: {
             id: true,
@@ -283,8 +319,11 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
     }
 
     // Check if category exists
-    const existingCategory = await prisma.category.findUnique({
-      where: { id }
+    const existingCategory = await prisma.category.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Filter by user's company
+      }
     });
 
     if (!existingCategory) {
@@ -294,12 +333,13 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       });
     }
 
-    // Check for name/code conflicts (excluding current category)
+    // Check for name/code conflicts (excluding current category, within same company)
     if (value.name || value.code) {
       const conflicts = await prisma.category.findFirst({
         where: {
           AND: [
             { id: { not: id } },
+            { companyId: req.user.companyId },
             {
               OR: [
                 ...(value.name ? [{ name: value.name }] : []),
@@ -313,7 +353,7 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       if (conflicts) {
         return res.status(400).json({
           success: false,
-          message: 'Category name or code already exists'
+          message: 'Category name or code already exists in this company'
         });
       }
     }
@@ -327,8 +367,11 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
         });
       }
 
-      const parent = await prisma.category.findUnique({
-        where: { id: value.parentId }
+      const parent = await prisma.category.findFirst({
+        where: { 
+          id: value.parentId,
+          companyId: req.user.companyId
+        }
       });
 
       if (!parent || !parent.isActive) {

@@ -46,6 +46,11 @@ services:
       EMAIL_USER: your_email@gmail.com
       EMAIL_PASS: your_email_password
       UPLOAD_PATH: /app/uploads
+      # Hot reload options
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "1000"
+      CHOKIDAR_IGNORE_INITIAL: "true"
+      NODEMON_LEGACY_WATCH: "true"
     ports:
       - "5000:5000"
     volumes:
@@ -68,7 +73,7 @@ services:
         echo 'Seeding database...' &&
         npx prisma db seed &&
         echo 'Starting development server with hot reload...' &&
-        npm run dev
+        npx nodemon --config nodemon.json src/index.js
       "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
@@ -87,8 +92,14 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:5000/api
       NEXT_PUBLIC_UPLOAD_URL: http://localhost:5000/uploads
-      WATCHPACK_POLLING: true
-      CHOKIDAR_USEPOLLING: true
+      # Hot reload options for Next.js
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "1000"
+      # Turn off telemetry during development
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Use turbopack for faster refresh (Next.js 13+)
+      NEXT_TURBO: "true"
     ports:
       - "3000:3000"
     volumes:
@@ -105,7 +116,7 @@ services:
         echo 'Installing frontend dependencies...' &&
         npm install &&
         echo 'Starting Next.js development server...' &&
-        npm run dev
+        npm run dev -- --turbopack
       "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]

@@ -7,13 +7,16 @@ const router = express.Router();
 
 // Validation schemas
 const createRequestSchema = Joi.object({
+  requestType: Joi.string().valid('ASSET_REQUEST', 'MAINTENANCE_REQUEST', 'SPARE_PART_REQUEST', 'SOFTWARE_LICENSE', 'ASSET_TRANSFER', 'ASSET_DISPOSAL', 'ASSET_BREAKDOWN').required(),
   description: Joi.string().required(),
   justification: Joi.string().required(),
   priority: Joi.string().valid('LOW', 'MEDIUM', 'HIGH', 'URGENT').default('MEDIUM'),
-  assetId: Joi.string().optional() // For specific asset requests
+  assetId: Joi.string().optional(),
+  companyId: Joi.string().optional()
 });
 
 const updateRequestSchema = Joi.object({
+  requestType: Joi.string().valid('ASSET_REQUEST', 'MAINTENANCE_REQUEST', 'SPARE_PART_REQUEST', 'SOFTWARE_LICENSE', 'ASSET_TRANSFER', 'ASSET_DISPOSAL', 'ASSET_BREAKDOWN').optional(),
   description: Joi.string().optional(),
   justification: Joi.string().optional(),
   priority: Joi.string().valid('LOW', 'MEDIUM', 'HIGH', 'URGENT').optional(),
@@ -31,13 +34,14 @@ const approvalSchema = Joi.object({
 });
 
 // Generate request number
-const generateRequestNumber = async () => {
+const generateRequestNumber = async (companyId) => {
   const today = new Date();
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, '0');
   
   const lastRequest = await prisma.assetRequest.findFirst({
     where: {
+      companyId,
       requestNumber: {
         startsWith: `REQ-${year}${month}-`
       }
@@ -67,7 +71,8 @@ router.get('/', authenticate, async (req, res, next) => {
     } = req.query;
     
     const skip = (page - 1) * limit;
-    const where = {};
+    const companyId = req.user.companyId;
+    const where = { companyId };
 
     // Role-based filtering
     switch (req.user.role) {
@@ -82,7 +87,7 @@ router.get('/', authenticate, async (req, res, next) => {
       case 'ADMIN':
       case 'ASSET_ADMIN':
       case 'TOP_MANAGEMENT':
-        // Can see all requests
+        // Can see all requests in their company
         break;
       default:
         where.requesterId = req.user.id;

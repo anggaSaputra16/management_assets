@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { locationService } from '@/lib/services/locationService'
+import { toast } from '@/hooks/useToast'
 
 interface Location {
   id: number
@@ -15,6 +16,7 @@ interface Location {
   capacity?: number
   managerId?: number
   isActive: boolean
+  companyId: number // Added for multi-company support
   createdAt: string
   updatedAt: string
 }
@@ -39,6 +41,7 @@ interface LocationState {
     capacity: string
     managerId: string
     isActive: boolean
+    // companyId will be auto-injected by API interceptor
   }
 }
 
@@ -117,14 +120,13 @@ export const useLocationStore = create<LocationState & LocationActions>((set, ge
         managerId: formData.managerId ? parseInt(formData.managerId) : null
       }
       await locationService.createLocation(locationData)
-      get().fetchLocations()
+      await get().fetchLocations()
       get().resetForm()
+      toast.success('Location created successfully!')
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'response' in error) {
-        const apiError = error as { response?: { data?: { message?: string } } }
-        throw new Error(apiError.response?.data?.message || 'Failed to create location')
-      }
-      throw new Error(error instanceof Error ? error.message : 'Failed to create location')
+      const message = error instanceof Error ? error.message : 'Failed to create location'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
@@ -137,28 +139,25 @@ export const useLocationStore = create<LocationState & LocationActions>((set, ge
         managerId: formData.managerId ? parseInt(formData.managerId) : null
       }
       await locationService.updateLocation(id, locationData)
-      get().fetchLocations()
+      await get().fetchLocations()
       get().resetForm()
+      toast.success('Location updated successfully!')
     } catch (error: unknown) {
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response?: { data?: { message?: string } } }).response === 'object'
-      ) {
-        const err = error as { response?: { data?: { message?: string } } }
-        throw new Error(err.response?.data?.message || 'Failed to update location')
-      }
-      throw new Error('Failed to update location')
+      const message = error instanceof Error ? error.message : 'Failed to update location'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
   deleteLocation: async (id) => {
     try {
       await locationService.deleteLocation(id)
-      get().fetchLocations()
-    } catch {
-      throw new Error('Failed to delete location')
+      await get().fetchLocations()
+      toast.success('Location deleted successfully!')
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to delete location'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { vendorService } from '@/lib/services/vendorService'
+import { toast } from '@/hooks/useToast'
 
 interface Vendor {
   id: number
@@ -17,6 +18,7 @@ interface Vendor {
   taxId?: string
   description?: string
   isActive: boolean
+  companyId: number // Added for multi-company support
   createdAt: string
   updatedAt: string
 }
@@ -43,6 +45,7 @@ interface VendorState {
     taxId: string
     description: string
     isActive: boolean
+    // companyId will be auto-injected by API interceptor
   }
 }
 
@@ -109,29 +112,38 @@ export const useVendorStore = create<VendorState & VendorActions>((set, get) => 
   createVendor: async (data) => {
     try {
       await vendorService.createVendor(data)
-      get().fetchVendors()
+      await get().fetchVendors()
       get().resetForm()
+      toast.success('Vendor created successfully!')
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to create vendor')
+      const message = error instanceof Error ? error.message : 'Failed to create vendor'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
   updateVendor: async (id, data) => {
     try {
       await vendorService.updateVendor(id, data)
-      get().fetchVendors()
+      await get().fetchVendors()
       get().resetForm()
+      toast.success('Vendor updated successfully!')
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Failed to update vendor')
+      const message = error instanceof Error ? error.message : 'Failed to update vendor'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 
   deleteVendor: async (id) => {
     try {
       await vendorService.deleteVendor(id)
-      get().fetchVendors()
-    } catch {
-      throw new Error('Failed to delete vendor')
+      await get().fetchVendors()
+      toast.success('Vendor deleted successfully!')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete vendor'
+      toast.error(message)
+      throw new Error(message)
     }
   },
 

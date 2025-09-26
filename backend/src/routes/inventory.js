@@ -1,10 +1,9 @@
 const express = require('express');
 const Joi = require('joi');
-const { PrismaClient } = require('@prisma/client');
-const { authenticate } = require('../middleware/auth');
+const { prisma } = require('../config/database');
+const { authenticate, authorize } = require('../middleware/auth');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Validation schemas
 const createInventorySchema = Joi.object({
@@ -15,7 +14,8 @@ const createInventorySchema = Joi.object({
   condition: Joi.string().valid('GOOD', 'FAIR', 'POOR', 'DAMAGED').default('GOOD'),
   location: Joi.string().optional(),
   notes: Joi.string().optional(),
-  minStockLevel: Joi.number().integer().min(0).default(1)
+  minStockLevel: Joi.number().integer().min(0).default(1),
+  companyId: Joi.string().optional()
 });
 
 const updateInventorySchema = Joi.object({
@@ -40,7 +40,7 @@ const createLoanSchema = Joi.object({
 });
 
 // Generate inventory tag
-const generateInventoryTag = async (departmentCode) => {
+const generateInventoryTag = async (departmentCode, companyId) => {
   const today = new Date();
   const year = today.getFullYear().toString().slice(-2);
   const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -49,6 +49,7 @@ const generateInventoryTag = async (departmentCode) => {
   
   const lastInventory = await prisma.inventory.findFirst({
     where: {
+      companyId,
       inventoryTag: {
         startsWith: prefix
       }
@@ -68,7 +69,7 @@ const generateInventoryTag = async (departmentCode) => {
 };
 
 // Generate loan number
-const generateLoanNumber = async () => {
+const generateLoanNumber = async (companyId) => {
   const today = new Date();
   const year = today.getFullYear().toString().slice(-2);
   const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -78,6 +79,7 @@ const generateLoanNumber = async () => {
   
   const lastLoan = await prisma.inventoryLoan.findFirst({
     where: {
+      companyId,
       loanNumber: {
         startsWith: prefix
       }
@@ -110,8 +112,9 @@ router.get('/', authenticate, async (req, res, next) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
+    const companyId = req.user.companyId;
 
-    const where = {};
+    const where = { companyId };
 
     if (search) {
       where.OR = [
