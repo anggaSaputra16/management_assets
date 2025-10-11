@@ -38,7 +38,7 @@ const menuItems = [
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   // Master Data Section
   { name: 'Master Data', href: '/master', icon: Settings, roles: ['ADMIN', 'ASSET_ADMIN'], isSection: true },
-  { name: 'Companies', href: '/master/companies', icon: Building, roles: ['ADMIN'], parent: 'Master Data' },
+  { name: 'Companies', href: '/master/companies', icon: Building, roles: ['ADMIN', 'ASSET_ADMIN'], parent: 'Master Data' },
   { name: 'Users', href: '/users', icon: Users, roles: ['ADMIN', 'ASSET_ADMIN'], parent: 'Master Data' },
   { name: 'Departments', href: '/departments', icon: Building, parent: 'Master Data' },
   { name: 'Positions', href: '/master/positions', icon: User, roles: ['ADMIN', 'ASSET_ADMIN'], parent: 'Master Data' },
@@ -49,7 +49,14 @@ const menuItems = [
   { name: 'Spare Parts', href: '/master/spare-parts', icon: Settings, roles: ['ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'], parent: 'Master Data' }
 ]
 
-export default function DashboardLayout({ children, title }) {
+import { ReactNode } from 'react'
+
+interface DashboardLayoutProps {
+  children: ReactNode
+  title?: string
+}
+
+export default function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const { user, logout, isHydrated } = useAuthStore()
   const router = useRouter()
   const pathname = usePathname()

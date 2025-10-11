@@ -16,6 +16,9 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Create .next directory with correct permissions
+RUN mkdir -p .next && chown -R node:node .next
+
 # Change ownership to node user
 RUN chown -R node:node /app
 

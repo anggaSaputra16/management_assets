@@ -14,6 +14,7 @@ export { useAuditStore } from './auditStore'
 export { useReportStore } from './reportStore'
 export { useNotificationStore } from './notificationStore'
 export { useInventoryStore } from './inventoryStore'
+export { useSparePartsStore } from './sparePartsStore'
 
 // Asset components and specifications
 export { useAssetComponentStore } from './assetComponentStore'

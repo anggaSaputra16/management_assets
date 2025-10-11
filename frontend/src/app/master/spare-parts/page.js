@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import useSparePartsStore from '@/stores/sparePartsStore'
+import { useSparePartsStore } from '@/stores/sparePartsStore'
 import { useCategoryStore } from '@/stores/categoryStore'
 import { useVendorStore } from '@/stores/vendorStore'
 import { Plus, Edit, Trash2, Package } from 'lucide-react'
@@ -13,7 +13,6 @@ export default function SparePartsPage() {
   const {
     spareParts,
     loading,
-    error,
     fetchSpareParts,
     createSparePart,
     updateSparePart,

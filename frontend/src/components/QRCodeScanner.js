@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Upload, X, AlertCircle, Camera, Smartphone, FileUp, RefreshCw } from 'lucide-react'
 import { api } from '@/lib/api'
 
@@ -19,54 +19,74 @@ const QRCodeScanner = ({ onScan, onClose, isOpen }) => {
 
   // Check for camera availability when component mounts
   useEffect(() => {
+    let isMounted = true;
+    
+    const stopCameraStream = () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        setCameraStream(null);
+      }
+    };
+    
+    const checkCameraAvailability = async () => {
+      try {
+        // Check if mediaDevices is supported
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+          if (isMounted) {
+            setHasCamera(false);
+            setUseCamera(false);
+          }
+          return;
+        }
+        
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter(device => device.kind === 'videoinput');
+        
+        if (isMounted) {
+          setAvailableCameras(cameras);
+          setHasCamera(cameras.length > 0);
+          
+          if (cameras.length > 0) {
+            setSelectedCamera(cameras[0].deviceId);
+          } else {
+            setUseCamera(false);
+          }
+        }
+      } catch (err) {
+        console.error('Error checking camera:', err);
+        if (isMounted) {
+          setHasCamera(false);
+          setUseCamera(false);
+        }
+      }
+    };
+
     if (isOpen) {
-      checkCameraAvailability();
+      // Initialize camera availability check when component opens
+      const initCamera = async () => {
+        try {
+          await checkCameraAvailability();
+        } catch (error) {
+          console.error('Failed to initialize camera:', error);
+        }
+      };
+      initCamera();
     }
     
     return () => {
+      isMounted = false;
       // Clean up camera stream when component unmounts
       stopCameraStream();
     };
-  }, [isOpen, checkCameraAvailability, stopCameraStream]);
-  
-  const stopCameraStream = useCallback(() => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
-      setCameraStream(null);
-    }
-  }, [cameraStream]);
-  
-  const checkCameraAvailability = useCallback(async () => {
-    try {
-      // Check if mediaDevices is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-        setHasCamera(false);
-        setUseCamera(false);
-        return;
-      }
-      
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const cameras = devices.filter(device => device.kind === 'videoinput');
-      
-      setAvailableCameras(cameras);
-      setHasCamera(cameras.length > 0);
-      
-      if (cameras.length > 0) {
-        setSelectedCamera(cameras[0].deviceId);
-        // Don't call startCamera here to avoid circular dependency
-      } else {
-        setUseCamera(false);
-      }
-    } catch (err) {
-      console.error('Error checking camera:', err);
-      setHasCamera(false);
-      setUseCamera(false);
-    }
-  }, []);
+  }, [isOpen, cameraStream]); // Include cameraStream in dependencies
 
   const startCamera = async (deviceId = null) => {
     try {
-      stopCameraStream(); // Stop any existing streams
+      // Stop any existing streams
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        setCameraStream(null);
+      }
       
       const constraints = {
         video: deviceId ? { deviceId: { exact: deviceId } } : true,
@@ -252,7 +272,10 @@ const QRCodeScanner = ({ onScan, onClose, isOpen }) => {
 
   const stopCamera = () => {
     setIsScanning(false);
-    stopCameraStream();
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
   };
 
   if (!isOpen) return null

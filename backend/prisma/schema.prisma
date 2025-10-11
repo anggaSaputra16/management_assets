@@ -190,6 +190,12 @@ model Company {
   auditTrails     AuditTrail[]
   notifications   Notification[]
   
+  // Asset Attachments
+  assetAttachments AssetAttachment[]
+  
+  // Asset Required Software
+  assetRequiredSoftware AssetRequiredSoftware[]
+  
   @@map("companies")
 }
 
@@ -288,6 +294,9 @@ model User {
   
   // Location management
   managedLocations Location[] @relation("LocationManager")
+  
+  // Asset Attachments uploaded by user
+  uploadedAssetAttachments AssetAttachment[] @relation("UploadedAttachments")
   
   @@map("users")
 }
@@ -478,6 +487,12 @@ model Asset {
   
   // Software installations on this asset
   softwareInstallations SoftwareInstallation[] @relation("SoftwareInstallations")
+  
+  // Asset Attachments
+  attachments     AssetAttachment[] @relation("AssetAttachments")
+  
+  // Required Software for this asset
+  requiredSoftware AssetRequiredSoftware[] @relation("RequiredSoftware")
   
   @@map("assets")
 }
@@ -1229,6 +1244,9 @@ model SoftwareAsset {
   licenses        SoftwareLicense[]
   installations   SoftwareInstallation[]
   
+  // Required by assets
+  requiredByAssets AssetRequiredSoftware[] @relation("RequiredByAssets")
+  
   @@map("software_assets")
 }
 
@@ -1311,4 +1329,63 @@ model LicenseRenewal {
   updatedAt       DateTime      @updatedAt
   
   @@map("license_renewals")
+}
+
+// Asset Attachments (Images and Documents)
+model AssetAttachment {
+  id              String        @id @default(cuid())
+  fileName        String
+  originalName    String
+  filePath        String
+  fileSize        Int?
+  mimeType        String?
+  attachmentType  AttachmentType
+  description     String?
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Foreign Keys
+  assetId         String
+  companyId       String
+  uploadedById    String
+  
+  // Relations
+  asset           Asset         @relation("AssetAttachments", fields: [assetId], references: [id])
+  company         Company       @relation(fields: [companyId], references: [id])
+  uploadedBy      User          @relation("UploadedAttachments", fields: [uploadedById], references: [id])
+  
+  @@map("asset_attachments")
+}
+
+// Asset Required Software (Many-to-Many relationship)
+model AssetRequiredSoftware {
+  id              String        @id @default(cuid())
+  isRequired      Boolean       @default(true)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Foreign Keys  
+  assetId         String
+  softwareAssetId String
+  companyId       String
+  
+  // Relations
+  asset           Asset         @relation("RequiredSoftware", fields: [assetId], references: [id])
+  softwareAsset   SoftwareAsset @relation("RequiredByAssets", fields: [softwareAssetId], references: [id])
+  company         Company       @relation(fields: [companyId], references: [id])
+  
+  @@unique([assetId, softwareAssetId])
+  @@map("asset_required_software")
+}
+
+// Attachment Type Enum
+enum AttachmentType {
+  IMAGE
+  DOCUMENT
+  MANUAL
+  WARRANTY
+  INVOICE
+  OTHER
 }

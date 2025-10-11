@@ -6,8 +6,9 @@ const Joi = require('joi')
 const router = express.Router()
 const prisma = new PrismaClient()
 
-// Validation schema untuk Software Assets
-const softwareAssetSchema = Joi.object({
+// Validation schema untuk combined Software Asset and License data
+const combinedSoftwareAssetSchema = Joi.object({
+  // Software Asset fields
   name: Joi.string().required().min(2).max(100),
   version: Joi.string().optional().allow('').max(20),
   publisher: Joi.string().optional().allow('').max(100),
@@ -23,11 +24,35 @@ const softwareAssetSchema = Joi.object({
     'DATABASE',
     'MIDDLEWARE',
     'PLUGIN'
-  ).required(),
+  ).optional().default('APPLICATION'),
   category: Joi.string().optional().allow('').max(50),
   systemRequirements: Joi.object().optional(),
   installationPath: Joi.string().optional().allow('').max(500),
-  isActive: Joi.boolean().default(true)
+  isActive: Joi.boolean().default(true),
+  
+  // License fields (for frontend compatibility)
+  license_type: Joi.string().valid(
+    'PERPETUAL',
+    'SUBSCRIPTION', 
+    'OPEN_SOURCE',
+    'TRIAL',
+    'EDUCATIONAL',
+    'ENTERPRISE',
+    'OEM',
+    'VOLUME',
+    'SINGLE_USER',  // Map to PERPETUAL
+    'MULTI_USER',   // Map to VOLUME
+    'SITE_LICENSE'  // Map to ENTERPRISE
+  ).optional().default('PERPETUAL'),
+  license_key: Joi.string().optional().allow(''),
+  status: Joi.string().valid('ACTIVE', 'EXPIRED', 'SUSPENDED', 'CANCELLED', 'PENDING_RENEWAL', 'VIOLATION').optional().default('ACTIVE'),
+  cost: Joi.number().optional().min(0),
+  purchase_date: Joi.date().optional().allow(null),
+  expiry_date: Joi.date().optional().allow(null),
+  max_installations: Joi.number().optional().min(1),
+  current_installations: Joi.number().optional().min(0),
+  vendor_id: Joi.string().optional().allow(''),
+  company_id: Joi.string().optional()
 })
 
 // GET /api/software-assets - Get all software assets with multi-company filtering
@@ -82,6 +107,13 @@ router.get('/', authenticate, async (req, res) => {
           { name: 'asc' }
         ],
         include: {
+          licenses: {
+            include: {
+              vendor: {
+                select: { id: true, name: true }
+              }
+            }
+          },
           _count: {
             select: {
               licenses: true,
@@ -247,7 +279,7 @@ router.get('/:id', authenticate, async (req, res) => {
 // POST /api/software-assets - Create new software asset (Admin/Asset Admin only)
 router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res) => {
   try {
-    const { error, value } = softwareAssetSchema.validate(req.body)
+    const { error, value } = combinedSoftwareAssetSchema.validate(req.body)
     if (error) {
       return res.status(400).json({
         success: false,
@@ -256,12 +288,37 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       })
     }
 
+    // Map license type for compatibility
+    const mapLicenseType = (type) => {
+      const mapping = {
+        'SINGLE_USER': 'PERPETUAL',
+        'MULTI_USER': 'VOLUME', 
+        'SITE_LICENSE': 'ENTERPRISE'
+      }
+      return mapping[type] || type
+    }
+
+    // Separate software asset and license data
+    const {
+      license_type,
+      license_key,
+      status: licenseStatus,
+      cost,
+      purchase_date,
+      expiry_date,
+      max_installations,
+      current_installations,
+      vendor_id,
+      company_id,
+      ...softwareAssetData
+    } = value
+
     // Check if software asset with same name and version exists in company
     const existingSoftware = await prisma.softwareAsset.findFirst({
       where: {
         companyId: req.user.companyId,
-        name: value.name,
-        version: value.version || null
+        name: softwareAssetData.name,
+        version: softwareAssetData.version || null
       }
     })
 
@@ -272,12 +329,51 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       })
     }
 
-    const softwareAsset = await prisma.softwareAsset.create({
-      data: {
-        ...value,
-        companyId: req.user.companyId // Auto-inject company ID
-      },
+    // Create software asset with license in transaction
+    const result = await prisma.$transaction(async (prisma) => {
+      // Create software asset
+      const softwareAsset = await prisma.softwareAsset.create({
+        data: {
+          ...softwareAssetData,
+          companyId: req.user.companyId
+        }
+      })
+
+      // Create license if license data is provided
+      let license = null
+      if (license_type || license_key || cost) {
+        license = await prisma.softwareLicense.create({
+          data: {
+            softwareAssetId: softwareAsset.id,
+            companyId: req.user.companyId,
+            licenseType: mapLicenseType(license_type) || 'PERPETUAL',
+            licenseKey: license_key || null,
+            status: licenseStatus || 'ACTIVE',
+            totalSeats: max_installations || 1,
+            usedSeats: current_installations || 0,
+            availableSeats: (max_installations || 1) - (current_installations || 0),
+            purchaseDate: purchase_date ? new Date(purchase_date) : null,
+            expiryDate: expiry_date ? new Date(expiry_date) : null,
+            purchaseCost: cost ? parseFloat(cost) : null,
+            vendorId: vendor_id || null
+          }
+        })
+      }
+
+      return { softwareAsset, license }
+    })
+
+    // Fetch complete data with relations
+    const completeData = await prisma.softwareAsset.findUnique({
+      where: { id: result.softwareAsset.id },
       include: {
+        licenses: {
+          include: {
+            vendor: {
+              select: { id: true, name: true }
+            }
+          }
+        },
         _count: {
           select: {
             licenses: true,
@@ -290,14 +386,14 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
     res.status(201).json({
       success: true,
       message: 'Software asset created successfully',
-      data: softwareAsset
+      data: completeData
     })
   } catch (error) {
     console.error('Error creating software asset:', error)
     res.status(500).json({
       success: false,
-      message: 'Failed to create software asset',
-      error: error.message
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     })
   }
 })
