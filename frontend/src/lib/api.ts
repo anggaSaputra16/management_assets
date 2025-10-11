@@ -46,9 +46,24 @@ api.interceptors.request.use(
         if (config.method === 'get') {
           config.params = { ...config.params, companyId: user.companyId }
         }
-        // Add company_id to request body for POST/PUT/PATCH requests
-        else if (config.data && typeof config.data === 'object') {
-          config.data = { ...config.data, companyId: user.companyId }
+
+        // Add company_id to request body for non-GET requests
+        // Special-case FormData: don't try to spread FormData into an object (that drops fields)
+        // Instead append the companyId to the FormData instance.
+        else if (config.data) {
+          try {
+            // Browser environment: FormData exists globally
+            if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+              // Append companyId so files and other fields are preserved
+              config.data.append('companyId', user.companyId)
+            } else if (typeof config.data === 'object') {
+              // Regular JSON body — safe to spread
+              config.data = { ...config.data, companyId: user.companyId }
+            }
+          } catch (err) {
+            // Fallback: don't modify body if something goes wrong
+            console.error('Failed to inject companyId into request body:', err)
+          }
         }
       }
     }

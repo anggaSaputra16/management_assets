@@ -1,6 +1,6 @@
 # Docker ignore file for backend
 node_modules
-npm-debug.log
+npm-debug.log*
 .nyc_output
 coverage
 .env
@@ -13,5 +13,29 @@ uploads/*
 .git
 .gitignore
 README.md
-Dockerfile
+Dockerfile*
+docker-compose*
 .dockerignore
+
+# Testing files
+*.test.js
+*.spec.js
+__tests__/
+
+# Backup and temp files
+*.backup
+*.bak
+*.tmp
+*.swp
+*.swo
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

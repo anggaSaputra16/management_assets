@@ -17,13 +17,27 @@ export const assetService = {
 
   // Create new asset - companyId auto-injected
   createAsset: async (assetData) => {
-    const response = await api.post('/assets', assetData)
+    const config = {}
+    if (assetData instanceof FormData) {
+      // Let axios handle the Content-Type for FormData automatically
+      // Don't set Content-Type manually as it needs boundary parameter
+    } else {
+      config.headers = { 'Content-Type': 'application/json' }
+    }
+    const response = await api.post('/assets', assetData, config)
     return response.data
   },
 
   // Update asset - companyId auto-injected
   updateAsset: async (id, assetData) => {
-    const response = await api.put(`/assets/${id}`, assetData)
+    const config = {}
+    if (assetData instanceof FormData) {
+      // Let axios handle the Content-Type for FormData automatically
+      // Don't set Content-Type manually as it needs boundary parameter
+    } else {
+      config.headers = { 'Content-Type': 'application/json' }
+    }
+    const response = await api.put(`/assets/${id}`, assetData, config)
     return response.data
   },
 

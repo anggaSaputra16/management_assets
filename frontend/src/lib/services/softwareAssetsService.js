@@ -22,16 +22,58 @@ export const softwareAssetsService = {
   // Create new software asset
   create: async (softwareAssetData) => {
     const company_id = getCompanyId();
-    const dataWithCompany = { ...softwareAssetData, company_id };
-    const response = await api.post('/software-assets', dataWithCompany);
+    // Map frontend fields to backend expected format
+    const mappedData = {
+      name: softwareAssetData.name,
+      version: softwareAssetData.version || '',
+      publisher: softwareAssetData.publisher || '',
+      description: softwareAssetData.description || '',
+      softwareType: 'APPLICATION', // Default type
+      category: softwareAssetData.category || '',
+      isActive: true,
+      // License data
+      license_type: softwareAssetData.license_type || 'PERPETUAL',
+      license_key: softwareAssetData.license_key || '',
+      status: softwareAssetData.status || 'ACTIVE',
+      cost: softwareAssetData.cost ? parseFloat(softwareAssetData.cost) : null,
+      purchase_date: softwareAssetData.purchase_date || null,
+      expiry_date: softwareAssetData.expiry_date || null,
+      max_installations: softwareAssetData.max_installations ? parseInt(softwareAssetData.max_installations) : 1,
+      current_installations: softwareAssetData.current_installations ? parseInt(softwareAssetData.current_installations) : 0,
+      vendor_id: softwareAssetData.vendor_id || null,
+      company_id
+    };
+    
+    const response = await api.post('/software-assets', mappedData);
     return response.data;
   },
 
   // Update software asset
   update: async (id, softwareAssetData) => {
     const company_id = getCompanyId();
-    const dataWithCompany = { ...softwareAssetData, company_id };
-    const response = await api.put(`/software-assets/${id}`, dataWithCompany);
+    // Map frontend fields to backend expected format
+    const mappedData = {
+      name: softwareAssetData.name,
+      version: softwareAssetData.version || '',
+      publisher: softwareAssetData.publisher || '',
+      description: softwareAssetData.description || '',
+      softwareType: 'APPLICATION', // Default type
+      category: softwareAssetData.category || '',
+      isActive: true,
+      // License data
+      license_type: softwareAssetData.license_type || 'PERPETUAL',
+      license_key: softwareAssetData.license_key || '',
+      status: softwareAssetData.status || 'ACTIVE',
+      cost: softwareAssetData.cost ? parseFloat(softwareAssetData.cost) : null,
+      purchase_date: softwareAssetData.purchase_date || null,
+      expiry_date: softwareAssetData.expiry_date || null,
+      max_installations: softwareAssetData.max_installations ? parseInt(softwareAssetData.max_installations) : 1,
+      current_installations: softwareAssetData.current_installations ? parseInt(softwareAssetData.current_installations) : 0,
+      vendor_id: softwareAssetData.vendor_id || null,
+      company_id
+    };
+    
+    const response = await api.put(`/software-assets/${id}`, mappedData);
     return response.data;
   },
 

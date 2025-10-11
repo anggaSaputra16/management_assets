@@ -8,14 +8,34 @@ const fs = require('fs');
 
 const router = express.Router();
 
-// Configure multer for asset image uploads
+// Configure multer for asset file uploads (images and documents)
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../../../uploads/assets');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+  // Resolve uploads directory relative to this file to reliably place
+  // uploads under <project-root>/uploads/assets regardless of the
+  // container working directory.
+  const uploadDir = path.resolve(__dirname, '..', '..', 'uploads', 'assets');
+  console.log('Preparing upload directory for assets:', uploadDir, '__dirname:', __dirname);
+    try {
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    } catch (err) {
+      console.error('Failed to prepare upload directory:', uploadDir, err);
+      // Fallback to OS temp directory so uploads can still be processed in
+      // constrained environments.
+      try {
+        const os = require('os');
+        const tmpDir = path.resolve(os.tmpdir(), 'management-assets-uploads');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+        console.warn('Falling back to tmp upload directory:', tmpDir);
+        cb(null, tmpDir);
+      } catch (err2) {
+        console.error('Fallback upload directory creation failed:', err2);
+        cb(err);
+      }
     }
-    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -25,19 +45,31 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  // Accept only image files
-  if (file.mimetype.startsWith('image/')) {
+  // Accept images and documents
+  const allowedTypes = [
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'application/pdf', 'application/msword', 
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain'
+  ];
+  
+  if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Only image files are allowed!'), false);
+    cb(new Error('File type not allowed! Only images and documents are permitted.'), false);
   }
 };
 
 const upload = multer({ 
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
+
+// Multiple file upload for asset attachments
+const uploadMultiple = upload.array('attachments', 5); // Max 5 files
 
 // Validation schemas - simplified to only require mandatory fields
 const createAssetSchema = Joi.object({
@@ -80,7 +112,18 @@ const createAssetSchema = Joi.object({
   departmentId: Joi.string().optional().allow(null, ''),
   assignedToId: Joi.string().optional().allow(null, ''),
   specifications: Joi.object().optional(),
-  imageUrl: Joi.string().optional().allow('', null)
+  imageUrl: Joi.string().optional().allow('', null),
+  
+  // New fields for enhanced asset management
+  requiredSoftware: Joi.alternatives().try(
+    Joi.array().items(Joi.string()),
+    Joi.string()
+  ).optional(),
+  requiredSoftwareIds: Joi.alternatives().try(
+    Joi.array().items(Joi.string()),
+    Joi.string()
+  ).optional(),
+  attachmentDescriptions: Joi.array().items(Joi.string()).optional()
 }).unknown(true); // Allow unknown fields to be more flexible
 
 const updateAssetSchema = Joi.object({
@@ -278,23 +321,91 @@ router.get('/:id', authenticate, async (req, res, next) => {
 });
 
 // Create new asset (Admin/Asset Admin only)
-router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res, next) => {
+// Create asset with file uploads and required software
+router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple, async (req, res, next) => {
   try {
-    const { error, value } = createAssetSchema.validate(req.body);
+    // Parse JSON fields from FormData if they exist
+    const parsedBody = { ...req.body };
+    
+    // Log for debugging
+    console.log('Received body:', parsedBody);
+    console.log('Files:', req.files);
+    console.log('Body keys:', Object.keys(parsedBody));
+    console.log('Form data entries:', Object.entries(parsedBody));
+    
+    // Handle JSON fields that might be stringified in FormData
+    ['specifications', 'requiredSoftware'].forEach(field => {
+      if (parsedBody[field] && typeof parsedBody[field] === 'string') {
+        try {
+          parsedBody[field] = JSON.parse(parsedBody[field]);
+        } catch (e) {
+          console.log(`Failed to parse ${field}:`, parsedBody[field]);
+        }
+      }
+    });
+    
+    // Check if we're receiving form data properly
+    if (Object.keys(parsedBody).length <= 1) {
+      console.error('ERROR: Form data not processed correctly. Only received:', parsedBody);
+      return res.status(400).json({
+        success: false,
+        message: 'Form data not received properly. Please check form submission.',
+        debug: {
+          received: parsedBody,
+          keys: Object.keys(parsedBody)
+        }
+      });
+    }
+    
+    // Ensure required fields are present
+    if (!parsedBody.name || parsedBody.name.trim() === '') {
+      console.error('ERROR: Asset name is missing from form data');
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        error: 'Asset name is required',
+        debug: {
+          received: parsedBody,
+          hasName: !!parsedBody.name,
+          nameValue: parsedBody.name
+        }
+      });
+    }
+    
+    const { error, value } = createAssetSchema.validate(parsedBody);
     if (error) {
       return res.status(400).json({
         success: false,
         message: 'Validation error',
-        error: error.details[0].message
+        details: [error.details[0].message]
       });
     }
 
+    // Parse array fields if they're strings (from FormData)
+    let requiredSoftwareIds = [];
+    let attachmentDescriptions = [];
+    
+    // Handle both requiredSoftware and requiredSoftwareIds
+    const softwareField = value.requiredSoftware || value.requiredSoftwareIds;
+    if (softwareField) {
+      requiredSoftwareIds = Array.isArray(softwareField) 
+        ? softwareField 
+        : JSON.parse(softwareField || '[]');
+    }
+    
+    if (value.attachmentDescriptions) {
+      attachmentDescriptions = Array.isArray(value.attachmentDescriptions)
+        ? value.attachmentDescriptions
+        : JSON.parse(value.attachmentDescriptions || '[]');
+    }
+
     // Validate foreign keys
-    const [category, vendor, location, department] = await Promise.all([
+    const [category, vendor, location, department, assignedUser] = await Promise.all([
       prisma.category.findUnique({ where: { id: value.categoryId } }),
       value.vendorId ? prisma.vendor.findUnique({ where: { id: value.vendorId } }) : null,
       value.locationId ? prisma.location.findUnique({ where: { id: value.locationId } }) : null,
-      value.departmentId ? prisma.department.findUnique({ where: { id: value.departmentId } }) : null
+      value.departmentId ? prisma.department.findUnique({ where: { id: value.departmentId } }) : null,
+      value.assignedToId ? prisma.user.findUnique({ where: { id: value.assignedToId } }) : null
     ]);
 
     if (!category) {
@@ -323,6 +434,28 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         success: false,
         message: 'Invalid department'
       });
+    }
+
+    if (value.assignedToId && !assignedUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid assigned user'
+      });
+    }
+
+    // Validate required software IDs exist (using inventory items for now)
+    if (requiredSoftwareIds.length > 0) {
+      const inventoryItems = await prisma.inventoryItem.findMany({
+        where: {
+          id: { in: requiredSoftwareIds },
+          departmentId: value.departmentId // Check same department or null for global items
+        }
+      });
+      
+      // For now, just log if some software items weren't found rather than failing
+      if (inventoryItems.length !== requiredSoftwareIds.length) {
+        console.log(`Warning: Only ${inventoryItems.length} of ${requiredSoftwareIds.length} software items found`);
+      }
     }
 
     // Generate unique asset tag
@@ -357,6 +490,14 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
     const companyId = req.user.companyId;
     const assetTag = await generateAssetTag(companyId);
 
+    // Capture depreciation-related fields (they belong to AssetDepreciation model)
+    const depreciationPayload = {
+      depreciationMethod: value.depreciationMethod,
+      usefulLife: value.usefulLife,
+      salvageValue: value.salvageValue,
+      depreciationRate: value.depreciationRate
+    };
+
     // Process and clean data
     const processedData = {
       ...value,
@@ -378,29 +519,172 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       specifications: value.specifications || {}
     };
 
-    // Create asset
-    const asset = await prisma.asset.create({
-      data: processedData,
-      include: {
-        category: {
-          select: { id: true, name: true, code: true }
-        },
-        vendor: {
-          select: { id: true, name: true, code: true }
-        },
-        location: {
-          select: { id: true, name: true, building: true, room: true }
-        },
-        department: {
-          select: { id: true, name: true, code: true }
+    // Remove fields that don't belong on the Asset model (they are handled
+    // in related models like AssetDepreciation or AssetAttachment)
+    ['depreciationRate', 'depreciationMethod', 'usefulLife', 'salvageValue', 'requiredSoftware', 'requiredSoftwareIds', 'attachments']
+      .forEach(k => delete processedData[k]);
+
+    // Create asset with transaction to handle related data
+    const result = await prisma.$transaction(async (tx) => {
+      // Create asset - only include fields that exist on the Asset model in Prisma
+        const createData = {
+          name: processedData.name,
+          assetTag: processedData.assetTag,
+          companyId: processedData.companyId,
+          categoryId: processedData.categoryId,
+          description: processedData.description || undefined,
+          serialNumber: processedData.serialNumber || undefined,
+          model: processedData.model || undefined,
+          brand: processedData.brand || undefined,
+          poNumber: processedData.poNumber || undefined,
+          purchaseDate: processedData.purchaseDate || undefined,
+          purchasePrice: processedData.purchasePrice !== undefined ? processedData.purchasePrice : undefined,
+          currentValue: processedData.currentValue !== undefined ? processedData.currentValue : undefined,
+          warrantyExpiry: processedData.warrantyExpiry || undefined,
+          status: processedData.status || undefined,
+          condition: processedData.condition || undefined,
+          notes: processedData.notes || undefined,
+          qrCode: processedData.qrCode || undefined,
+          imageUrl: processedData.imageUrl || undefined,
+          specifications: processedData.specifications || undefined,
+          isActive: processedData.isActive !== undefined ? processedData.isActive : undefined,
+          vendorId: processedData.vendorId || undefined,
+          locationId: processedData.locationId || undefined,
+          departmentId: processedData.departmentId || undefined,
+          assignedToId: processedData.assignedToId || undefined
+        };
+
+        const asset = await tx.asset.create({
+          data: createData,
+        include: {
+          category: {
+            select: { id: true, name: true, code: true }
+          },
+          vendor: {
+            select: { id: true, name: true, code: true }
+          },
+          location: {
+            select: { id: true, name: true, building: true, room: true }
+          },
+          department: {
+            select: { id: true, name: true, code: true }
+          },
+          assignedTo: {
+            select: { id: true, firstName: true, lastName: true, email: true }
+          }
+        }
+      });
+
+      // Handle file attachments
+      if (req.files && req.files.length > 0) {
+        const attachments = req.files.map((file, index) => {
+          // Determine attachment type based on mime type
+          let attachmentType = 'OTHER';
+          if (file.mimetype.startsWith('image/')) {
+            attachmentType = 'IMAGE';
+          } else if (file.mimetype === 'application/pdf') {
+            attachmentType = 'DOCUMENT';
+          } else if (file.mimetype.includes('word') || file.mimetype.includes('excel')) {
+            attachmentType = 'DOCUMENT';
+          }
+
+          return {
+            assetId: asset.id,
+            companyId: req.user.companyId,
+            uploadedById: req.user.id,
+            fileName: file.filename,
+            originalName: file.originalname,
+            filePath: file.path,
+            fileSize: file.size,
+            mimeType: file.mimetype,
+            attachmentType: attachmentType,
+            description: attachmentDescriptions[index] || file.originalname
+          };
+        });
+
+        await tx.assetAttachment.createMany({
+          data: attachments
+        });
+      }
+
+  // Handle required software (temporarily commented out until proper software assets are ready)
+      if (requiredSoftwareIds.length > 0) {
+        // For now, just store in asset notes or specifications
+        // Will be implemented properly when software asset management is ready
+        console.log('Required software IDs stored in asset specifications:', requiredSoftwareIds);
+        
+        // Store software requirements in specifications for now
+        if (!processedData.specifications) processedData.specifications = {};
+        processedData.specifications.requiredSoftware = requiredSoftwareIds;
+        
+        // Update the asset with software requirements in specifications
+        await tx.asset.update({
+          where: { id: asset.id },
+          data: { 
+            specifications: processedData.specifications
+          }
+        });
+      }
+
+      // If depreciation fields were provided, create an AssetDepreciation entry
+      if (depreciationPayload.depreciationMethod || depreciationPayload.usefulLife || depreciationPayload.depreciationRate || depreciationPayload.salvageValue) {
+        try {
+          await tx.assetDepreciation.create({
+            data: {
+              depreciationMethod: depreciationPayload.depreciationMethod || 'STRAIGHT_LINE',
+              usefulLife: depreciationPayload.usefulLife || 0,
+              salvageValue: depreciationPayload.salvageValue || null,
+              depreciationRate: depreciationPayload.depreciationRate || null,
+              currentBookValue: processedData.purchasePrice || null,
+              accumulatedDepreciation: 0,
+              lastCalculatedDate: new Date(),
+              isActive: true,
+              notes: null,
+              asset: { connect: { id: asset.id } }
+            }
+          });
+        } catch (err) {
+          console.error('Failed to create asset depreciation record:', err);
+          // don't fail the whole transaction for depreciation issues; log and continue
         }
       }
+
+      // Return asset with all related data
+      return await tx.asset.findUnique({
+        where: { id: asset.id },
+        include: {
+          category: { select: { id: true, name: true, code: true } },
+          vendor: { select: { id: true, name: true, code: true } },
+          location: { select: { id: true, name: true, building: true, room: true } },
+          department: { select: { id: true, name: true, code: true } },
+          assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } },
+          attachments: {
+            select: {
+              id: true,
+              fileName: true,
+              originalName: true,
+              attachmentType: true,
+              description: true,
+              fileSize: true,
+              mimeType: true,
+              createdAt: true
+            }
+          },
+          requiredSoftware: {
+            include: {
+              softwareAsset: {
+                select: { id: true, name: true, version: true }
+              }
+            }
+          }
+        }
+      });
     });
 
     res.status(201).json({
       success: true,
       message: 'Asset created successfully',
-      data: asset
+      data: result
     });
   } catch (error) {
     next(error);
@@ -408,10 +692,25 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
 });
 
 // Update asset (Admin/Asset Admin only)
-router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res, next) => {
+router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple, async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { error, value } = updateAssetSchema.validate(req.body);
+    
+    // Parse JSON fields from FormData if they exist
+    const parsedBody = { ...req.body };
+    
+    // Handle JSON fields that might be stringified in FormData
+    ['specifications', 'requiredSoftware'].forEach(field => {
+      if (parsedBody[field] && typeof parsedBody[field] === 'string') {
+        try {
+          parsedBody[field] = JSON.parse(parsedBody[field]);
+        } catch (e) {
+          console.log(`Failed to parse ${field}:`, parsedBody[field]);
+        }
+      }
+    });
+    
+    const { error, value } = updateAssetSchema.validate(parsedBody);
     
     if (error) {
       return res.status(400).json({
@@ -419,6 +718,22 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
         message: 'Validation error',
         error: error.details[0].message
       });
+    }
+
+    // Parse array fields if they're strings (from FormData)
+    let requiredSoftwareIds = [];
+    let attachmentDescriptions = [];
+    
+    if (value.requiredSoftwareIds) {
+      requiredSoftwareIds = Array.isArray(value.requiredSoftwareIds) 
+        ? value.requiredSoftwareIds 
+        : JSON.parse(value.requiredSoftwareIds || '[]');
+    }
+    
+    if (value.attachmentDescriptions) {
+      attachmentDescriptions = Array.isArray(value.attachmentDescriptions)
+        ? value.attachmentDescriptions
+        : JSON.parse(value.attachmentDescriptions || '[]');
     }
 
     // Check if asset exists
@@ -1020,7 +1335,7 @@ router.post('/:id/generate-qr', authenticate, async (req, res, next) => {
 
     // Check if asset exists
     const asset = await prisma.asset.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: id }, // Use string ID, not parseInt
       include: {
         category: true,
         location: true,

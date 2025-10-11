@@ -34,22 +34,64 @@ export default function MasterCompaniesPage() {
     description: '',
     isActive: true
   })
+  const [formErrors, setFormErrors] = useState({})
 
   useEffect(() => {
     fetchCompanies({ search: searchTerm })
   }, [searchTerm, fetchCompanies])
 
+  // Helper to refresh data after CRUD
+  const refreshCompanies = async () => {
+    await fetchCompanies({ search: searchTerm })
+  }
+
+  const validateForm = () => {
+    const errors = {}
+    if (!formData.name.trim()) errors.name = 'Company name wajib diisi.'
+    if (!formData.code.trim()) errors.code = 'Company code wajib diisi.'
+    if (formData.code.length < 2 || formData.code.length > 10) errors.code = 'Code 2-10 karakter.'
+    if (formData.email && !/^\S+@\S+\.\S+$/.test(formData.email)) errors.email = 'Format email tidak valid.'
+    if (formData.website && !/^https?:\/\/.+\..+/.test(formData.website)) errors.website = 'Format website tidak valid.'
+    return errors
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const errors = validateForm()
+    setFormErrors(errors)
+    if (Object.keys(errors).length > 0) return
     try {
+      let result
       if (editingCompany) {
-        await updateCompany(editingCompany.id, formData)
+        result = await updateCompany(editingCompany.id, formData)
       } else {
-        await createCompany(formData)
+        result = await createCompany(formData)
+      }
+      if (result === false) {
+        // Ambil error dari store jika ada
+        setFormErrors({ backend: 'Gagal menyimpan data. Cek duplikat atau format.' })
+        return
       }
       setShowModal(false)
       resetForm()
+      setFormErrors({})
+      await refreshCompanies()
     } catch (error) {
+      // Coba ambil error Joi dari response
+      if (error?.response?.data?.details) {
+        const backendErrors = {}
+        error.response.data.details.forEach(msg => {
+          // Mapping error ke field jika bisa
+          if (msg.toLowerCase().includes('name')) backendErrors.name = msg
+          else if (msg.toLowerCase().includes('code')) backendErrors.code = msg
+          else if (msg.toLowerCase().includes('email')) backendErrors.email = msg
+          else if (msg.toLowerCase().includes('website')) backendErrors.website = msg
+          else backendErrors.backend = msg
+        })
+        setFormErrors(backendErrors)
+      } else {
+        setFormErrors({ backend: 'Gagal menyimpan data company!' })
+      }
       console.error('Error saving company:', error)
     }
   }
@@ -77,7 +119,9 @@ export default function MasterCompaniesPage() {
         await deleteCompany(companyToDelete.id)
         setShowDeleteModal(false)
         setCompanyToDelete(null)
+        await refreshCompanies()
       } catch (error) {
+        alert('Gagal menghapus company!')
         console.error('Error deleting company:', error)
       }
     }
@@ -101,6 +145,9 @@ export default function MasterCompaniesPage() {
 
   if (!user) {
     return <div className="flex justify-center items-center h-64">Loading...</div>
+  }
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading companies...</div>
   }
 
   const filteredCompanies = companies.filter(comp =>
@@ -259,9 +306,10 @@ export default function MasterCompaniesPage() {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="glass-input w-full px-3 py-2 rounded-lg"
+                    className={`glass-input w-full px-3 py-2 rounded-lg ${formErrors.name ? 'border-red-500' : ''}`}
                     placeholder="Enter company name"
                   />
+                  {formErrors.name && <div className="text-red-500 text-xs mt-1">{formErrors.name}</div>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -272,10 +320,11 @@ export default function MasterCompaniesPage() {
                     required
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                    className="glass-input w-full px-3 py-2 rounded-lg"
+                    className={`glass-input w-full px-3 py-2 rounded-lg ${formErrors.code ? 'border-red-500' : ''}`}
                     placeholder="Enter company code (2-10 chars)"
                     maxLength={10}
                   />
+                  {formErrors.code && <div className="text-red-500 text-xs mt-1">{formErrors.code}</div>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -310,9 +359,10 @@ export default function MasterCompaniesPage() {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="glass-input w-full px-3 py-2 rounded-lg"
+                      className={`glass-input w-full px-3 py-2 rounded-lg ${formErrors.email ? 'border-red-500' : ''}`}
                       placeholder="Email address"
                     />
+                    {formErrors.email && <div className="text-red-500 text-xs mt-1">{formErrors.email}</div>}
                   </div>
                 </div>
                 <div>
@@ -323,9 +373,10 @@ export default function MasterCompaniesPage() {
                     type="url"
                     value={formData.website}
                     onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                    className="glass-input w-full px-3 py-2 rounded-lg"
+                    className={`glass-input w-full px-3 py-2 rounded-lg ${formErrors.website ? 'border-red-500' : ''}`}
                     placeholder="https://example.com"
                   />
+                  {formErrors.website && <div className="text-red-500 text-xs mt-1">{formErrors.website}</div>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -365,6 +416,7 @@ export default function MasterCompaniesPage() {
                     rows="2"
                   />
                 </div>
+                {formErrors.backend && <div className="text-red-500 text-xs mt-2">{formErrors.backend}</div>}
                 <div className="flex items-center">
                   <input
                     type="checkbox"

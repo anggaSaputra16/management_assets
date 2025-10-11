@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { useAssetStore, useCategoryStore, useLocationStore, useDepartmentStore, useVendorStore } from '@/stores'
+import { useAssetStore, useCategoryStore, useLocationStore, useDepartmentStore, useVendorStore, useUserStore, useInventoryStore } from '@/stores'
 import { useToast } from '@/contexts/ToastContext'
 import QRCodeScanner from '@/components/QRCodeScanner'
 import QRCodeDisplay from '@/components/QRCodeDisplay'
@@ -61,6 +61,9 @@ const AssetsPage = () => {
   const { locations, fetchLocations } = useLocationStore()
   const { departments, fetchDepartments } = useDepartmentStore()
   const { vendors, fetchVendors } = useVendorStore()
+  const { users, fetchUsers } = useUserStore()
+  // const { spareParts, fetchSpareParts } = useSparePartsStore()
+  const { inventories: spareParts, fetchInventories: fetchSpareParts } = useInventoryStore()
 
   const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -77,6 +80,9 @@ const AssetsPage = () => {
   const [selectedAssetId, setSelectedAssetId] = useState(null)
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [showDepreciationModal, setShowDepreciationModal] = useState(false)
+  const [selectedFiles, setSelectedFiles] = useState([])
+  const [previewFiles, setPreviewFiles] = useState([])
+  const [selectedSoftware, setSelectedSoftware] = useState([])
   const itemsPerPage = 10
 
   const filteredAssets = getFilteredAssets()
@@ -87,6 +93,67 @@ const AssetsPage = () => {
     currentPage * itemsPerPage
   )
 
+  // Get software items from inventory (temporarily using inventory instead of spare parts)
+  const softwareItems = spareParts?.filter(item => 
+    item.type === 'SOFTWARE' || (item.name && item.name.toLowerCase().includes('software'))
+  ) || []
+
+  // Handle file upload
+  const handleFileUpload = (event) => {
+    const files = Array.from(event.target.files)
+    setSelectedFiles(prev => [...prev, ...files])
+    
+    // Create preview for images
+    const newPreviews = []
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          newPreviews.push({
+            file,
+            url: e.target.result,
+            type: 'image'
+          })
+          if (newPreviews.length === files.filter(f => f.type.startsWith('image/')).length) {
+            setPreviewFiles(prev => [...prev, ...newPreviews])
+          }
+        }
+        reader.readAsDataURL(file)
+      } else {
+        newPreviews.push({
+          file,
+          url: null,
+          type: 'document'
+        })
+      }
+    })
+    
+    // Add document previews immediately
+    const docPreviews = newPreviews.filter(p => p.type === 'document')
+    if (docPreviews.length > 0) {
+      setPreviewFiles(prev => [...prev, ...docPreviews])
+    }
+  }
+
+  // Remove file from selection
+  const removeFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+    setPreviewFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // Handle software selection
+  const handleSoftwareSelection = (softwareId) => {
+    const software = softwareItems.find(item => item.id === softwareId)
+    if (software && !selectedSoftware.find(s => s.id === softwareId)) {
+      setSelectedSoftware(prev => [...prev, software])
+    }
+  }
+
+  // Remove software from selection
+  const removeSoftware = (softwareId) => {
+    setSelectedSoftware(prev => prev.filter(s => s.id !== softwareId))
+  }
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -95,7 +162,9 @@ const AssetsPage = () => {
           fetchCategories(),
           fetchLocations(),
           fetchDepartments(),
-          fetchVendors()
+          fetchVendors(),
+          fetchUsers(),
+          fetchSpareParts()
         ])
       } catch (error) {
         console.error('Failed to load data:', error)
@@ -104,7 +173,7 @@ const AssetsPage = () => {
     }
     
     loadData()
-  }, [fetchAssets, fetchCategories, fetchLocations, fetchDepartments, fetchVendors, showError])
+  }, [fetchAssets, fetchCategories, fetchLocations, fetchDepartments, fetchVendors, fetchUsers, fetchSpareParts, showError])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -125,9 +194,9 @@ const AssetsPage = () => {
       return
     }
 
-    try {
-      // Clean up form data before sending
-      const dataToSend = {
+    try {      
+      // Prepare asset data as regular JSON object
+      const assetData = {
         name: formData.name?.trim(),
         description: formData.description?.trim() || null,
         serialNumber: formData.serialNumber?.trim() || null,
@@ -138,22 +207,59 @@ const AssetsPage = () => {
         locationId: formData.locationId,
         departmentId: formData.departmentId || null,
         vendorId: formData.vendorId || null,
+        assignedToId: formData.assignedToId || null,
         status: formData.status || 'ACTIVE',
         condition: formData.condition || 'GOOD',
         purchaseDate: formData.purchaseDate || null,
         purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
         warrantyExpiry: formData.warrantyExpiry || null,
-        specifications: formData.specifications || {}
+        depreciationRate: formData.depreciationRate ? parseFloat(formData.depreciationRate) : null,
+        specifications: formData.specifications || {},
+        requiredSoftware: selectedSoftware.map(s => s.id)
       }
 
-      if (editingAsset) {
-        await updateAsset(editingAsset.id, dataToSend)
-        showSuccess('Asset updated successfully!')
+      // If there are files, use FormData approach
+      if (selectedFiles.length > 0) {
+        const formDataToSend = new FormData()
+        
+        // Add asset data to FormData
+        Object.keys(assetData).forEach(key => {
+          if (assetData[key] !== null && assetData[key] !== undefined) {
+            if (key === 'requiredSoftware' || key === 'specifications') {
+              formDataToSend.append(key, JSON.stringify(assetData[key]))
+            } else {
+              formDataToSend.append(key, assetData[key])
+            }
+          }
+        })
+
+        // Add files to FormData
+        selectedFiles.forEach((file) => {
+          formDataToSend.append('attachments', file)
+        })
+        
+        // Send FormData
+        if (editingAsset) {
+          await updateAsset(editingAsset.id, formDataToSend)
+        } else {
+          await createAsset(formDataToSend)
+        }
       } else {
-        await createAsset(dataToSend)
-        showSuccess('Asset created successfully!')
+        // No files, send as regular JSON
+        if (editingAsset) {
+          await updateAsset(editingAsset.id, assetData)
+        } else {
+          await createAsset(assetData)
+        }
       }
+
+      
+      showSuccess(editingAsset ? 'Asset updated successfully!' : 'Asset created successfully!')
       setShowModal(false)
+      setSelectedFiles([])
+      setPreviewFiles([])
+      setSelectedSoftware([])
+      resetForm()
     } catch (error) {
       console.error('Failed to save asset:', error)
       showError(error.message || 'Failed to save asset. Please try again.')
@@ -179,8 +285,25 @@ const AssetsPage = () => {
       purchaseDate: asset.purchaseDate || '',
       purchasePrice: asset.purchasePrice || '',
       warrantyExpiry: asset.warrantyExpiry || '',
+      depreciationRate: asset.depreciationRate || '',
+      assignedToId: asset.assignedToId || '',
       specifications: asset.specifications || {}
     })
+    
+    // Clear previous selections
+    setSelectedFiles([])
+    setPreviewFiles([])
+    
+    // Set existing required software if any
+    if (asset.requiredSoftware && asset.requiredSoftware.length > 0) {
+      const existingSoftware = asset.requiredSoftware.map(rs => 
+        softwareItems.find(item => item.id === rs.softwareId)
+      ).filter(Boolean)
+      setSelectedSoftware(existingSoftware)
+    } else {
+      setSelectedSoftware([])
+    }
+    
     setShowModal(true)
   }
   
@@ -680,6 +803,26 @@ const AssetsPage = () => {
               </div>
             </div>
 
+            {/* User Assignment */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Assign to User (Optional)
+              </label>
+              <select
+                name="assignedToId"
+                value={formData.assignedToId || ''}
+                onChange={handleFormChange}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select User</option>
+                {Array.isArray(users) && users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.firstName} {user.lastName} ({user.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -786,6 +929,133 @@ const AssetsPage = () => {
               />
             </div>
 
+            {/* File Upload Section */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Upload Files (Images/Documents)
+              </label>
+              <div className="border-dashed border-2 border-gray-300 rounded-lg p-4">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                  onChange={handleFileUpload}
+                  className="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Upload images or documents related to this asset (JPEG, PNG, PDF, DOC, XLS, TXT)
+                </p>
+                
+                {/* File Preview */}
+                {previewFiles.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <h4 className="text-sm font-medium text-gray-700">Selected Files:</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {previewFiles.map((preview, index) => (
+                        <div key={index} className="relative border rounded-lg p-2">
+                          {preview.type === 'image' ? (
+                            <Image 
+                              src={preview.url} 
+                              alt={preview.file.name}
+                              width={80}
+                              height={64}
+                              className="w-full h-16 object-cover rounded"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center h-16 bg-gray-100 rounded">
+                              <span className="text-xs text-gray-600 text-center">
+                                {preview.file.name}
+                              </span>
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                          >
+                            ×
+                          </button>
+                          <p className="text-xs text-gray-500 mt-1 truncate">
+                            {preview.file.name}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Required Software Section */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Required Software (For devices that need software installation)
+              </label>
+              <div className="space-y-3">
+                {/* Software Selection Dropdown */}
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleSoftwareSelection(e.target.value)
+                      e.target.value = ''
+                    }
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select software to add...</option>
+                  {softwareItems.map(software => (
+                    <option 
+                      key={software.id} 
+                      value={software.id}
+                      disabled={selectedSoftware.some(s => s.id === software.id)}
+                    >
+                      {software.name} - {software.brand || 'Generic'} ({software.partNumber})
+                    </option>
+                  ))}
+                </select>
+
+                {/* Selected Software List */}
+                {selectedSoftware.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-gray-700">Selected Software:</h4>
+                    <div className="space-y-2">
+                      {selectedSoftware.map((software) => (
+                        <div key={software.id} className="flex items-center justify-between bg-blue-50 rounded-lg p-3">
+                          <div>
+                            <p className="font-medium text-sm">{software.name}</p>
+                            <p className="text-xs text-gray-600">
+                              {software.brand || 'Generic'} - {software.partNumber}
+                              {software.description && (
+                                <span className="block text-gray-500 mt-1">{software.description}</span>
+                              )}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeSoftware(software.id)}
+                            className="text-red-600 hover:text-red-800 p-1"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {softwareItems.length === 0 && (
+                  <p className="text-sm text-gray-500 italic">
+                    No software items available in inventory. Add software items to the spare parts inventory first.
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Image Upload */}
             {editingAsset && (
               <div className="mb-4">
@@ -846,6 +1116,9 @@ const AssetsPage = () => {
                 type="button"
                 onClick={() => {
                   setShowModal(false)
+                  setSelectedFiles([])
+                  setPreviewFiles([])
+                  setSelectedSoftware([])
                   resetForm()
                 }}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"

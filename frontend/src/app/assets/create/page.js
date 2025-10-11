@@ -14,20 +14,36 @@ export default function CreateAssetPage() {
   const [locations, setLocations] = useState([])
   const [vendors, setVendors] = useState([])
   const [departments, setDepartments] = useState([])
+  const [companies, setCompanies] = useState([])
+  const [users, setUsers] = useState([])
+  const [softwareAssets, setSoftwareAssets] = useState([])
+  
+  // File upload states
+  const [attachments, setAttachments] = useState([])
+  const [attachmentPreviews, setAttachmentPreviews] = useState([])
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     assetTag: '',
     serialNumber: '',
     poNumber: '',
+    model: '',
+    brand: '',
     categoryId: '',
     locationId: '',
     vendorId: '',
     departmentId: '',
+    companyId: '',
+    assignedToId: '',
     purchasePrice: '',
     currentValue: '',
     purchaseDate: '',
     warrantyExpiry: '',
+    condition: '',
+    status: 'AVAILABLE',
+    notes: '',
+    requiredSoftwareIds: [],
     specifications: {}
   })
 
@@ -35,17 +51,21 @@ export default function CreateAssetPage() {
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
-        const [categoriesRes, locationsRes, vendorsRes, departmentsRes] = await Promise.all([
+        const [categoriesRes, locationsRes, vendorsRes, departmentsRes, usersRes, softwareRes] = await Promise.all([
           api.get('/categories'),
           api.get('/locations'),
           api.get('/vendors'),
-          api.get('/departments')
+          api.get('/departments'),
+          api.get('/users'),
+          api.get('/software-assets')
         ])
 
         setCategories(categoriesRes.data?.data?.categories || [])
         setLocations(locationsRes.data?.data?.locations || [])
         setVendors(vendorsRes.data?.data?.vendors || [])
         setDepartments(departmentsRes.data?.data?.departments || [])
+        setUsers(usersRes.data?.data?.users || [])
+        setSoftwareAssets(softwareRes.data?.data?.softwareAssets || [])
       } catch (error) {
         console.error('Failed to fetch master data:', error)
         alert('Failed to load form data. Please refresh the page.')
@@ -55,33 +75,83 @@ export default function CreateAssetPage() {
     fetchMasterData()
   }, [])
 
+  // Handle file upload
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files)
+    setAttachments(files)
+    
+    // Create preview for images
+    const previews = files.map(file => {
+      if (file.type.startsWith('image/')) {
+        return URL.createObjectURL(file)
+      }
+      return null
+    })
+    setAttachmentPreviews(previews)
+  }
+
+  // Handle software selection
+  const handleSoftwareChange = (e) => {
+    const value = e.target.value
+    if (value && !formData.requiredSoftwareIds.includes(value)) {
+      setFormData(prev => ({
+        ...prev,
+        requiredSoftwareIds: [...prev.requiredSoftwareIds, value]
+      }))
+    }
+  }
+
+  // Remove software from selection
+  const removeSoftware = (softwareId) => {
+    setFormData(prev => ({
+      ...prev,
+      requiredSoftwareIds: prev.requiredSoftwareIds.filter(id => id !== softwareId)
+    }))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const payload = {
-        ...formData,
-        purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
-        currentValue: formData.currentValue ? parseFloat(formData.currentValue) : null,
-        purchaseDate: formData.purchaseDate ? new Date(formData.purchaseDate).toISOString() : null,
-        warrantyExpiry: formData.warrantyExpiry ? new Date(formData.warrantyExpiry).toISOString() : null,
-        // Include specifications in the payload
-        specifications: formData.specifications || {}
-      }
+      // Create FormData for file upload
+      const formDataToSend = new FormData()
+      
+      // Add form fields
+      Object.keys(formData).forEach(key => {
+        if (key === 'requiredSoftwareIds') {
+          formDataToSend.append(key, JSON.stringify(formData[key]))
+        } else if (key === 'specifications') {
+          formDataToSend.append(key, JSON.stringify(formData[key] || {}))
+        } else if (formData[key] !== '' && formData[key] !== null) {
+          formDataToSend.append(key, formData[key])
+        }
+      })
+      
+      // Add attachment files
+      attachments.forEach((file, index) => {
+        formDataToSend.append('attachments', file)
+      })
+      
+      // Add attachment descriptions
+      const attachmentDescriptions = attachments.map(file => file.name)
+      formDataToSend.append('attachmentDescriptions', JSON.stringify(attachmentDescriptions))
 
-      console.log('Creating asset with payload:', payload)
+      console.log('Creating asset with files:', attachments.length)
 
-      const response = await api.post('/assets', payload)
+      const response = await api.post('/assets', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
 
       if (response.data.success) {
         alert('Asset created successfully!')
         router.push('/assets')
       }
     } catch (error) {
-      console.error('Error creating asset:', error)
-      const errorMessage = error.response?.data?.message || 'Failed to create asset. Please try again.'
-      alert(`Error: ${errorMessage}`)
+      console.error('Failed to create asset:', error)
+      alert(error.response?.data?.message || 'Failed to create asset')
     } finally {
       setLoading(false)
     }
@@ -181,6 +251,36 @@ export default function CreateAssetPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
                   placeholder="Enter purchase order number"
                 />
+              </div>
+
+              {/* Model */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Model
+                </label>
+                <input
+                  type="text"
+                  name="model"
+                  value={formData.model}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
+                  placeholder="Enter asset model"
+                />
+              </div>
+
+              {/* Brand */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Brand
+                </label>
+                <input
+                  type="text"
+                  name="brand"
+                  value={formData.brand}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500"
+                  placeholder="Enter asset brand"
+                />
               </div> 
 
               {/* Category */}
@@ -265,6 +365,64 @@ export default function CreateAssetPage() {
                 </select>
               </div>
 
+              {/* Assigned To User */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Assign to User
+                </label>
+                <select
+                  name="assignedToId"
+                  value={formData.assignedToId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="" className="text-gray-500">Select User (Optional)</option>
+                  {users.map(user => (
+                    <option key={user.id} value={user.id} className="text-gray-900">
+                      {user.firstName} {user.lastName} - {user.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Asset Condition */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Condition
+                </label>
+                <select
+                  name="condition"
+                  value={formData.condition}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="" className="text-gray-500">Select Condition</option>
+                  <option value="EXCELLENT">Excellent</option>
+                  <option value="GOOD">Good</option>
+                  <option value="FAIR">Fair</option>
+                  <option value="POOR">Poor</option>
+                  <option value="DAMAGED">Damaged</option>
+                </select>
+              </div>
+
+              {/* Asset Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="AVAILABLE">Available</option>
+                  <option value="IN_USE">In Use</option>
+                  <option value="MAINTENANCE">Maintenance</option>
+                  <option value="RETIRED">Retired</option>
+                </select>
+              </div>
+
               {/* Purchase Price */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -329,6 +487,134 @@ export default function CreateAssetPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 />
               </div>
+
+              {/* Notes */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notes
+                </label>
+                <textarea
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-500 resize-vertical"
+                  placeholder="Additional notes about the asset..."
+                />
+              </div>
+            </div>
+
+            {/* File Upload Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Asset Attachments</h3>
+              
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Images or Documents
+                </label>
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                  multiple
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  Upload asset images, manuals, warranty documents, or invoices. Max 5 files, 10MB each.
+                </p>
+                
+                {/* File Preview */}
+                {attachments.length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Files:</h4>
+                    <div className="space-y-2">
+                      {attachments.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            {attachmentPreviews[index] ? (
+                              <img 
+                                src={attachmentPreviews[index]} 
+                                alt="Preview" 
+                                className="w-12 h-12 object-cover rounded"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                                <span className="text-xs text-gray-500">
+                                  {file.name.split('.').pop()?.toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                              <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Required Software Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900">Required Software</h3>
+              
+              {/* Software Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Required Software
+                </label>
+                <select
+                  value=""
+                  onChange={handleSoftwareChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                >
+                  <option value="">Choose software to add...</option>
+                  {softwareAssets.filter(software => 
+                    !formData.requiredSoftwareIds.includes(software.id)
+                  ).map(software => (
+                    <option key={software.id} value={software.id} className="text-gray-900">
+                      {software.name} {software.version ? `v${software.version}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-sm text-gray-500">
+                  Select software that should be installed on this asset. Only applicable for devices that support software installation.
+                </p>
+              </div>
+
+              {/* Selected Software List */}
+              {formData.requiredSoftwareIds.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Software:</h4>
+                  <div className="space-y-2">
+                    {formData.requiredSoftwareIds.map(softwareId => {
+                      const software = softwareAssets.find(s => s.id === softwareId)
+                      return software ? (
+                        <div key={softwareId} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                          <div>
+                            <h5 className="text-sm font-medium text-gray-900">{software.name}</h5>
+                            <p className="text-xs text-gray-500">
+                              {software.version ? `Version ${software.version}` : 'No version specified'} • 
+                              {software.publisher ? ` ${software.publisher}` : ''}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeSoftware(softwareId)}
+                            className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : null
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Description */}

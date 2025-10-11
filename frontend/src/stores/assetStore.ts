@@ -19,6 +19,7 @@ interface AssetState {
     locationId: string
     departmentId: string
     vendorId: string
+    assignedToId: string
     model: string
     serialNumber: string
     brand: string
@@ -52,8 +53,8 @@ interface AssetActions {
   fetchAssets: () => Promise<void>
   fetchAsset: (id: string) => Promise<void>
   fetchMultipleAssets: (ids: string[]) => Promise<void>
-  createAsset: (data: Partial<Asset>) => Promise<void>
-  updateAsset: (id: string, data: Partial<Asset>) => Promise<void>
+  createAsset: (data: Partial<Asset> | FormData) => Promise<void>
+  updateAsset: (id: string, data: Partial<Asset> | FormData) => Promise<void>
   deleteAsset: (id: string) => Promise<void>
   bulkImportAssets: (assetsData: Partial<Asset>[]) => Promise<ImportResult>
   exportAssets: (format?: string, filters?: ExportFilters) => Promise<Blob>
@@ -84,6 +85,7 @@ const initialFormData = {
   locationId: '',
   departmentId: '',
   vendorId: '',
+  assignedToId: '',
   model: '',
   serialNumber: '',
   brand: '',
@@ -144,27 +146,33 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
 
   createAsset: async (data) => {
     try {
-      const assetData = {
-        ...data,
-        // Keep IDs as strings since backend uses CUID strings
-        categoryId: data.categoryId?.toString() || '',
-        locationId: data.locationId?.toString() || '',
-        departmentId: data.departmentId ? data.departmentId.toString() : null,
-        vendorId: data.vendorId ? data.vendorId.toString() : null,
-        assignedToId: data.assignedToId ? data.assignedToId.toString() : null,
-        // Send prices as strings (backend will convert)
-        purchasePrice: data.purchasePrice ? data.purchasePrice.toString() : null,
-        currentValue: data.currentValue ? data.currentValue.toString() : null,
-        // Format dates properly
-        purchaseDate: data.purchaseDate ? data.purchaseDate.toString() : null,
-        warrantyExpiry: data.warrantyExpiry ? data.warrantyExpiry.toString() : null,
-        // Ensure specifications is properly passed
-        specifications: data.specifications || {},
-        // Remove fields that shouldn't be sent to create endpoint
-        assetTag: undefined,
-        depreciationRate: undefined // This should be handled in depreciation module, not asset creation
+      // If data is FormData, pass it directly to the service
+      if (data instanceof FormData) {
+        await assetService.createAsset(data)
+      } else {
+        // Handle regular object data
+        const assetData = {
+          ...data,
+          // Keep IDs as strings since backend uses CUID strings
+          categoryId: data.categoryId?.toString() || '',
+          locationId: data.locationId?.toString() || '',
+          departmentId: data.departmentId ? data.departmentId.toString() : null,
+          vendorId: data.vendorId ? data.vendorId.toString() : null,
+          assignedToId: data.assignedToId ? data.assignedToId.toString() : null,
+          // Send prices as strings (backend will convert)
+          purchasePrice: data.purchasePrice ? data.purchasePrice.toString() : null,
+          currentValue: data.currentValue ? data.currentValue.toString() : null,
+          // Format dates properly
+          purchaseDate: data.purchaseDate ? data.purchaseDate.toString() : null,
+          warrantyExpiry: data.warrantyExpiry ? data.warrantyExpiry.toString() : null,
+          // Ensure specifications is properly passed
+          specifications: data.specifications || {},
+          // Remove fields that shouldn't be sent to create endpoint
+          assetTag: undefined,
+          depreciationRate: undefined // This should be handled in depreciation module, not asset creation
+        }
+        await assetService.createAsset(assetData)
       }
-      await assetService.createAsset(assetData)
       get().fetchAssets()
       get().resetForm()
     } catch (error) {
@@ -174,26 +182,32 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
 
   updateAsset: async (id, data) => {
     try {
-      const assetData = {
-        ...data,
-        // Keep IDs as strings since backend uses CUID strings
-        categoryId: data.categoryId?.toString() || undefined,
-        locationId: data.locationId?.toString() || undefined,
-        departmentId: data.departmentId ? data.departmentId.toString() : null,
-        vendorId: data.vendorId ? data.vendorId.toString() : null,
-        assignedToId: data.assignedToId ? data.assignedToId.toString() : null,
-        // Send prices as strings (backend will convert)
-        purchasePrice: data.purchasePrice ? data.purchasePrice.toString() : null,
-        currentValue: data.currentValue ? data.currentValue.toString() : null,
-        // Format dates properly
-        purchaseDate: data.purchaseDate ? data.purchaseDate.toString() : null,
-        warrantyExpiry: data.warrantyExpiry ? data.warrantyExpiry.toString() : null,
-        // Make sure specifications is properly passed
-        specifications: data.specifications || undefined,
-        // Remove fields that shouldn't be sent to update endpoint
-        depreciationRate: undefined // This should be handled in depreciation module, not asset update
+      // If data is FormData, pass it directly to the service
+      if (data instanceof FormData) {
+        await assetService.updateAsset(id, data)
+      } else {
+        // Handle regular object data
+        const assetData = {
+          ...data,
+          // Keep IDs as strings since backend uses CUID strings
+          categoryId: data.categoryId?.toString() || undefined,
+          locationId: data.locationId?.toString() || undefined,
+          departmentId: data.departmentId ? data.departmentId.toString() : null,
+          vendorId: data.vendorId ? data.vendorId.toString() : null,
+          assignedToId: data.assignedToId ? data.assignedToId.toString() : null,
+          // Send prices as strings (backend will convert)
+          purchasePrice: data.purchasePrice ? data.purchasePrice.toString() : null,
+          currentValue: data.currentValue ? data.currentValue.toString() : null,
+          // Format dates properly
+          purchaseDate: data.purchaseDate ? data.purchaseDate.toString() : null,
+          warrantyExpiry: data.warrantyExpiry ? data.warrantyExpiry.toString() : null,
+          // Make sure specifications is properly passed
+          specifications: data.specifications || undefined,
+          // Remove fields that shouldn't be sent to update endpoint
+          depreciationRate: undefined // This should be handled in depreciation module, not asset update
+        }
+        await assetService.updateAsset(id, assetData)
       }
-      await assetService.updateAsset(id, assetData)
       get().fetchAssets()
       get().resetForm()
     } catch (error) {
@@ -244,6 +258,7 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
           locationId: asset.locationId?.toString() || '',
           departmentId: asset.departmentId?.toString() || '',
           vendorId: asset.vendorId?.toString() || '',
+          assignedToId: asset.assignedToId?.toString() || '',
           model: asset.model || '',
           serialNumber: asset.serialNumber || '',
           brand: asset.brand || '',

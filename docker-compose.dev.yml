@@ -69,9 +69,8 @@ services:
         echo 'Waiting for postgres...' &&
         sleep 5 &&
         echo 'Running database migrations...' &&
+        npx prisma generate &&
         npx prisma migrate deploy &&
-        echo 'Seeding database...' &&
-        npx prisma db seed &&
         echo 'Starting development server with hot reload...' &&
         npx nodemon --config nodemon.json src/index.js
       "

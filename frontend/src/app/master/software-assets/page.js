@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import useSoftwareAssetsStore from '@/stores/softwareAssetsStore'
+import { useCompanyStore } from '@/stores/companyStore'
 import { useVendorStore } from '@/stores/vendorStore'
-import { Plus, Edit, Trash2 } from 'lucide-react'
+import { assetSoftwareService } from '@/lib/services/assetSoftwareService'
+import { Plus, Edit, Trash2, Monitor } from 'lucide-react'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import DataTable from '@/components/ui/DataTable'
 import Modal from '@/components/ui/Modal'
@@ -21,6 +23,7 @@ export default function MasterSoftwareAssetsPage() {
   } = useSoftwareAssetsStore()
 
   const { vendors, fetchVendors } = useVendorStore()
+  const { companies, fetchCompanies } = useCompanyStore()
 
   const [showModal, setShowModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -32,6 +35,7 @@ export default function MasterSoftwareAssetsPage() {
     license_type: 'SINGLE_USER',
     license_key: '',
     vendor_id: '',
+    company_id: '',
     purchase_date: '',
     expiry_date: '',
     cost: '',
@@ -44,7 +48,8 @@ export default function MasterSoftwareAssetsPage() {
   useEffect(() => {
     fetchSoftwareAssets()
     fetchVendors()
-  }, [fetchSoftwareAssets, fetchVendors])
+    fetchCompanies()
+  }, [fetchSoftwareAssets, fetchVendors, fetchCompanies])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -124,9 +129,9 @@ export default function MasterSoftwareAssetsPage() {
     { key: 'version', label: 'Version' },
     { key: 'license_type', label: 'License Type' },
     { key: 'vendor', label: 'Vendor' },
+    { key: 'company', label: 'Company' },
     { key: 'status', label: 'Status' },
-    { key: 'max_installations', label: 'Max Installations' },
-    { key: 'current_installations', label: 'Current Installations' },
+    { key: 'installations', label: 'Installations' },
     { key: 'actions', label: 'Actions', isAction: true }
   ]
 
@@ -134,6 +139,8 @@ export default function MasterSoftwareAssetsPage() {
     switch (key) {
       case 'vendor':
         return item.vendor?.name || 'N/A'
+      case 'company':
+        return item.company?.name || 'N/A'
       case 'status':
         const statusColors = {
           ACTIVE: 'bg-green-100 text-green-800',
@@ -147,6 +154,31 @@ export default function MasterSoftwareAssetsPage() {
         )
       case 'license_type':
         return item[key]?.replace(/_/g, ' ') || 'N/A'
+      case 'installations':
+        const totalLicenses = item.licenses?.reduce((sum, license) => sum + (license.totalSeats || 0), 0) || 0
+        const activeInstallations = item.installations?.filter(inst => inst.status === 'INSTALLED').length || 0
+        return (
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-900">{activeInstallations}/{totalLicenses}</span>
+            {activeInstallations > 0 && (
+              <button
+                onClick={async () => {
+                  try {
+                    const result = await assetSoftwareService.getSoftwareInstallations(item.id)
+                    console.log(`Installations for ${item.name}:`, result.data)
+                    // You can show a modal or redirect to detailed view here
+                  } catch (error) {
+                    console.error('Failed to fetch installations:', error)
+                  }
+                }}
+                className="text-blue-600 hover:text-blue-900"
+                title="View installations"
+              >
+                <Monitor className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )
       default:
         return item[key] || 'N/A'
     }
@@ -204,6 +236,22 @@ export default function MasterSoftwareAssetsPage() {
         >
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Company *
+                </label>
+                <select
+                  value={formData.company_id}
+                  onChange={e => setFormData({ ...formData, company_id: e.target.value })}
+                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  required
+                >
+                  <option value="">Select Company</option>
+                  {companies.map(company => (
+                    <option key={company.id} value={company.id}>{company.name}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Name *

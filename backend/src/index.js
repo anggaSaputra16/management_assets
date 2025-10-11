@@ -24,7 +24,10 @@ const auditRoutes = require('./routes/audit');
 const notificationRoutes = require('./routes/notifications');
 const reportRoutes = require('./routes/reports');
 const inventoryRoutes = require('./routes/inventory');
-// const sparePartsRoutes = require('./routes/spareParts');
+const softwareAssetsRoutes = require('./routes/softwareAssets');
+const assetSoftwareRoutes = require('./routes/assetSoftware');
+const sparePartsRoutes = require('./routes/spareParts');
+const qrCodeRoutes = require('./routes/qrCode');
 // const componentsRoutes = require('./routes/components');
 
 const app = express();
@@ -81,7 +84,10 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/inventory', inventoryRoutes);
-// app.use('/api/spare-parts', sparePartsRoutes);
+app.use('/api/software-assets', softwareAssetsRoutes);
+app.use('/api/asset-software', assetSoftwareRoutes);
+app.use('/api/spare-parts', sparePartsRoutes);
+app.use('/api/qr-codes', qrCodeRoutes);
 // app.use('/api/components', componentsRoutes);
 
 // Health check endpoint

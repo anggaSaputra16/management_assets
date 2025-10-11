@@ -110,11 +110,15 @@ router.get('/', authenticate, async (req, res, next) => {
       condition
     } = req.query;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const take = parseInt(limit);
-    const companyId = req.user.companyId;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const take = parseInt(limit);
 
-    const where = { companyId };
+  // Note: `inventory` model in Prisma schema does not have a direct `companyId` field
+  // (see error: Unknown argument `companyId`). Instead enforce company scoping via
+  // related models (for example, the linked `asset` or `department`) when needed.
+  const companyId = req.user.companyId;
+
+  const where = {};
 
     if (search) {
       where.OR = [
@@ -137,9 +141,17 @@ router.get('/', authenticate, async (req, res, next) => {
       where.condition = condition;
     }
 
+    // When scoping inventories to the current company, filter by related asset's companyId
+    // if the asset relation exists. This avoids passing an unknown `companyId` arg to Prisma.
+    const inventoryWhere = { ...where };
+    if (companyId) {
+      // Only apply company filter through the related asset if asset relation exists
+      inventoryWhere.asset = { is: { companyId } }
+    }
+
     const [inventories, total] = await Promise.all([
       prisma.inventory.findMany({
-        where,
+        where: inventoryWhere,
         include: {
           asset: {
             select: {
@@ -176,7 +188,7 @@ router.get('/', authenticate, async (req, res, next) => {
           createdAt: 'desc'
         }
       }),
-      prisma.inventory.count({ where })
+      prisma.inventory.count({ where: inventoryWhere })
     ]);
 
     res.json({
