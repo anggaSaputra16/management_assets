@@ -217,7 +217,7 @@ export default function DepartmentsPage() {
 
       {/* Create/Edit Modal */}
       {(isCreateModalOpen || isEditModalOpen) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full">
             <div className="flex items-center justify-between p-6 border-b">
               <h3 className="text-lg font-medium text-gray-900">
@@ -331,7 +331,7 @@ export default function DepartmentsPage() {
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-sm w-full">
             <div className="p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Department</h3>

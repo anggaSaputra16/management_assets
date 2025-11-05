@@ -12,10 +12,9 @@ const createDepartmentSchema = Joi.object({
   description: Joi.string().allow('').optional(),
   managerId: Joi.string().allow(null, '').optional(),
   parentId: Joi.string().allow(null, '').optional(),
-  budgetLimit: Joi.number().positive().allow(null).optional(),
   companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional()
-});
+}).unknown(true);
 
 const updateDepartmentSchema = Joi.object({
   name: Joi.string().optional(),
@@ -23,10 +22,9 @@ const updateDepartmentSchema = Joi.object({
   description: Joi.string().allow('').optional(),
   managerId: Joi.string().allow(null, '').optional(),
   parentId: Joi.string().allow(null, '').optional(),
-  budgetLimit: Joi.number().positive().allow(null).optional(),
   companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional()
-});
+}).unknown(true);
 
 // Get all departments
 router.get('/', authenticate, async (req, res, next) => {
@@ -182,7 +180,8 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       });
     }
 
-    const { name, code, description, managerId, budgetLimit, companyId } = value;
+  // FIX: budgetLimit removed from Department; financials handled elsewhere
+  const { name, code, description, managerId, companyId } = value;
 
     // Determine final companyId
     let finalCompanyId = companyId;
@@ -233,7 +232,6 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         code,
         description,
         managerId,
-        budgetLimit,
         companyId: finalCompanyId
       },
       include: {

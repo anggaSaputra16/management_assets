@@ -12,7 +12,6 @@ interface SparePart {
   category: 'HARDWARE' | 'SOFTWARE' | 'ACCESSORY' | 'CONSUMABLE'
   partType: 'COMPONENT' | 'ACCESSORY' | 'CONSUMABLE' | 'TOOL' | 'SOFTWARE'
   status: 'ACTIVE' | 'DISCONTINUED' | 'OUT_OF_STOCK' | 'OBSOLETE'
-  unitPrice: number
   stockLevel: number
   minStockLevel: number
   maxStockLevel: number
@@ -54,7 +53,6 @@ interface SparePartState {
     category: 'HARDWARE' | 'SOFTWARE' | 'ACCESSORY' | 'CONSUMABLE'
     partType: 'COMPONENT' | 'ACCESSORY' | 'CONSUMABLE' | 'TOOL' | 'SOFTWARE'
     status: 'ACTIVE' | 'DISCONTINUED' | 'OUT_OF_STOCK' | 'OBSOLETE'
-    unitPrice: string
     stockLevel: string
     minStockLevel: string
     maxStockLevel: string
@@ -108,7 +106,6 @@ const initialFormData = {
   category: 'HARDWARE' as const,
   partType: 'COMPONENT' as const,
   status: 'ACTIVE' as const,
-  unitPrice: '',
   stockLevel: '',
   minStockLevel: '10',
   maxStockLevel: '100',
@@ -173,7 +170,7 @@ export const useSparePartStore = create<SparePartState & SparePartActions>((set,
       // Process form data
       const processedData = {
         ...data,
-        unitPrice: parseFloat(data.unitPrice?.toString() || '0'),
+        // unitPrice intentionally omitted from inventory create/update in this module
         stockLevel: parseInt(data.stockLevel?.toString() || '0'),
         minStockLevel: parseInt(data.minStockLevel?.toString() || '10'),
         maxStockLevel: parseInt(data.maxStockLevel?.toString() || '100'),
@@ -204,7 +201,7 @@ export const useSparePartStore = create<SparePartState & SparePartActions>((set,
       // Process form data
       const processedData = {
         ...data,
-        unitPrice: parseFloat(data.unitPrice?.toString() || '0'),
+        // unitPrice intentionally omitted from inventory create/update in this module
         stockLevel: parseInt(data.stockLevel?.toString() || '0'),
         minStockLevel: parseInt(data.minStockLevel?.toString() || '10'),
         maxStockLevel: parseInt(data.maxStockLevel?.toString() || '100'),

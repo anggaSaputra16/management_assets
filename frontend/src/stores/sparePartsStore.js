@@ -12,10 +12,13 @@ const useSparePartsStore = create((set) => ({
   fetchSpareParts: async () => {
     set({ loading: true, error: null });
     try {
+      console.log('🔵 fetchSpareParts starting...')
       const spareParts = await sparePartsService.getAll();
-      set({ spareParts, loading: false });
+      console.log('🟢 fetchSpareParts received:', spareParts.length, 'items', spareParts)
+      set({ spareParts: Array.isArray(spareParts) ? spareParts : [], loading: false });
     } catch (error) {
-      set({ error: error.message, loading: false });
+      console.error('🔴 fetchSpareParts failed:', error)
+      set({ error: error.message || String(error), loading: false });
     }
   },
 

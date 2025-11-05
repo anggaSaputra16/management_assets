@@ -1,4 +1,12 @@
 
+const express = require('express');
+const { authenticate, authorize } = require('../middleware/auth');
+const { PrismaClient } = require('@prisma/client');
+const Joi = require('joi');
+
+const router = express.Router();
+const prisma = new PrismaClient();
+
 // Create new software asset
 router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res) => {
   try {
@@ -7,11 +15,50 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       version: Joi.string().optional().allow(''),
       publisher: Joi.string().optional().allow(''),
       description: Joi.string().optional().allow(''),
-      softwareType: Joi.string().required(),
+      softwareType: Joi.string().valid(
+        'OPERATING_SYSTEM',
+        'APPLICATION', 
+        'UTILITY',
+        'DRIVER',
+        'SECURITY',
+        'DEVELOPMENT_TOOL',
+        'OFFICE_SUITE',
+        'DATABASE',
+        'MIDDLEWARE',
+        'PLUGIN'
+      ).required(),
       category: Joi.string().optional().allow(''),
-      systemRequirements: Joi.any().optional(),
+      systemRequirements: Joi.object().optional(),
       installationPath: Joi.string().optional().allow(''),
-      isActive: Joi.boolean().optional(),
+      isActive: Joi.boolean().default(true),
+      license_type: Joi.string().valid(
+        'PERPETUAL',
+        'SUBSCRIPTION',
+        'OPEN_SOURCE',
+        'TRIAL',
+        'EDUCATIONAL',
+        'ENTERPRISE',
+        'OEM',
+        'VOLUME',
+        'SINGLE_USER',
+        'MULTI_USER',
+        'SITE_LICENSE'
+      ).required(),
+      licenseId: Joi.string().optional().allow(''),
+      vendor_id: Joi.string().optional().allow(''),
+      license_key: Joi.string().optional().allow(''),
+      purchase_date: Joi.date().optional().allow(null),
+      expiry_date: Joi.date().when('license_type', {
+        is: 'SUBSCRIPTION',
+        then: Joi.date().required(),
+        otherwise: Joi.date().optional().allow(null)
+      }),
+      cost: Joi.number().optional().allow(null),
+      max_installations: Joi.number().integer().optional().allow(null),
+      current_installations: Joi.number().integer().optional().allow(null),
+      status: Joi.string().valid('ACTIVE', 'INACTIVE', 'EXPIRED').optional()
+      ,
+      companyId: Joi.string().optional().allow('')
     });
 
     const { error, value } = schema.validate(req.body);
@@ -23,11 +70,27 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       });
     }
 
-    // Create software asset with companyId from user
+    // Determine companyId: allow override for ADMIN/TOP_MANAGEMENT, otherwise use user's company
+    let targetCompanyId = req.user.companyId;
+    if (value.companyId && value.companyId !== req.user.companyId) {
+      const allowedOverrideRoles = ['ADMIN', 'TOP_MANAGEMENT'];
+      if (allowedOverrideRoles.includes(req.user.role)) {
+        // verify target company exists
+        const targetCompany = await prisma.company.findUnique({ where: { id: value.companyId } });
+        if (!targetCompany || !targetCompany.isActive) {
+          return res.status(400).json({ success: false, message: 'Target company not found or inactive.' });
+        }
+        targetCompanyId = value.companyId;
+      } else {
+        // ignore provided companyId for non-authorized users
+        targetCompanyId = req.user.companyId;
+      }
+    }
+
     const softwareAsset = await prisma.softwareAsset.create({
       data: {
         ...value,
-        companyId: req.user.companyId
+        companyId: targetCompanyId
       }
     });
 
@@ -45,13 +108,121 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
     });
   }
 });
-const express = require('express');
-const { authenticate, authorize } = require('../middleware/auth');
-const { PrismaClient } = require('@prisma/client');
-const Joi = require('joi');
+// Update software asset
+router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const schema = Joi.object({
+      name: Joi.string().required(),
+      version: Joi.string().optional().allow(''),
+      publisher: Joi.string().optional().allow(''),
+      description: Joi.string().optional().allow(''),
+      softwareType: Joi.string().valid(
+        'OPERATING_SYSTEM',
+        'APPLICATION', 
+        'UTILITY',
+        'DRIVER',
+        'SECURITY',
+        'DEVELOPMENT_TOOL',
+        'OFFICE_SUITE',
+        'DATABASE',
+        'MIDDLEWARE',
+        'PLUGIN'
+      ).required(),
+      category: Joi.string().optional().allow(''),
+      systemRequirements: Joi.object().optional(),
+      installationPath: Joi.string().optional().allow(''),
+      isActive: Joi.boolean().default(true),
+      license_type: Joi.string().valid(
+        'PERPETUAL',
+        'SUBSCRIPTION',
+        'OPEN_SOURCE',
+        'TRIAL',
+        'EDUCATIONAL',
+        'ENTERPRISE',
+        'OEM',
+        'VOLUME',
+        'SINGLE_USER',
+        'MULTI_USER',
+        'SITE_LICENSE'
+      ).required(),
+      licenseId: Joi.string().optional().allow(''),
+      vendor_id: Joi.string().optional().allow(''),
+      license_key: Joi.string().optional().allow(''),
+      purchase_date: Joi.date().optional().allow(null),
+      expiry_date: Joi.date().when('license_type', {
+        is: 'SUBSCRIPTION',
+        then: Joi.date().required(),
+        otherwise: Joi.date().optional().allow(null)
+      }),
+      cost: Joi.number().optional().allow(null),
+      max_installations: Joi.number().integer().optional().allow(null),
+      current_installations: Joi.number().integer().optional().allow(null),
+      status: Joi.string().valid('ACTIVE', 'INACTIVE', 'EXPIRED').optional()
+      ,
+      companyId: Joi.string().optional().allow('')
+    });
 
-const router = express.Router();
-const prisma = new PrismaClient();
+    const { error, value } = schema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        details: error.details.map(detail => detail.message)
+      });
+    }
+
+    // Check if software asset exists and belongs to user's company
+    const existingSoftware = await prisma.softwareAsset.findFirst({
+      where: {
+        id,
+        companyId: req.user.companyId
+      }
+    });
+
+    if (!existingSoftware) {
+      return res.status(404).json({
+        success: false,
+        message: 'Software asset not found'
+      });
+    }
+
+    // Determine companyId for update: allow override for ADMIN/TOP_MANAGEMENT
+    let updateCompanyId = req.user.companyId;
+    if (value.companyId && value.companyId !== req.user.companyId) {
+      const allowedOverrideRoles = ['ADMIN', 'TOP_MANAGEMENT'];
+      if (allowedOverrideRoles.includes(req.user.role)) {
+        const targetCompany = await prisma.company.findUnique({ where: { id: value.companyId } });
+        if (!targetCompany || !targetCompany.isActive) {
+          return res.status(400).json({ success: false, message: 'Target company not found or inactive.' });
+        }
+        updateCompanyId = value.companyId;
+      }
+    }
+
+    // Update software asset
+    const updatedSoftware = await prisma.softwareAsset.update({
+      where: { id },
+      data: {
+        ...value,
+        companyId: updateCompanyId
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Software asset updated successfully',
+      data: updatedSoftware
+    });
+  } catch (error) {
+    console.error('Update software asset error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update software asset',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 
 // Install software on asset
 router.post('/install', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'), async (req, res) => {
@@ -93,10 +264,16 @@ router.post('/install', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNIC
     const softwareAsset = await prisma.softwareAsset.findFirst({
       where: {
         id: value.softwareAssetId,
-        companyId: req.user.companyId
+        companyId: req.user.companyId,
+        isActive: true
       },
       include: {
-        licenses: true,
+        licenses: {
+          where: {
+            isActive: true,
+            status: 'ACTIVE'
+          }
+        },
         installations: {
           where: { 
             status: 'INSTALLED',
@@ -151,31 +328,97 @@ router.post('/install', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNIC
       selectedLicense = softwareAsset.licenses.find(license => license.id === value.licenseId);
     }
 
-    // Create installation record
-    const installation = await prisma.softwareInstallation.create({
-      data: {
-        assetId: value.assetId,
-        softwareAssetId: value.softwareAssetId,
-        licenseId: selectedLicense?.id || null,
-        userId: req.user.id,
-        companyId: req.user.companyId,
-        version: value.version || softwareAsset.version,
-        installationPath: value.installationPath || null,
-        notes: value.notes || null,
-        status: 'INSTALLED'
-      },
-      include: {
-        asset: {
-          select: { id: true, name: true, assetTag: true }
+    // Create installation record and update master counters in a transaction
+    const installation = await prisma.$transaction(async (tx) => {
+      const created = await tx.softwareInstallation.create({
+        data: {
+          assetId: value.assetId,
+          softwareAssetId: value.softwareAssetId,
+          licenseId: selectedLicense?.id || null,
+          userId: req.user.id,
+          companyId: req.user.companyId,
+          version: value.version || softwareAsset.version,
+          installationPath: value.installationPath || null,
+          notes: value.notes || null,
+          status: 'INSTALLED'
         },
-        softwareAsset: {
-          select: { id: true, name: true, version: true }
-        },
-        license: {
-          select: { id: true, licenseKey: true, licenseType: true }
+        include: {
+          asset: {
+            select: { id: true, name: true, assetTag: true }
+          },
+          softwareAsset: {
+            select: { id: true, name: true, version: true, current_installations: true }
+          },
+          license: {
+            select: { id: true, licenseKey: true, licenseType: true, totalSeats: true, usedSeats: true }
+          }
+        }
+      })
+
+      // Increment softwareAsset current_installations (if column exists)
+      try {
+        await tx.softwareAsset.update({
+          where: { id: value.softwareAssetId },
+          data: {
+            current_installations: (softwareAsset.current_installations || 0) + 1
+          }
+        })
+      } catch (err) {
+        // Non-fatal if column doesn't exist or update fails; continue
+        console.warn('Failed to update softwareAsset.current_installations:', err.message)
+      }
+
+      // Update selected license usedSeats/availableSeats if we reserved one
+      if (selectedLicense && selectedLicense.id) {
+        try {
+          const license = await tx.softwareLicense.findUnique({ where: { id: selectedLicense.id } })
+          if (license) {
+            const newUsed = (license.usedSeats || 0) + 1
+            const totalSeats = license.totalSeats || 1
+            await tx.softwareLicense.update({
+              where: { id: selectedLicense.id },
+              data: {
+                usedSeats: newUsed,
+                availableSeats: Math.max(0, totalSeats - newUsed)
+              }
+            })
+          }
+        } catch (err) {
+          console.warn('Failed to update license counters:', err.message)
         }
       }
-    });
+
+      // Recompute overall license availability and software installation counts.
+      try {
+        // Sum total seats from active licenses
+        const activeLicenses = await tx.softwareLicense.findMany({ where: { softwareAssetId: value.softwareAssetId, isActive: true, status: 'ACTIVE' } })
+        const totalSeats = activeLicenses.reduce((s, l) => s + (l.totalSeats || 0), 0)
+
+        // Count active installations on assets for this software
+        const installationCount = await tx.softwareInstallation.count({ where: { softwareAssetId: value.softwareAssetId, status: 'INSTALLED', assetId: { not: null } } })
+
+        // Also check configured maximum installations on the software asset
+        const sa = await tx.softwareAsset.findUnique({ where: { id: value.softwareAssetId } })
+        const maxInst = sa?.max_installations || null
+
+        // If no available seats remain OR we've reached max_installations, mark software as not active/available
+        const seatsRemaining = totalSeats - installationCount
+        const shouldDisable = (sa && sa.license_type === 'SUBSCRIPTION' && seatsRemaining <= 0) || (maxInst !== null && installationCount >= maxInst)
+
+        if (shouldDisable) {
+          try {
+            await tx.softwareAsset.update({ where: { id: value.softwareAssetId }, data: { isActive: false, status: 'INACTIVE' } })
+            console.info(`SoftwareAsset ${value.softwareAssetId} disabled due to no available licenses or max installations reached`)
+          } catch (err) {
+            console.warn('Failed to disable software asset after installation:', err.message)
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to recompute license/install counts for software asset:', err.message)
+      }
+
+      return created
+    })
 
     res.status(201).json({
       success: true,
@@ -364,7 +607,7 @@ router.get('/software/:softwareId', authenticate, async (req, res) => {
               select: { id: true, name: true }
             },
             assignedTo: {
-              select: { id: true, name: true, email: true }
+              select: { id: true, firstName: true, lastName: true, email: true }
             }
           }
         },

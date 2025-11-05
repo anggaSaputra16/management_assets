@@ -124,6 +124,9 @@ ehthumbs.db
 backend/uploads/*
 !backend/uploads/.gitkeep
 
+# Postgres data directory used for local bind-mount (do not commit DB files)
+backend/pgdata/
+
 # Database
 *.sqlite
 *.sqlite3

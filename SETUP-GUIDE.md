@@ -41,8 +41,8 @@ This system runs with:
 
 ## Access URLs
 
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000/api
+- **Frontend**: http://localhost:3001
+- **Backend API**: http://localhost:5001/api
 - **pgAdmin**: http://localhost:8080
   - Email: admin@admin.com
   - Password: admin123
@@ -182,8 +182,8 @@ node prisma/seed-simple.js
 ```
 
 ### Port Conflicts
-- Frontend default: 3000 (change in package.json)
-- Backend default: 5000 (change in .env)
+- Frontend default: 3001 (change in package.json)
+- Backend default: 5001 (change in .env)
 - Database default: 5432 (change in docker-compose)
 - pgAdmin default: 8080 (change in docker-compose)
 
@@ -219,4 +219,4 @@ For issues and questions:
 1. Check this documentation
 2. Review error logs in terminal windows
 3. Use pgAdmin to inspect database
-4. Check API endpoints at http://localhost:5000/api
+4. Check API endpoints at http://localhost:5001/api

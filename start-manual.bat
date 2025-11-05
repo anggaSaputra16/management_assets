@@ -54,7 +54,7 @@ echo.
 echo 🚀 Both services will start in new terminal windows...
 echo.
 
-echo Starting Backend (Port 5000)...
+echo Starting Backend (Port 5001)...
 start "Management Assets Backend" cmd /k "cd /d %cd% && npm run dev"
 
 timeout /t 3 /nobreak > nul
@@ -70,7 +70,7 @@ echo ========================================
 echo.
 echo 🌐 Access URLs:
 echo   Frontend: http://localhost:3001
-echo   Backend API: http://localhost:5000/api
+echo   Backend API: http://localhost:5001/api
 echo   pgAdmin: http://localhost:8080
 echo.
 echo 🔐 Default Login:
@@ -79,7 +79,7 @@ echo   Password: password123
 echo.
 echo 📊 Services Status:
 echo   ✅ Database: Running in Docker
-echo   ✅ Backend: Running manually (Port 5000)
+echo   ✅ Backend: Running manually (Port 5001)
 echo   ✅ Frontend: Running manually (Port 3001)
 echo.
 echo ❌ To stop: Close the terminal windows and run:

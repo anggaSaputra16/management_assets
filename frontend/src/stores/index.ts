@@ -2,6 +2,7 @@
 export { useAuthStore } from './authStore'
 
 // Master data stores
+export { useCompanyStore } from './companyStore'
 export { useLocationStore } from './locationStore'
 export { useVendorStore } from './vendorStore'
 export { useDepartmentStore } from './departmentStore'

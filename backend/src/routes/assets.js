@@ -186,6 +186,12 @@ router.get('/', authenticate, async (req, res, next) => {
     const companyId = req.user.companyId;
     const where = { companyId };
 
+    // BUSINESS RULE: By default, only show active assets in the list
+    // Unless explicitly requesting inactive assets via status filter
+    if (!status || (status !== 'RETIRED' && status !== 'DISPOSED')) {
+      where.isActive = true;
+    }
+
     // Role-based filtering
     if (req.user.role === 'DEPARTMENT_USER') {
       where.departmentId = req.user.departmentId;
@@ -445,7 +451,8 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple
 
     // Validate required software IDs exist (using inventory items for now)
     if (requiredSoftwareIds.length > 0) {
-      const inventoryItems = await prisma.inventoryItem.findMany({
+      // Inventory model in Prisma is named `Inventory` and exposed as `prisma.inventory`
+      const inventoryItems = await prisma.inventory.findMany({
         where: {
           id: { in: requiredSoftwareIds },
           departmentId: value.departmentId // Check same department or null for global items
@@ -598,32 +605,148 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple
             fileSize: file.size,
             mimeType: file.mimetype,
             attachmentType: attachmentType,
-            description: attachmentDescriptions[index] || file.originalname
+            description: attachmentDescriptions[index] || file.originalname,
+            isActive: true
           };
         });
 
-        await tx.assetAttachment.createMany({
-          data: attachments
-        });
+        // Create attachments one by one to avoid any potential issues
+        for (const attachment of attachments) {
+          await tx.assetAttachment.create({
+            data: attachment
+          });
+        }
       }
 
-  // Handle required software (temporarily commented out until proper software assets are ready)
+      // Handle required software: create AssetRequiredSoftware relations and attempt
+      // to create SoftwareInstallation records (mark as INSTALLED) when possible.
       if (requiredSoftwareIds.length > 0) {
-        // For now, just store in asset notes or specifications
-        // Will be implemented properly when software asset management is ready
-        console.log('Required software IDs stored in asset specifications:', requiredSoftwareIds);
-        
-        // Store software requirements in specifications for now
+        console.log('Processing required software IDs for asset:', requiredSoftwareIds);
+
+        // Ensure specifications keeps the list as well for backward compatibility
         if (!processedData.specifications) processedData.specifications = {};
         processedData.specifications.requiredSoftware = requiredSoftwareIds;
-        
-        // Update the asset with software requirements in specifications
-        await tx.asset.update({
-          where: { id: asset.id },
-          data: { 
-            specifications: processedData.specifications
+
+        // Create AssetRequiredSoftware entries and create software installations
+        for (const softwareId of requiredSoftwareIds) {
+          try {
+            // Create the required software link (if not exists)
+            await tx.assetRequiredSoftware.upsert({
+              where: {
+                // composite unique is defined in model as [assetId, softwareAssetId]
+                id: `${asset.id}::${softwareId}` // fallback unique key; upsert will fail if id doesn't match the schema, so use try/catch below to fallback
+              },
+              update: {},
+              create: {
+                assetId: asset.id,
+                softwareAssetId: softwareId,
+                companyId: req.user.companyId,
+              }
+            })
+          } catch (e) {
+            // If upsert with synthetic id fails (no such id field), fallback to safe create-if-not-exists
+            try {
+              const exists = await tx.assetRequiredSoftware.findFirst({ where: { assetId: asset.id, softwareAssetId: softwareId } })
+              if (!exists) {
+                await tx.assetRequiredSoftware.create({ data: { assetId: asset.id, softwareAssetId: softwareId, companyId: req.user.companyId } })
+              }
+            } catch (err) {
+              console.warn('Failed to create AssetRequiredSoftware for', softwareId, err.message)
+            }
           }
-        });
+
+          // Try to create a SoftwareInstallation similar to the install endpoint logic
+          try {
+            const sa = await tx.softwareAsset.findFirst({
+              where: { id: softwareId, companyId: req.user.companyId, isActive: true },
+              include: {
+                licenses: { where: { isActive: true, status: 'ACTIVE' } },
+                installations: { where: { status: 'INSTALLED', assetId: { not: null } } }
+              }
+            });
+
+            if (!sa) {
+              console.log(`SoftwareAsset ${softwareId} not found or inactive; skipping installation creation.`)
+              continue
+            }
+
+            const totalSeats = sa.licenses.reduce((s, l) => s + (l.totalSeats || 0), 0)
+            const activeInstCount = sa.installations.length
+
+            // If there are no available seats, skip installation but keep required record
+            if (activeInstCount >= totalSeats && totalSeats > 0) {
+              console.log(`No available licenses for software ${softwareId} (${activeInstCount}/${totalSeats}); skipping installation.`)
+              continue
+            }
+
+            // Select a license with available seats if possible
+            let selectedLicense = sa.licenses.find(license => {
+              const licenseInstallations = sa.installations.filter(inst => inst.licenseId === license.id).length
+              return licenseInstallations < (license.totalSeats || 1)
+            })
+
+            const createdInst = await tx.softwareInstallation.create({
+              data: {
+                assetId: asset.id,
+                softwareAssetId: softwareId,
+                licenseId: selectedLicense?.id || null,
+                userId: req.user.id,
+                companyId: req.user.companyId,
+                version: sa.version || null,
+                installationPath: null,
+                notes: 'Installed during asset creation',
+                status: 'INSTALLED'
+              }
+            })
+
+            // Update selected license counters if any
+            if (selectedLicense && selectedLicense.id) {
+              try {
+                const licenseRecord = await tx.softwareLicense.findUnique({ where: { id: selectedLicense.id } })
+                if (licenseRecord) {
+                  const newUsed = (licenseRecord.usedSeats || 0) + 1
+                  const total = licenseRecord.totalSeats || 1
+                  await tx.softwareLicense.update({ where: { id: selectedLicense.id }, data: { usedSeats: newUsed, availableSeats: Math.max(0, total - newUsed) } })
+                }
+              } catch (err) {
+                console.warn('Failed to update license counters during asset creation install:', err.message)
+              }
+            }
+
+            // Attempt to bump softwareAsset.current_installations (best-effort)
+            try {
+              await tx.softwareAsset.update({ where: { id: softwareId }, data: { current_installations: (sa.current_installations || 0) + 1 } })
+            } catch (err) {
+              console.warn('Failed to update softwareAsset.current_installations during asset creation:', err.message)
+            }
+
+            // Recompute and disable if needed (mirror install endpoint behaviour)
+            try {
+              const activeLicenses = await tx.softwareLicense.findMany({ where: { softwareAssetId: softwareId, isActive: true, status: 'ACTIVE' } })
+              const seats = activeLicenses.reduce((s, l) => s + (l.totalSeats || 0), 0)
+              const instCount = await tx.softwareInstallation.count({ where: { softwareAssetId: softwareId, status: 'INSTALLED', assetId: { not: null } } })
+              const saRecord = await tx.softwareAsset.findUnique({ where: { id: softwareId } })
+              const maxInst = saRecord?.max_installations || null
+              const seatsRemaining = seats - instCount
+              const shouldDisable = (saRecord && saRecord.license_type === 'SUBSCRIPTION' && seatsRemaining <= 0) || (maxInst !== null && instCount >= maxInst)
+              if (shouldDisable) {
+                try { await tx.softwareAsset.update({ where: { id: softwareId }, data: { isActive: false, status: 'INACTIVE' } }) } catch (err) { console.warn('Failed to disable software asset after auto-install:', err.message) }
+              }
+            } catch (err) {
+              console.warn('Failed to recompute license/install counts during asset creation:', err.message)
+            }
+
+          } catch (err) {
+            console.warn('Failed to create installation for software', softwareId, err.message)
+          }
+        }
+
+        // Persist specifications update (so UI can show the list)
+        try {
+          await tx.asset.update({ where: { id: asset.id }, data: { specifications: processedData.specifications } })
+        } catch (err) {
+          console.warn('Failed to update asset specifications with requiredSoftware list:', err.message)
+        }
       }
 
       // If depreciation fields were provided, create an AssetDepreciation entry
@@ -667,7 +790,9 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple
               description: true,
               fileSize: true,
               mimeType: true,
-              createdAt: true
+              filePath: true,
+              createdAt: true,
+              isActive: true
             }
           },
           requiredSoftware: {
@@ -817,26 +942,192 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultip
     });
 
     // Update asset
-    const updatedAsset = await prisma.asset.update({
-      where: { id },
-      data: processedData,
-      include: {
-        category: {
-          select: { id: true, name: true, code: true }
-        },
-        vendor: {
-          select: { id: true, name: true, code: true }
-        },
-        location: {
-          select: { id: true, name: true, building: true, room: true }
-        },
-        department: {
-          select: { id: true, name: true, code: true }
-        },
-        assignedTo: {
-          select: { id: true, firstName: true, lastName: true, email: true }
+    // Update asset with attachments in a transaction
+    const updatedAsset = await prisma.$transaction(async (tx) => {
+      // Update the asset first
+      const asset = await tx.asset.update({
+        where: { id },
+        data: processedData,
+        include: {
+          category: {
+            select: { id: true, name: true, code: true }
+          },
+          vendor: {
+            select: { id: true, name: true, code: true }
+          },
+          location: {
+            select: { id: true, name: true, building: true, room: true }
+          },
+          department: {
+            select: { id: true, name: true, code: true }
+          },
+          assignedTo: {
+            select: { id: true, firstName: true, lastName: true, email: true }
+          },
+          attachments: {
+            select: {
+              id: true,
+              fileName: true,
+              originalName: true,
+              attachmentType: true,
+              description: true,
+              fileSize: true,
+              mimeType: true,
+              filePath: true,
+              createdAt: true,
+              isActive: true
+            }
+          }
+        }
+      });
+
+      // Handle file attachments if any
+      if (req.files && req.files.length > 0) {
+        const attachments = req.files.map((file, index) => {
+          // Determine attachment type based on mime type
+          let attachmentType = 'OTHER';
+          if (file.mimetype.startsWith('image/')) {
+            attachmentType = 'IMAGE';
+          } else if (file.mimetype === 'application/pdf') {
+            attachmentType = 'DOCUMENT';
+          } else if (file.mimetype.includes('word') || file.mimetype.includes('excel')) {
+            attachmentType = 'DOCUMENT';
+          }
+
+          return {
+            assetId: asset.id,
+            companyId: req.user.companyId,
+            uploadedById: req.user.id,
+            fileName: file.filename,
+            originalName: file.originalname,
+            filePath: file.path,
+            fileSize: file.size,
+            mimeType: file.mimetype,
+            attachmentType: attachmentType,
+            description: attachmentDescriptions[index] || file.originalname,
+            isActive: true
+          };
+        });
+
+        // Create new attachments
+        for (const attachment of attachments) {
+          await tx.assetAttachment.create({
+            data: attachment
+          });
+        }
+
+        // Reload asset with new attachments
+        return await tx.asset.findUnique({
+          where: { id },
+          include: {
+            category: {
+              select: { id: true, name: true, code: true }
+            },
+            vendor: {
+              select: { id: true, name: true, code: true }
+            },
+            location: {
+              select: { id: true, name: true, building: true, room: true }
+            },
+            department: {
+              select: { id: true, name: true, code: true }
+            },
+            assignedTo: {
+              select: { id: true, firstName: true, lastName: true, email: true }
+            },
+            attachments: {
+              select: {
+                id: true,
+                fileName: true,
+                originalName: true,
+                attachmentType: true,
+                description: true,
+                fileSize: true,
+                mimeType: true,
+                filePath: true,
+                createdAt: true,
+                isActive: true
+              }
+            }
+          }
+        });
+      }
+
+      // Handle required software additions on update: create relations and attempt installations
+      if (requiredSoftwareIds.length > 0) {
+        try {
+          const existingReq = await tx.assetRequiredSoftware.findMany({ where: { assetId: asset.id } })
+          const existingIds = existingReq.map(r => r.softwareAssetId)
+          const toCreate = requiredSoftwareIds.filter(id => !existingIds.includes(id))
+
+          if (toCreate.length > 0) {
+            // update specs for backward compatibility
+            if (!processedData.specifications) processedData.specifications = {}
+            processedData.specifications.requiredSoftware = requiredSoftwareIds
+            await tx.asset.update({ where: { id: asset.id }, data: { specifications: processedData.specifications } })
+          }
+
+          for (const softwareId of toCreate) {
+            try {
+              // create relation if missing
+              const exists = await tx.assetRequiredSoftware.findFirst({ where: { assetId: asset.id, softwareAssetId: softwareId } })
+              if (!exists) {
+                await tx.assetRequiredSoftware.create({ data: { assetId: asset.id, softwareAssetId: softwareId, companyId: req.user.companyId } })
+              }
+
+              // Attempt to auto-install like create flow
+              const sa = await tx.softwareAsset.findFirst({ where: { id: softwareId, companyId: req.user.companyId, isActive: true }, include: { licenses: { where: { isActive: true, status: 'ACTIVE' } }, installations: { where: { status: 'INSTALLED', assetId: { not: null } } } } })
+              if (!sa) continue
+
+              const totalSeats = sa.licenses.reduce((s, l) => s + (l.totalSeats || 0), 0)
+              const activeInstCount = sa.installations.length
+              if (activeInstCount >= totalSeats && totalSeats > 0) {
+                console.log(`No available licenses for software ${softwareId} during asset update; skipping installation.`)
+                continue
+              }
+
+              let selectedLicense = sa.licenses.find(license => {
+                const licenseInstallations = sa.installations.filter(inst => inst.licenseId === license.id).length
+                return licenseInstallations < (license.totalSeats || 1)
+              })
+
+              await tx.softwareInstallation.create({ data: { assetId: asset.id, softwareAssetId: softwareId, licenseId: selectedLicense?.id || null, userId: req.user.id, companyId: req.user.companyId, version: sa.version || null, installationPath: null, notes: 'Installed during asset update', status: 'INSTALLED' } })
+
+              if (selectedLicense && selectedLicense.id) {
+                try {
+                  const licenseRecord = await tx.softwareLicense.findUnique({ where: { id: selectedLicense.id } })
+                  if (licenseRecord) {
+                    const newUsed = (licenseRecord.usedSeats || 0) + 1
+                    const total = licenseRecord.totalSeats || 1
+                    await tx.softwareLicense.update({ where: { id: selectedLicense.id }, data: { usedSeats: newUsed, availableSeats: Math.max(0, total - newUsed) } })
+                  }
+                } catch (err) { console.warn('Failed to update license counters during asset update install:', err.message) }
+              }
+
+              try { await tx.softwareAsset.update({ where: { id: softwareId }, data: { current_installations: (sa.current_installations || 0) + 1 } }) } catch (err) { console.warn('Failed to update softwareAsset.current_installations during asset update:', err.message) }
+
+              // Recompute disable logic
+              try {
+                const activeLicenses = await tx.softwareLicense.findMany({ where: { softwareAssetId: softwareId, isActive: true, status: 'ACTIVE' } })
+                const seats = activeLicenses.reduce((s, l) => s + (l.totalSeats || 0), 0)
+                const instCount = await tx.softwareInstallation.count({ where: { softwareAssetId: softwareId, status: 'INSTALLED', assetId: { not: null } } })
+                const saRecord = await tx.softwareAsset.findUnique({ where: { id: softwareId } })
+                const maxInst = saRecord?.max_installations || null
+                const seatsRemaining = seats - instCount
+                const shouldDisable = (saRecord && saRecord.license_type === 'SUBSCRIPTION' && seatsRemaining <= 0) || (maxInst !== null && instCount >= maxInst)
+                if (shouldDisable) { try { await tx.softwareAsset.update({ where: { id: softwareId }, data: { isActive: false, status: 'INACTIVE' } }) } catch (err) { console.warn('Failed to disable software asset after auto-install (update):', err.message) } }
+              } catch (err) { console.warn('Failed to recompute license/install counts during asset update:', err.message) }
+
+            } catch (err) {
+              console.warn('Failed to process required software during asset update for', softwareId, err.message)
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to process required software list during update:', err.message)
         }
       }
+
+      return asset;
     });
 
     res.json({
@@ -900,6 +1191,40 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res, next) =
     next(error);
   }
 });
+
+// POST /api/assets/:id/retire - Mark asset as retired and inactive
+router.post('/:id/retire', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res, next) => {
+  console.log('POST /api/assets/:id/retire called by user:', req.user?.id, 'role:', req.user?.role)
+  try {
+    const { id } = req.params
+    const { note } = req.body
+
+    const asset = await prisma.asset.findUnique({ where: { id } })
+    if (!asset) {
+      return res.status(404).json({ success: false, message: 'Asset not found' })
+    }
+
+    const updated = await prisma.asset.update({
+      where: { id },
+      data: {
+        status: 'RETIRED',
+        isActive: false,
+        notes: note ? `${asset.notes || ''}\n[${new Date().toISOString()}] Retired: ${note}` : `${asset.notes || ''}\n[${new Date().toISOString()}] Retired via API`
+      },
+      include: {
+        category: { select: { id: true, name: true, code: true } },
+        vendor: { select: { id: true, name: true, code: true } },
+        location: { select: { id: true, name: true } },
+        department: { select: { id: true, name: true } },
+        assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } }
+      }
+    })
+
+    res.json({ success: true, message: 'Asset retired successfully', data: updated })
+  } catch (error) {
+    next(error)
+  }
+})
 
 // Assign asset to user (Admin/Asset Admin only)
 router.post('/:id/assign', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res, next) => {

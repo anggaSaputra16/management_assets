@@ -3,19 +3,19 @@
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import useSoftwareAssetsStore from '@/stores/softwareAssetsStore'
-import { useCompanyStore } from '@/stores/companyStore'
 import { useVendorStore } from '@/stores/vendorStore'
+import { useCompanyStore } from '@/stores/companyStore'
 import { assetSoftwareService } from '@/lib/services/assetSoftwareService'
 import { Plus, Edit, Trash2, Monitor } from 'lucide-react'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import DataTable from '@/components/ui/DataTable'
 import Modal from '@/components/ui/Modal'
+import { softwareAssetsService } from '@/lib/services/softwareAssetsService'
 
 export default function MasterSoftwareAssetsPage() {
   const {
     softwareAssets,
     loading,
-    error,
     fetchSoftwareAssets,
     createSoftwareAsset,
     updateSoftwareAsset,
@@ -24,43 +24,92 @@ export default function MasterSoftwareAssetsPage() {
 
   const { vendors, fetchVendors } = useVendorStore()
   const { companies, fetchCompanies } = useCompanyStore()
+  const { user } = useAuthStore()
 
   const [showModal, setShowModal] = useState(false)
+  const [showMultiModal, setShowMultiModal] = useState(false)
+  const [multiInput, setMultiInput] = useState('')
+  const [multiLoading, setMultiLoading] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [editingSoftwareAsset, setEditingSoftwareAsset] = useState(null)
   const [softwareAssetToDelete, setSoftwareAssetToDelete] = useState(null)
+  const [showInstallModal, setShowInstallModal] = useState(false)
+  const [installations, setInstallations] = useState([])
+  const [selectedSoftwareForInst, setSelectedSoftwareForInst] = useState(null)
   const [formData, setFormData] = useState({
+    companyId: '',
     name: '',
     version: '',
-    license_type: 'SINGLE_USER',
+    publisher: '',
+    description: '',
+    softwareType: 'APPLICATION',
+    category: '',
+    systemRequirements: {},
+    installationPath: '',
+    isActive: true,
+    license_type: 'PERPETUAL',
     license_key: '',
+    status: 'ACTIVE',
     vendor_id: '',
-    company_id: '',
     purchase_date: '',
     expiry_date: '',
     cost: '',
     max_installations: '',
-    current_installations: '',
-    description: '',
-    status: 'ACTIVE'
+    current_installations: ''
   })
 
   useEffect(() => {
     fetchSoftwareAssets()
     fetchVendors()
-    fetchCompanies()
-  }, [fetchSoftwareAssets, fetchVendors, fetchCompanies])
+
+    // Only fetch the full companies list for privileged roles.
+    // Regular users should not call the companies endpoint (it's protected on the backend)
+    // and will instead have their company pre-filled from the authenticated user.
+    if (user && (user.role === 'ADMIN' || user.role === 'ASSET_ADMIN' || user.role === 'TOP_MANAGEMENT')) {
+      console.log('Fetching companies for role:', user.role)
+      fetchCompanies().then(() => {
+        console.log('Companies fetched successfully')
+      }).catch(err => {
+        console.error('Error fetching companies:', err)
+      })
+    } else if (user) {
+      console.log('Prefilling company for role:', user.role, 'companyId:', user.companyId)
+      // Prefill companyId for non-privileged users so the form sends the correct company
+      setFormData((f) => ({ ...f, companyId: user.companyId || '' }))
+    }
+  }, [fetchSoftwareAssets, fetchVendors, fetchCompanies, user])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      // Validate required fields based on license type
+      if (formData.license_type === 'SUBSCRIPTION' && !formData.expiry_date) {
+        alert('Expiry date is required for subscription licenses')
+        return
+      }
+
+      // Remove company_id from data since it's handled by backend auth
       const softwareAssetData = {
-        ...formData,
+        name: formData.name,
+        version: formData.version,
+        publisher: formData.publisher,
+        description: formData.description,
+        softwareType: formData.softwareType,
+        category: formData.category,
+        systemRequirements: formData.systemRequirements || {},
+        installationPath: formData.installationPath,
+        license_type: formData.license_type,
+        licenseId: formData.licenseId || '',
+        vendor_id: formData.vendor_id || '',
+        license_key: formData.license_key || '',
+        purchase_date: formData.purchase_date || null,
+        expiry_date: formData.expiry_date || null,
         cost: formData.cost ? parseFloat(formData.cost) : null,
         max_installations: formData.max_installations ? parseInt(formData.max_installations) : null,
         current_installations: formData.current_installations ? parseInt(formData.current_installations) : 0,
-        purchase_date: formData.purchase_date || null,
-        expiry_date: formData.expiry_date || null
+        status: formData.status,
+        isActive: formData.status === 'ACTIVE',
+        company_id: formData.companyId || user?.companyId || null // snake_case for backend
       }
 
       if (editingSoftwareAsset) {
@@ -68,6 +117,8 @@ export default function MasterSoftwareAssetsPage() {
       } else {
         await createSoftwareAsset(softwareAssetData)
       }
+      await fetchSoftwareAssets()
+      window.alert('Software asset berhasil disimpan!')
       setShowModal(false)
       resetForm()
     } catch (error) {
@@ -80,6 +131,7 @@ export default function MasterSoftwareAssetsPage() {
     setFormData({
       name: softwareAsset.name,
       version: softwareAsset.version || '',
+      companyId: softwareAsset.companyId || user?.companyId || '',
       license_type: softwareAsset.license_type || 'SINGLE_USER',
       license_key: softwareAsset.license_key || '',
       vendor_id: softwareAsset.vendor_id || '',
@@ -98,6 +150,7 @@ export default function MasterSoftwareAssetsPage() {
     if (softwareAssetToDelete) {
       try {
         await deleteSoftwareAsset(softwareAssetToDelete.id)
+        await fetchSoftwareAssets()
         setShowDeleteModal(false)
         setSoftwareAssetToDelete(null)
       } catch (error) {
@@ -110,29 +163,32 @@ export default function MasterSoftwareAssetsPage() {
     setFormData({
       name: '',
       version: '',
-      license_type: 'SINGLE_USER',
+      publisher: '',
+      description: '',
+      softwareType: 'APPLICATION',
+      category: '',
+      systemRequirements: {},
+      installationPath: '',
+      isActive: true,
+      license_type: 'PERPETUAL',
       license_key: '',
+      status: 'ACTIVE',
       vendor_id: '',
       purchase_date: '',
       expiry_date: '',
       cost: '',
       max_installations: '',
-      current_installations: '',
-      description: '',
-      status: 'ACTIVE'
+      current_installations: ''
     })
     setEditingSoftwareAsset(null)
   }
 
+  // FIX: Software Assets table - only show Name, License Type, Status, Installation Action
   const columns = [
     { key: 'name', label: 'Name' },
-    { key: 'version', label: 'Version' },
     { key: 'license_type', label: 'License Type' },
-    { key: 'vendor', label: 'Vendor' },
-    { key: 'company', label: 'Company' },
     { key: 'status', label: 'Status' },
-    { key: 'installations', label: 'Installations' },
-    { key: 'actions', label: 'Actions', isAction: true }
+    { key: 'installations', label: 'Installation Action', isAction: true }
   ]
 
   const formatCellValue = (item, key) => {
@@ -156,27 +212,34 @@ export default function MasterSoftwareAssetsPage() {
         return item[key]?.replace(/_/g, ' ') || 'N/A'
       case 'installations':
         const totalLicenses = item.licenses?.reduce((sum, license) => sum + (license.totalSeats || 0), 0) || 0
-        const activeInstallations = item.installations?.filter(inst => inst.status === 'INSTALLED').length || 0
+        // backend may return either `installations` array or `_count.installations` for performance
+        const activeInstallations = (Array.isArray(item.installations)
+          ? (item.installations.filter(inst => inst.status === 'INSTALLED').length || 0)
+          : (item._count?.installations || 0))
         return (
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-900">{activeInstallations}/{totalLicenses}</span>
-            {activeInstallations > 0 && (
-              <button
-                onClick={async () => {
-                  try {
-                    const result = await assetSoftwareService.getSoftwareInstallations(item.id)
-                    console.log(`Installations for ${item.name}:`, result.data)
-                    // You can show a modal or redirect to detailed view here
-                  } catch (error) {
-                    console.error('Failed to fetch installations:', error)
-                  }
-                }}
-                className="text-blue-600 hover:text-blue-900"
-                title="View installations"
-              >
-                <Monitor className="h-4 w-4" />
-              </button>
-            )}
+            <button
+              onClick={async () => {
+                try {
+                  setSelectedSoftwareForInst(item)
+                  const result = await assetSoftwareService.getSoftwareInstallations(item.id)
+                  setInstallations(result.data || [])
+                  setShowInstallModal(true)
+                } catch (error) {
+                  // Log full error for debugging (includes response object when available)
+                  console.error('Failed to fetch installations:', error)
+                  // If the service provided a message, show it; otherwise fallback to generic message
+                  const message = error?.message || (error?.response?.data?.message) || 'Failed to load installations'
+                  // Show more informative alert to the user for immediate debugging in dev
+                  alert(message)
+                }
+              }}
+              className={`p-1 rounded ${activeInstallations > 0 ? 'text-blue-600 hover:text-blue-900' : 'text-gray-400 hover:text-gray-600'}`}
+              title="View installations"
+            >
+              <Monitor className="w-4 h-4" />
+            </button>
           </div>
         )
       default:
@@ -206,15 +269,24 @@ export default function MasterSoftwareAssetsPage() {
 
   return (
     <DashboardLayout title="Software Assets">
-      <div className="flex justify-between items-center mb-6">
+  <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Software Assets</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Software Asset</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowMultiModal(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 flex items-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Multi Add</span>
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Software Asset</span>
+          </button>
+        </div>
       </div>
 
       <DataTable
@@ -235,22 +307,38 @@ export default function MasterSoftwareAssetsPage() {
           }}
         >
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Debug info - remove after testing */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
+                Debug: User role: {user?.role} | Companies count: {companies?.length || 0} | FormData.companyId: {formData.companyId || 'empty'}
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Company *
                 </label>
-                <select
-                  value={formData.company_id}
-                  onChange={e => setFormData({ ...formData, company_id: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select Company</option>
-                  {companies.map(company => (
-                    <option key={company.id} value={company.id}>{company.name}</option>
-                  ))}
-                </select>
+                {(user?.role === 'ADMIN' || user?.role === 'ASSET_ADMIN' || user?.role === 'TOP_MANAGEMENT') ? (
+                  <select
+                    value={formData.companyId}
+                    onChange={e => setFormData({ ...formData, companyId: e.target.value })}
+                    className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Select Company</option>
+                    {companies.map(company => (
+                      <option key={company.id} value={company.id}>{company.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={user?.company?.name || ''}
+                    className="w-full p-2 border rounded bg-gray-100 text-gray-500"
+                    disabled
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -263,6 +351,29 @@ export default function MasterSoftwareAssetsPage() {
                   className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Software Type *
+                </label>
+                <select
+                  value={formData.softwareType}
+                  onChange={(e) => setFormData({ ...formData, softwareType: e.target.value })}
+                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  required
+                >
+                  <option value="APPLICATION">Application</option>
+                  <option value="OPERATING_SYSTEM">Operating System</option>
+                  <option value="UTILITY">Utility</option>
+                  <option value="DRIVER">Driver</option>
+                  <option value="SECURITY">Security</option>
+                  <option value="DEVELOPMENT_TOOL">Development Tool</option>
+                  <option value="OFFICE_SUITE">Office Suite</option>
+                  <option value="DATABASE">Database</option>
+                  <option value="MIDDLEWARE">Middleware</option>
+                  <option value="PLUGIN">Plugin</option>
+                </select>
               </div>
 
               <div>
@@ -287,13 +398,17 @@ export default function MasterSoftwareAssetsPage() {
                   className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
                   required
                 >
+                  <option value="PERPETUAL">Perpetual</option>
+                  <option value="SUBSCRIPTION">Subscription</option>
+                  <option value="OPEN_SOURCE">Open Source</option>
+                  <option value="TRIAL">Trial</option>
+                  <option value="EDUCATIONAL">Educational</option>
+                  <option value="ENTERPRISE">Enterprise</option>
+                  <option value="OEM">OEM</option>
+                  <option value="VOLUME">Volume</option>
                   <option value="SINGLE_USER">Single User</option>
                   <option value="MULTI_USER">Multi User</option>
                   <option value="SITE_LICENSE">Site License</option>
-                  <option value="ENTERPRISE">Enterprise</option>
-                  <option value="SUBSCRIPTION">Subscription</option>
-                  <option value="PERPETUAL">Perpetual</option>
-                  <option value="OPEN_SOURCE">Open Source</option>
                 </select>
               </div>
 
@@ -440,6 +555,74 @@ export default function MasterSoftwareAssetsPage() {
         </Modal>
       )}
 
+      {/* Multi Add Modal */}
+      {showMultiModal && (
+        <Modal
+          title="Multi Add Software Assets"
+          onClose={() => {
+            setShowMultiModal(false)
+            setMultiInput('')
+          }}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">Paste a JSON array of software assets or newline-separated JSON objects. Each object should include at least <code>name</code> and <code>softwareType</code>. Company will be set to your current company unless overridden and allowed.</p>
+            <textarea
+              value={multiInput}
+              onChange={(e) => setMultiInput(e.target.value)}
+              placeholder='[{"name":"App A","softwareType":"APPLICATION"},{"name":"App B","softwareType":"APPLICATION"}]'
+              className="w-full p-2 border rounded h-48"
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => {
+                  setShowMultiModal(false)
+                  setMultiInput('')
+                }}
+                className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    setMultiLoading(true)
+                    let parsed
+                    try {
+                      parsed = JSON.parse(multiInput)
+                    } catch {
+                      // try newline separated
+                      const lines = multiInput.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+                      parsed = lines.map(l => JSON.parse(l))
+                    }
+
+                    if (!Array.isArray(parsed)) {
+                      window.alert('Input must be a JSON array or newline-separated JSON objects')
+                      setMultiLoading(false)
+                      return
+                    }
+
+                    await softwareAssetsService.batchCreate(parsed)
+                    await fetchSoftwareAssets()
+                    window.alert('Batch create successful')
+                    setShowMultiModal(false)
+                    setMultiInput('')
+                  } catch (error) {
+                    console.error('Batch create failed:', error)
+                    window.alert('Batch create failed: ' + (error?.message || 'Unknown error'))
+                  } finally {
+                    setMultiLoading(false)
+                  }
+                }}
+                disabled={multiLoading}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {multiLoading ? 'Importing...' : 'Import'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Delete Modal */}
       {showDeleteModal && (
         <Modal
@@ -469,6 +652,35 @@ export default function MasterSoftwareAssetsPage() {
             >
               Delete
             </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Installations Modal */}
+      {showInstallModal && (
+        <Modal title={`Installations - ${selectedSoftwareForInst?.name || ''}`} onClose={() => { setShowInstallModal(false); setInstallations([]); setSelectedSoftwareForInst(null); }}>
+          <div className="space-y-3">
+            {installations.length === 0 ? (
+              <p className="text-sm text-gray-600">No installations found for this software.</p>
+            ) : (
+              <div className="space-y-2">
+                {installations.map(inst => (
+                  <div key={inst.id} className="p-3 border rounded-md">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{inst.asset?.name || 'Unknown asset'}</p>
+                        <p className="text-xs text-gray-500">Tag: {inst.asset?.assetTag || '-'}</p>
+                        <p className="text-xs text-gray-500">Location: {inst.asset?.location?.name || 'N/A'} • Dept: {inst.asset?.department?.name || 'N/A'}</p>
+                      </div>
+                      <div className="text-right text-sm text-gray-600">
+                        <div>Installed: {new Date(inst.installationDate).toLocaleString()}</div>
+                        <div>License: {inst.license ? inst.license.licenseKey || inst.license.id : 'N/A'}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Modal>
       )}

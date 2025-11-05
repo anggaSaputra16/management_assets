@@ -2,95 +2,99 @@
 
 import { useEffect, useState } from 'react'
 import { 
-  Package, 
-  FileText, 
-  Clock, 
-  CheckCircle, 
+  Package,
+  Clock,
   AlertTriangle,
-  Users,
   Wrench,
-  BarChart3,
   Calendar,
   Building,
-  MapPin,
-  Truck,
   TrendingUp,
   Download,
-  Settings,
-  Archive,
-  Plus
+  Settings
 } from 'lucide-react'
+import Link from 'next/link'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/lib/api'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
-  const [stats, setStats] = useState({
-    totalAssets: 156,
-    availableAssets: 89,
-    assignedAssets: 45,
-    maintenanceAssets: 8,
-    pendingRequests: 12,
-    activeRequests: 23,
-    completedRequests: 134,
-    maintenanceDue: 8,
-    totalUsers: 45,
-    totalValue: 2500000,
-    utilizationRate: 75,
-    complianceRate: 92
-  })
-  const [loading, setLoading] = useState(false)
+  const [stats, setStats] = useState(null)
+  // weeklyData removed per request
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        const statsResponse = await api.get('/dashboard/stats')
+        if (statsResponse.data.success) {
+          setStats(statsResponse.data.data)
+        }
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err)
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user) {
+      fetchDashboardData()
+    }
+  }, [user])
 
   // Progress Ring Component
-  const ProgressRing = ({ progress, size = 120, strokeWidth = 8, children }) => {
-    const radius = (size - strokeWidth) / 2
-    const circumference = radius * 2 * Math.PI
-    const offset = circumference - (progress / 100) * circumference
+  // ProgressRing removed (used by Month/Weekly progress which were removed)
 
+  // Quick actions removed per request (kept helper removed)
+
+  // Loading state
+  if (loading) {
     return (
-      <div className="relative flex items-center justify-center">
-        <svg width={size} height={size} className="progress-ring">
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke="rgba(107, 114, 128, 0.3)"
-            strokeWidth={strokeWidth}
-            fill="transparent"
-          />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke="#374151"
-            strokeWidth={strokeWidth}
-            fill="transparent"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            className="progress-ring__circle"
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          {children}
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading dashboard data...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     )
   }
 
-  const getQuickActions = () => {
-    return [
-      { name: 'Add Asset', href: '/assets/create', icon: Package, color: 'from-blue-400 to-blue-600' },
-      { name: 'Categories', href: '/categories', icon: BarChart3, color: 'from-purple-400 to-purple-600' },
-      { name: 'Locations', href: '/locations', icon: MapPin, color: 'from-green-400 to-green-600' },
-      { name: 'Vendors', href: '/vendors', icon: Truck, color: 'from-orange-400 to-orange-600' },
-      { name: 'New Request', href: '/requests/create', icon: FileText, color: 'from-emerald-400 to-emerald-600' },
-      { name: 'Maintenance', href: '/maintenance', icon: Wrench, color: 'from-yellow-400 to-yellow-600' },
-      { name: 'Reports', href: '/reports', icon: BarChart3, color: 'from-indigo-400 to-indigo-600' },
-      { name: 'Users', href: '/users', icon: Users, color: 'from-pink-400 to-pink-600' },
-      { name: 'Departments', href: '/departments', icon: Building, color: 'from-teal-400 to-teal-600' }
-    ]
+  // Error state
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="glass-card p-6 text-center">
+          <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to Load Dashboard</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="glass-button px-6 py-2 rounded-lg hover:scale-105 transition-transform"
+          >
+            Retry
+          </button>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  // No data state
+  if (!stats) {
+    return (
+      <DashboardLayout>
+        <div className="glass-card p-6 text-center">
+          <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">No Data Available</h2>
+          <p className="text-gray-600">Start by adding assets to your system.</p>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
@@ -128,19 +132,23 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Main Dashboard Grid */}
+        {/* Stock Assets - Main Focus */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Overall Information Card */}
+          {/* Total Stock Assets Card */}
           <div className="glass-card p-6 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400"></div>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-800">Overall Information</h3>
+              <h3 className="text-xl font-semibold text-gray-800">Stock Assets</h3>
               <div className="flex space-x-2">
-                <button className="glass-button p-2 rounded-lg">
+                <button 
+                  onClick={() => window.location.href = '/assets'}
+                  className="glass-button p-2 rounded-lg hover:scale-105 transition-transform"
+                  title="View All Assets"
+                >
                   <Settings className="h-4 w-4 text-gray-600" />
                 </button>
-                <button className="glass-button p-2 rounded-lg">
+                <button className="glass-button p-2 rounded-lg hover:scale-105 transition-transform">
                   <Download className="h-4 w-4 text-gray-600" />
                 </button>
               </div>
@@ -148,262 +156,347 @@ export default function DashboardPage() {
             
             <div className="grid grid-cols-2 gap-6 mb-6">
               <div className="text-center">
-                <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-1">{stats.totalAssets}</div>
-                <div className="text-gray-500 text-sm">Total Assets</div>
+                <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-1">
+                  {stats?.overview?.totalAssets || 0}
+                </div>
+                <div className="text-gray-500 text-sm">Total Stock</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-1">{stats.pendingRequests}</div>
-                <div className="text-gray-500 text-sm">Pending Requests</div>
+                <div className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-1">
+                  {stats?.assets?.byStatus?.AVAILABLE || 0}
+                </div>
+                <div className="text-gray-500 text-sm">Available Stock</div>
               </div>
             </div>
             
             <div className="grid grid-cols-3 gap-4">
               <div className="relative glass-button p-4 rounded-xl text-center overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-400/20 to-emerald-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="relative text-2xl font-bold text-gray-700 mb-1">{stats.availableAssets}</div>
-                <div className="relative text-gray-500 text-xs">Available</div>
-              </div>
-              <div className="relative glass-button p-4 rounded-xl text-center overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="relative text-2xl font-bold text-gray-700 mb-1">{stats.assignedAssets}</div>
+                <div className="relative text-2xl font-bold text-gray-700 mb-1">
+                  {stats?.assets?.byStatus?.IN_USE || 0}
+                </div>
                 <div className="relative text-gray-500 text-xs">In Use</div>
               </div>
               <div className="relative glass-button p-4 rounded-xl text-center overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-400/20 to-red-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="relative text-2xl font-bold text-gray-700 mb-1">{stats.maintenanceAssets}</div>
+                <div className="relative text-2xl font-bold text-gray-700 mb-1">
+                  {stats?.assets?.byStatus?.MAINTENANCE || 0}
+                </div>
                 <div className="relative text-gray-500 text-xs">Maintenance</div>
               </div>
+              <div className="relative glass-button p-4 rounded-xl text-center overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-gray-400/20 to-gray-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative text-2xl font-bold text-gray-700 mb-1">
+                  {stats?.assets?.byStatus?.RETIRED || 0}
+                </div>
+                <div className="relative text-gray-500 text-xs">Retired</div>
+              </div>
             </div>
           </div>
 
-          {/* Weekly Progress */}
-          <div className="glass-card p-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400"></div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Weekly Progress</h3>
-              <button className="glass-button p-2 rounded-lg">
-                <TrendingUp className="h-4 w-4 text-gray-600" />
-              </button>
-            </div>
-            
-            <div className="flex items-center space-x-4 mb-4">
-              <span className="glass-button px-3 py-1 rounded-full text-gray-700 text-sm bg-gradient-to-r from-blue-400/10 to-purple-400/10">Assets</span>
-              <span className="text-gray-500 text-sm">Requests</span>
-            </div>
-            
-            {/* Mock Chart Area */}
-            <div className="h-32 flex items-end justify-between space-x-2 mb-4">
-              {[40, 65, 45, 80, 60, 90, 70].map((height, index) => (
-                <div key={index} className="flex-1 flex flex-col items-center">
-                  <div 
-                    className="w-full bg-gradient-to-t from-gray-200/30 to-gray-200/10 rounded-t-lg relative"
-                    style={{ height: `${height}%` }}
-                  >
-                    <div 
-                      className={`w-full rounded-t-lg absolute bottom-0 ${
-                        index === 5 
-                          ? 'bg-gradient-to-t from-blue-400 to-purple-400' 
-                          : 'bg-gradient-to-t from-blue-300/60 to-purple-300/60'
-                      }`}
-                      style={{ height: index === 5 ? '100%' : '60%' }}
-                    />
-                  </div>
-                  <div className="text-gray-500 text-xs mt-2">
-                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'][index]}
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <div className="text-center">
-              <div className="glass-button px-4 py-2 rounded-lg text-gray-700 text-sm bg-gradient-to-r from-green-400/10 to-emerald-400/10">+24%</div>
-              <div className="text-gray-500 text-xs mt-1">compared to last week</div>
-            </div>
-          </div>
-
-          {/* Month Progress */}
-          <div className="glass-card p-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400"></div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Month Progress</h3>
-              <button className="glass-button p-2 rounded-lg">
-                <BarChart3 className="h-4 w-4 text-gray-600" />
-              </button>
-            </div>
-            
-            <div className="text-center mb-4">
-              <div className="text-green-600 text-sm mb-2 font-medium">+20% compared to last month*</div>
-              
-              <ProgressRing progress={stats.utilizationRate} size={100}>
-                <div className="text-center">
-                  <div className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{stats.utilizationRate}%</div>
-                  <div className="text-gray-500 text-xs">Utilization</div>
-                </div>
-              </ProgressRing>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center text-sm">
-                <div className="w-3 h-3 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full mr-2"></div>
-                <span className="text-gray-600">Assets</span>
-              </div>
-              <div className="flex items-center text-sm">
-                <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-purple-500 rounded-full mr-2"></div>
-                <span className="text-gray-600">Requests</span>
-              </div>
-              <div className="flex items-center text-sm">
-                <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-green-500 rounded-full mr-2"></div>
-                <span className="text-white/80">Maintenance</span>
-              </div>
-            </div>
-            
-            <button className="w-full mt-4 glass-button py-2 rounded-lg text-white text-sm">
-              Download Report
-            </button>
-          </div>
+          {/* Weekly/Month Progress removed per request */}
         </div>
 
-        {/* Quick Actions Grid */}
-        <div className="glass-card p-6">
-          <h3 className="text-xl font-semibold text-white mb-6">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {getQuickActions().slice(0, 10).map((action, index) => (
-              <a
-                key={index}
-                href={action.href}
-                className="glass-button p-4 rounded-xl text-center hover:scale-105 transition-all duration-200 group"
-              >
-                <div className={`w-12 h-12 mx-auto mb-3 bg-gradient-to-r ${action.color} rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow`}>
-                  <action.icon className="h-6 w-6 text-white" />
-                </div>
-                <span className="text-white text-sm font-medium">{action.name}</span>
-              </a>
-            ))}
-          </div>
-        </div>
-
-        {/* Tasks and Goals Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          {/* Month Goals */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">Month Goals</h3>
-              <button className="glass-button p-2 rounded-lg">
-                <Plus className="h-4 w-4 text-white" />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                  <CheckCircle className="h-3 w-3 text-white" />
-                </div>
-                <span className="text-white line-through">Process 50 asset requests</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-5 h-5 border-2 border-white/30 rounded-full"></div>
-                <span className="text-white/80">Complete maintenance audit</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-5 h-5 border-2 border-white/30 rounded-full"></div>
-                <span className="text-white/80">Update asset categories</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Task In Process */}
-          <div className="glass-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">Task In Process (2)</h3>
-              <button className="glass-button p-2 rounded-lg">
-                <Plus className="h-4 w-4 text-white" />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="glass-button p-4 rounded-xl">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-white font-medium">Asset Audit Review</h4>
-                  <span className="text-white/60 text-sm">Today</span>
-                </div>
-                <p className="text-white/70 text-sm">Review quarterly asset audit results</p>
-              </div>
-              
-              <div className="glass-button p-4 rounded-xl">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-white font-medium">Maintenance Schedule</h4>
-                  <span className="text-white/60 text-sm">Tomorrow</span>
-                </div>
-                <p className="text-white/70 text-sm">Plan next month maintenance tasks</p>
-              </div>
-              
-              <button className="w-full border-2 border-dashed border-white/30 py-8 rounded-xl text-white/60 hover:border-white/50 transition-colors">
-                + Add task
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Last Projects */}
+        {/* Available Assets Detail - Hardware & Software */}
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-white">Last Projects</h3>
-            <div className="flex items-center space-x-4">
-              <span className="text-white/60 text-sm">Sort by</span>
-              <div className="flex space-x-2">
-                <button className="glass-button p-2 rounded-lg">
-                  <div className="grid grid-cols-2 gap-1">
-                    <div className="w-2 h-2 bg-white rounded-sm"></div>
-                    <div className="w-2 h-2 bg-white rounded-sm"></div>
-                    <div className="w-2 h-2 bg-white rounded-sm"></div>
-                    <div className="w-2 h-2 bg-white rounded-sm"></div>
+            <h3 className="text-xl font-semibold text-gray-800">Available Assets Detail</h3>
+            <Link 
+              href="/assets?status=AVAILABLE" 
+              className="text-blue-600 text-sm hover:underline flex items-center"
+            >
+              View All
+              <TrendingUp className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Hardware Assets Available */}
+            <div className="glass-button p-6 rounded-xl hover:scale-105 transition-transform">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <Package className="h-8 w-8 text-blue-600 mb-2" />
+                  <h4 className="text-lg font-semibold text-gray-800">Hardware Assets</h4>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                    {stats?.assets?.byStatus?.AVAILABLE || 0}
                   </div>
-                </button>
-                <button className="glass-button p-2 rounded-lg">
-                  <div className="space-y-1">
-                    <div className="w-4 h-0.5 bg-white rounded"></div>
-                    <div className="w-4 h-0.5 bg-white rounded"></div>
-                    <div className="w-4 h-0.5 bg-white rounded"></div>
+                  <div className="text-gray-500 text-sm">Ready to Use</div>
+                </div>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between text-gray-600">
+                  <span>Condition: Excellent</span>
+                  <span className="font-semibold text-green-600">{stats?.assets?.byCondition?.EXCELLENT || 0}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Condition: Good</span>
+                  <span className="font-semibold text-blue-600">{stats?.assets?.byCondition?.GOOD || 0}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Condition: Fair</span>
+                  <span className="font-semibold text-yellow-600">{stats?.assets?.byCondition?.FAIR || 0}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => window.location.href = '/assets?status=AVAILABLE'}
+                className="w-full mt-4 glass-button py-2 rounded-lg text-blue-600 font-medium hover:bg-blue-50 transition"
+              >
+                Browse Hardware
+              </button>
+            </div>
+
+            {/* Software Assets Available */}
+            <div className="glass-button p-6 rounded-xl hover:scale-105 transition-transform">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <Settings className="h-8 w-8 text-purple-600 mb-2" />
+                  <h4 className="text-lg font-semibold text-gray-800">Software Assets</h4>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    {stats?.software?.available || 0}
                   </div>
-                </button>
+                  <div className="text-gray-500 text-sm">Licenses Available</div>
+                </div>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between text-gray-600">
+                  <span>Active Licenses</span>
+                  <span className="font-semibold text-green-600">{stats?.software?.active || 0}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Total Software</span>
+                  <span className="font-semibold text-blue-600">{stats?.software?.total || 0}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Expiring Soon</span>
+                  <span className="font-semibold text-red-600">{stats?.software?.expiringSoon || 0}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => window.location.href = '/master/software-assets'}
+                className="w-full mt-4 glass-button py-2 rounded-lg text-purple-600 font-medium hover:bg-purple-50 transition"
+              >
+                Browse Software
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Key Metrics Grid - reduced as requested (Users & Compliance removed) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+          {/* Total Value */}
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-r from-green-400 to-emerald-500 rounded-xl">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-green-600 text-sm font-medium">Assets</span>
+            </div>
+            <div className="text-3xl font-bold text-gray-800 mb-1">
+              ${((stats?.overview?.totalValue || 0) / 1000000).toFixed(2)}M
+            </div>
+            <div className="text-gray-500 text-sm">Total Asset Value</div>
+          </div>
+
+          {/* Maintenance */}
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl">
+                <Wrench className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-orange-600 text-sm font-medium">Maintenance</span>
+            </div>
+            <div className="text-3xl font-bold text-gray-800 mb-1">
+              {stats?.maintenance?.overdue || 0}
+            </div>
+            <div className="text-gray-500 text-sm">Overdue Tasks</div>
+          </div>
+        </div>
+
+        {/* Recently Available Assets removed per request */}
+
+  {/* Asset Categories & Locations */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Top Categories */}
+          <div className="glass-card p-6">
+            <h3 className="text-xl font-semibold text-gray-800 mb-6">Top Asset Categories</h3>
+            <div className="space-y-4">
+              {(stats?.assets?.topCategories || []).slice(0, 5).map((category, index) => {
+                const percentage = ((category.count / (stats?.overview?.totalAssets || 1)) * 100).toFixed(1)
+                return (
+                  <div key={category.categoryId || index}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-gray-700 font-medium">{category.categoryName}</span>
+                      <span className="text-gray-600 text-sm">{category.count} assets</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Top Locations */}
+          <div className="glass-card p-6">
+            <h3 className="text-xl font-semibold text-gray-800 mb-6">Top Asset Locations</h3>
+            <div className="space-y-4">
+              {(stats?.assets?.topLocations || []).slice(0, 5).map((location, index) => {
+                const percentage = ((location.count / (stats?.overview?.totalAssets || 1)) * 100).toFixed(1)
+                return (
+                  <div key={location.locationId || index}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-gray-700 font-medium">{location.locationName}</span>
+                      <span className="text-gray-600 text-sm">{location.count} assets</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Activities removed per request */}
+
+        {/* Quick Actions removed per request */}
+
+        {/* Maintenance & Audit Summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Maintenance Summary */}
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                <Wrench className="h-5 w-5 mr-2" />
+                Maintenance Overview
+              </h3>
+              <a 
+                href="/maintenance" 
+                className="text-blue-600 text-sm hover:underline"
+              >
+                View All
+              </a>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="glass-button p-4 rounded-xl text-center">
+                <div className="text-3xl font-bold text-gray-800 mb-1">
+                  {stats?.maintenance?.upcoming || 0}
+                </div>
+                <div className="text-gray-600 text-sm">Upcoming</div>
+              </div>
+              <div className="glass-button p-4 rounded-xl text-center">
+                <div className="text-3xl font-bold text-red-600 mb-1">
+                  {stats?.maintenance?.overdue || 0}
+                </div>
+                <div className="text-gray-600 text-sm">Overdue</div>
               </div>
             </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-700">Total Cost (This Month)</span>
+                <span className="text-gray-800 font-bold">
+                  ${(stats?.maintenance?.totalCost || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-700">Total Maintenance</span>
+                <span className="text-gray-800 font-bold">{stats?.maintenance?.total || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-700">Completed</span>
+                <span className="text-green-600 font-bold">
+                  {stats?.maintenance?.byStatus?.COMPLETED || 0}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Audit Summary removed per request */}
+        </div>
+
+        {/* Top Companies by Assets (Departments used as fallback detail) */}
+        <div className="glass-card p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold text-gray-800">Top Companies by Assets</h3>
+            <Building className="h-6 w-6 text-gray-600" />
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="glass-button p-6 rounded-xl">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-white font-semibold">Asset Migration</h4>
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <Package className="h-4 w-4 text-white" />
+            {((stats?.companies?.topCompanies && stats.companies.topCompanies.length) ? stats.companies.topCompanies : (stats?.departments?.topDepartments || [])).slice(0, 3).map((item, index) => {
+              const name = item.companyName || item.name
+              const count = item.count || item.assetCount || 0
+              const colors = [
+                { bg: 'bg-blue-500', gradient: 'from-blue-400 to-blue-600' },
+                { bg: 'bg-green-500', gradient: 'from-green-400 to-green-600' },
+                { bg: 'bg-purple-500', gradient: 'from-purple-400 to-purple-600' }
+              ]
+              const color = colors[index] || colors[0]
+              
+              return (
+                <div key={name + index} className="glass-button p-6 rounded-xl hover:scale-105 transition-transform">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-gray-800 font-semibold">{name}</h4>
+                    <div className={`w-12 h-12 bg-gradient-to-r ${color.gradient} rounded-full flex items-center justify-center`}>
+                      <Building className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-3xl font-bold text-gray-800 mb-2">
+                    {count}
+                  </div>
+                  <p className="text-gray-600 text-sm">Total Assets</p>
+                  <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`bg-gradient-to-r ${color.gradient} h-2 rounded-full`}
+                      style={{ width: `${((count / (stats?.overview?.totalAssets || 1)) * 100).toFixed(0)}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="text-green-400 text-sm mb-2">● In progress</div>
-              <p className="text-white/70 text-sm">Migrate legacy assets to new system database</p>
-            </div>
-            
-            <div className="glass-button p-6 rounded-xl">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-white font-semibold">System Integration</h4>
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <CheckCircle className="h-4 w-4 text-white" />
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Asset Status Overview */}
+        <div className="glass-card p-6">
+          <h3 className="text-xl font-semibold text-gray-800 mb-6">Asset Status Overview</h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {Object.entries(stats?.assets?.byStatus || {}).map(([status, count]) => {
+              const statusConfig = {
+                AVAILABLE: { color: 'from-green-400 to-emerald-500', label: 'Available' },
+                IN_USE: { color: 'from-blue-400 to-cyan-500', label: 'In Use' },
+                MAINTENANCE: { color: 'from-yellow-400 to-orange-500', label: 'Maintenance' },
+                RETIRED: { color: 'from-gray-400 to-gray-500', label: 'Retired' },
+                DISPOSED: { color: 'from-red-400 to-pink-500', label: 'Disposed' }
+              }
+              const config = statusConfig[status] || statusConfig.AVAILABLE
+              const percentage = ((count / (stats?.overview?.totalAssets || 1)) * 100).toFixed(1)
+              
+              return (
+                <div key={status} className="glass-button p-4 rounded-xl text-center">
+                  <div className={`w-12 h-12 mx-auto mb-3 bg-gradient-to-r ${config.color} rounded-full flex items-center justify-center`}>
+                    <Package className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="text-2xl font-bold text-gray-800 mb-1">{count}</div>
+                  <div className="text-gray-600 text-sm mb-1">{config.label}</div>
+                  <div className="text-gray-500 text-xs">{percentage}%</div>
                 </div>
-              </div>
-              <div className="text-green-400 text-sm mb-2">● Completed</div>
-              <p className="text-white/70 text-sm">Integrate with HR and Finance systems</p>
-            </div>
-            
-            <div className="glass-button p-6 rounded-xl">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-white font-semibold">Mobile App</h4>
-                <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                  <Clock className="h-4 w-4 text-white" />
-                </div>
-              </div>
-              <div className="text-blue-400 text-sm mb-2">● In progress</div>
-              <p className="text-white/70 text-sm">Develop mobile application for field teams</p>
-            </div>
+              )
+            })}
           </div>
         </div>
       </div>

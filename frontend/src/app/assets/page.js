@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import DashboardLayout from '@/components/layouts/DashboardLayout'
 import Image from 'next/image'
 import { useAssetStore, useCategoryStore, useLocationStore, useDepartmentStore, useVendorStore, useUserStore, useInventoryStore } from '@/stores'
 import { useToast } from '@/contexts/ToastContext'
@@ -29,6 +30,7 @@ import {
   QrCode,
   Eye
 } from 'lucide-react'
+import { api } from '@/lib/api'
 
 const AssetsPage = () => {
   const { showSuccess, showError, showInfo } = useToast()
@@ -83,6 +85,7 @@ const AssetsPage = () => {
   const [selectedFiles, setSelectedFiles] = useState([])
   const [previewFiles, setPreviewFiles] = useState([])
   const [selectedSoftware, setSelectedSoftware] = useState([])
+  const [softwareAssets, setSoftwareAssets] = useState([])
   const itemsPerPage = 10
 
   const filteredAssets = getFilteredAssets()
@@ -93,10 +96,10 @@ const AssetsPage = () => {
     currentPage * itemsPerPage
   )
 
-  // Get software items from inventory (temporarily using inventory instead of spare parts)
-  const softwareItems = spareParts?.filter(item => 
-    item.type === 'SOFTWARE' || (item.name && item.name.toLowerCase().includes('software'))
-  ) || []
+  // Software items: prefer master software assets if available, otherwise fallback to inventory spare parts
+  const softwareItems = (Array.isArray(softwareAssets) && softwareAssets.length > 0)
+    ? softwareAssets
+    : (spareParts?.filter(item => item.type === 'SOFTWARE' || (item.name && item.name.toLowerCase().includes('software'))) || [])
 
   // Handle file upload
   const handleFileUpload = (event) => {
@@ -166,6 +169,14 @@ const AssetsPage = () => {
           fetchUsers(),
           fetchSpareParts()
         ])
+        // Also fetch master software assets (if available) to show in selector
+        try {
+          const sw = await api.get('/software-assets')
+          setSoftwareAssets(sw.data?.data || [])
+        } catch (err) {
+          console.warn('Could not fetch master software assets:', err.message)
+          setSoftwareAssets([])
+        }
       } catch (error) {
         console.error('Failed to load data:', error)
         showError('Failed to load data. Please refresh the page.')
@@ -993,9 +1004,12 @@ const AssetsPage = () => {
 
             {/* Required Software Section */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Required Software (For devices that need software installation)
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Required Software (For devices that need software installation)
+                </label>
+                <a href="/master/software-assets" target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">Add / Manage Software</a>
+              </div>
               <div className="space-y-3">
                 {/* Software Selection Dropdown */}
                 <select
@@ -1271,7 +1285,8 @@ const AssetsPage = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <DashboardLayout title="Assets">
+      <div className="p-6 space-y-6">
       {/* Header */}
       <div className="glass-card p-6 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400"></div>
@@ -1682,7 +1697,8 @@ const AssetsPage = () => {
           showSuccess('Depreciation settings saved');
         }}
       />
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }
 

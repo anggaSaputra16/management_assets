@@ -60,6 +60,14 @@ const masterModules = [
     description: 'Manage software licenses and digital assets',
     color: 'bg-teal-500'
   }
+  ,
+  {
+    name: 'Assets',
+    href: '/assets',
+    icon: Package,
+    description: 'Manage physical assets and lifecycle',
+    color: 'bg-cyan-500'
+  }
 ]
 
 export default function MasterPage() {

@@ -2,6 +2,9 @@ const express = require('express')
 const { authenticate, authorize } = require('../middleware/auth')
 const { PrismaClient } = require('@prisma/client')
 const Joi = require('joi')
+const multer = require('multer')
+const path = require('path')
+const fs = require('fs')
 
 const router = express.Router()
 const prisma = new PrismaClient()
@@ -24,7 +27,7 @@ const combinedSoftwareAssetSchema = Joi.object({
     'DATABASE',
     'MIDDLEWARE',
     'PLUGIN'
-  ).optional().default('APPLICATION'),
+  ).required(),
   category: Joi.string().optional().allow('').max(50),
   systemRequirements: Joi.object().optional(),
   installationPath: Joi.string().optional().allow('').max(500),
@@ -43,16 +46,21 @@ const combinedSoftwareAssetSchema = Joi.object({
     'SINGLE_USER',  // Map to PERPETUAL
     'MULTI_USER',   // Map to VOLUME
     'SITE_LICENSE'  // Map to ENTERPRISE
-  ).optional().default('PERPETUAL'),
+  ).required(),
   license_key: Joi.string().optional().allow(''),
   status: Joi.string().valid('ACTIVE', 'EXPIRED', 'SUSPENDED', 'CANCELLED', 'PENDING_RENEWAL', 'VIOLATION').optional().default('ACTIVE'),
-  cost: Joi.number().optional().min(0),
+  cost: Joi.number().optional().min(0).max(9999999999999.99),
   purchase_date: Joi.date().optional().allow(null),
-  expiry_date: Joi.date().optional().allow(null),
+  expiry_date: Joi.date().when('license_type', {
+    is: 'SUBSCRIPTION',
+    then: Joi.date().required(),
+    otherwise: Joi.date().optional().allow(null)
+  }),
   max_installations: Joi.number().optional().min(1),
   current_installations: Joi.number().optional().min(0),
   vendor_id: Joi.string().optional().allow(''),
-  company_id: Joi.string().optional()
+  company_id: Joi.string().optional(),
+  companyId: Joi.string().optional() // allow camelCase for compatibility
 })
 
 // GET /api/software-assets - Get all software assets with multi-company filtering
@@ -203,11 +211,9 @@ router.get('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params
     
+    // Fetch by unique id first, then enforce multi-company access control in JS.
     const softwareAsset = await prisma.softwareAsset.findUnique({
-      where: { 
-        id,
-        companyId: req.user.companyId // Multi-company filtering
-      },
+      where: { id },
       include: {
         licenses: {
           include: {
@@ -262,6 +268,15 @@ router.get('/:id', authenticate, async (req, res) => {
       })
     }
 
+    // Enforce company-level access: only allow access if asset belongs to user's company
+    // or the user has an overriding role (ADMIN / TOP_MANAGEMENT).
+    if (softwareAsset.companyId !== req.user.companyId && !['ADMIN', 'TOP_MANAGEMENT'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to view this software asset'
+      })
+    }
+
     res.json({
       success: true,
       data: softwareAsset
@@ -277,6 +292,7 @@ router.get('/:id', authenticate, async (req, res) => {
 })
 
 // POST /api/software-assets - Create new software asset (Admin/Asset Admin only)
+// Supports optional company_id override for ADMIN/TOP_MANAGEMENT users
 router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res) => {
   try {
     const { error, value } = combinedSoftwareAssetSchema.validate(req.body)
@@ -313,10 +329,27 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       ...softwareAssetData
     } = value
 
-    // Check if software asset with same name and version exists in company
+    // Determine target companyId: allow override for ADMIN/TOP_MANAGEMENT, otherwise use user's company
+    let targetCompanyId = req.user.companyId
+    if (company_id && company_id !== req.user.companyId) {
+      const allowedOverrideRoles = ['ADMIN', 'TOP_MANAGEMENT']
+      if (allowedOverrideRoles.includes(req.user.role)) {
+        const targetCompany = await prisma.company.findUnique({ where: { id: company_id } })
+        if (!targetCompany || !targetCompany.isActive) {
+          return res.status(400).json({ success: false, message: 'Target company not found or inactive.' })
+        }
+        targetCompanyId = company_id
+      } else {
+        // ignore provided company_id for non-authorized users
+        targetCompanyId = req.user.companyId
+      }
+    }
+
+
+    // Check if software asset with same name and version exists in target company
     const existingSoftware = await prisma.softwareAsset.findFirst({
       where: {
-        companyId: req.user.companyId,
+        companyId: targetCompanyId,
         name: softwareAssetData.name,
         version: softwareAssetData.version || null
       }
@@ -325,8 +358,13 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
     if (existingSoftware) {
       return res.status(400).json({
         success: false,
-        message: 'Software asset with this name and version already exists in your company'
+        message: 'Software asset with this name and version already exists in the target company'
       })
+    }
+
+    // Remove companyId/camelCase from frontend value if present
+    if ('companyId' in softwareAssetData) {
+      delete softwareAssetData.companyId
     }
 
     // Create software asset with license in transaction
@@ -335,7 +373,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       const softwareAsset = await prisma.softwareAsset.create({
         data: {
           ...softwareAssetData,
-          companyId: req.user.companyId
+          companyId: targetCompanyId
         }
       })
 
@@ -345,7 +383,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         license = await prisma.softwareLicense.create({
           data: {
             softwareAssetId: softwareAsset.id,
-            companyId: req.user.companyId,
+            companyId: targetCompanyId,
             licenseType: mapLicenseType(license_type) || 'PERPETUAL',
             licenseKey: license_key || null,
             status: licenseStatus || 'ACTIVE',
@@ -398,11 +436,111 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
   }
 })
 
+// POST /api/software-assets/batch - Create multiple software assets in one request
+router.post('/batch', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res) => {
+  try {
+    const items = req.body
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Request body must be a non-empty array of software assets' })
+    }
+
+    // Validate each item using the same Joi schema
+    const created = []
+
+    await prisma.$transaction(async (prismaTx) => {
+      for (const raw of items) {
+        const { error, value } = combinedSoftwareAssetSchema.validate(raw)
+        if (error) {
+          throw new Error('Validation error on one of the items: ' + error.details.map(d => d.message).join(', '))
+        }
+
+        // Determine company target similar to single create
+        let targetCompanyId = req.user.companyId
+        if (value.company_id && value.company_id !== req.user.companyId) {
+          const allowedOverrideRoles = ['ADMIN', 'TOP_MANAGEMENT']
+          if (allowedOverrideRoles.includes(req.user.role)) {
+            const targetCompany = await prismaTx.company.findUnique({ where: { id: value.company_id } })
+            if (!targetCompany || !targetCompany.isActive) {
+              throw new Error('Target company not found or inactive for one of the items')
+            }
+            targetCompanyId = value.company_id
+          }
+        }
+
+        // Skip duplicates in target company
+        const exists = await prismaTx.softwareAsset.findFirst({
+          where: {
+            companyId: targetCompanyId,
+            name: value.name,
+            version: value.version || null
+          }
+        })
+        if (exists) {
+          // Skip and continue
+          continue
+        }
+
+        const softwareAsset = await prismaTx.softwareAsset.create({
+          data: {
+            name: value.name,
+            version: value.version || null,
+            publisher: value.publisher || null,
+            description: value.description || null,
+            softwareType: value.softwareType,
+            category: value.category || null,
+            systemRequirements: value.systemRequirements || {},
+            installationPath: value.installationPath || null,
+            isActive: typeof value.isActive === 'boolean' ? value.isActive : true,
+            companyId: targetCompanyId
+          }
+        })
+
+        // Create license if present
+        if (value.license_type || value.license_key || value.cost) {
+          const mapLicenseType = (type) => {
+            const mapping = {
+              'SINGLE_USER': 'PERPETUAL',
+              'MULTI_USER': 'VOLUME',
+              'SITE_LICENSE': 'ENTERPRISE'
+            }
+            return mapping[type] || type
+          }
+          await prismaTx.softwareLicense.create({
+            data: {
+              softwareAssetId: softwareAsset.id,
+              companyId: targetCompanyId,
+              licenseType: mapLicenseType(value.license_type) || 'PERPETUAL',
+              licenseKey: value.license_key || null,
+              status: value.status || 'ACTIVE',
+              totalSeats: value.max_installations || 1,
+              usedSeats: value.current_installations || 0,
+              availableSeats: (value.max_installations || 1) - (value.current_installations || 0),
+              purchaseDate: value.purchase_date ? new Date(value.purchase_date) : null,
+              expiryDate: value.expiry_date ? new Date(value.expiry_date) : null,
+              purchaseCost: value.cost ? parseFloat(value.cost) : null,
+              vendorId: value.vendor_id || null
+            }
+          })
+        }
+
+        created.push(softwareAsset)
+      }
+    })
+
+    res.status(201).json({ success: true, message: 'Batch create completed', data: created })
+  } catch (error) {
+    console.error('Batch create software assets error:', error)
+    res.status(500).json({ success: false, message: 'Failed batch create', error: process.env.NODE_ENV === 'development' ? error.message : undefined })
+  }
+})
+
 // PUT /api/software-assets/:id - Update software asset
+// Supports optional company_id override for ADMIN/TOP_MANAGEMENT users
 router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res) => {
   try {
     const { id } = req.params
-    const { error, value } = softwareAssetSchema.validate(req.body)
+    // Use the same schema as POST for validation
+    const { error, value } = combinedSoftwareAssetSchema.validate(req.body)
     
     if (error) {
       return res.status(400).json({
@@ -412,12 +550,9 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       })
     }
 
-    // Check if software asset exists and belongs to user's company
+    // Check if software asset exists and belongs to user's company (or allowed override will be handled)
     const existingSoftware = await prisma.softwareAsset.findUnique({
-      where: { 
-        id,
-        companyId: req.user.companyId
-      }
+      where: { id }
     })
 
     if (!existingSoftware) {
@@ -446,9 +581,46 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       })
     }
 
+    // Determine update companyId: allow override for ADMIN/TOP_MANAGEMENT
+    let updateCompanyId = req.user.companyId
+    if (value.company_id && value.company_id !== req.user.companyId) {
+      const allowedOverrideRoles = ['ADMIN', 'TOP_MANAGEMENT']
+      if (allowedOverrideRoles.includes(req.user.role)) {
+        const targetCompany = await prisma.company.findUnique({ where: { id: value.company_id } })
+        if (!targetCompany || !targetCompany.isActive) {
+          return res.status(400).json({ success: false, message: 'Target company not found or inactive.' })
+        }
+        updateCompanyId = value.company_id
+      }
+    }
+
+    // Separate asset and license fields
+    const {
+      license_type,
+      license_key,
+      status: licenseStatus,
+      cost,
+      purchase_date,
+      expiry_date,
+      max_installations,
+      current_installations,
+      vendor_id,
+      company_id,
+      ...softwareAssetData
+    } = value;
+
+    // Remove companyId/camelCase from frontend value if present
+    if ('companyId' in softwareAssetData) {
+      delete softwareAssetData.companyId;
+    }
+
+    // Update software asset only with its own fields
     const updatedSoftware = await prisma.softwareAsset.update({
       where: { id },
-      data: value,
+      data: {
+        ...softwareAssetData,
+        companyId: updateCompanyId
+      },
       include: {
         _count: {
           select: {
@@ -457,13 +629,37 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
           }
         }
       }
-    })
+    });
+
+    // Optionally update license if license fields are present
+    // Find the latest license for this asset
+    const latestLicense = await prisma.softwareLicense.findFirst({
+      where: { softwareAssetId: id },
+      orderBy: { createdAt: 'desc' }
+    });
+    if (latestLicense) {
+      await prisma.softwareLicense.update({
+        where: { id: latestLicense.id },
+        data: {
+          licenseType: license_type || latestLicense.licenseType,
+          licenseKey: license_key || latestLicense.licenseKey,
+          status: licenseStatus || latestLicense.status,
+          totalSeats: max_installations || latestLicense.totalSeats,
+          usedSeats: current_installations || latestLicense.usedSeats,
+          availableSeats: (max_installations || latestLicense.totalSeats) - (current_installations || latestLicense.usedSeats),
+          purchaseDate: purchase_date ? new Date(purchase_date) : latestLicense.purchaseDate,
+          expiryDate: expiry_date ? new Date(expiry_date) : latestLicense.expiryDate,
+          purchaseCost: cost ? parseFloat(cost) : latestLicense.purchaseCost,
+          vendorId: vendor_id || latestLicense.vendorId
+        }
+      });
+    }
 
     res.json({
       success: true,
       message: 'Software asset updated successfully',
       data: updatedSoftware
-    })
+    });
   } catch (error) {
     console.error('Error updating software asset:', error)
     res.status(500).json({
@@ -480,11 +676,9 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
     const { id } = req.params
 
     // Check if software asset exists and belongs to user's company
-    const existingSoftware = await prisma.softwareAsset.findUnique({
-      where: { 
-        id,
-        companyId: req.user.companyId
-      },
+    // Fetch by unique id then enforce company ownership to avoid using non-unique compound `where` in `findUnique`.
+    const existingSoftware = await prisma.softwareAsset.findUnique({ 
+      where: { id },
       include: {
         _count: {
           select: {
@@ -494,12 +688,16 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
         }
       }
     })
-
     if (!existingSoftware) {
       return res.status(404).json({
         success: false,
         message: 'Software asset not found'
       })
+    }
+
+    // Enforce company-level ownership for delete operation
+    if (existingSoftware.companyId !== req.user.companyId && !['ADMIN', 'TOP_MANAGEMENT'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to delete this software asset' })
     }
 
     // Check if software asset has licenses or installations
@@ -531,5 +729,108 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
     })
   }
 })
+
+  // Configure multer for software file uploads (images and documents)
+  const softwareStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      const uploadDir = path.resolve(__dirname, '..', '..', 'uploads', 'software');
+      try {
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+      } catch (err) {
+        console.error('Failed to prepare upload directory for software:', uploadDir, err);
+        try {
+          const os = require('os');
+          const tmpDir = path.resolve(os.tmpdir(), 'management-assets-uploads');
+          if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+          console.warn('Falling back to tmp upload directory for software:', tmpDir);
+          cb(null, tmpDir);
+        } catch (err2) {
+          console.error('Fallback upload directory creation failed for software:', err2);
+          cb(err2);
+        }
+      }
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      cb(null, 'software-' + uniqueSuffix + ext);
+    }
+  });
+
+  const softwareFileFilter = (req, file, cb) => {
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf', 'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain'
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed! Only images and documents are permitted.'), false);
+    }
+  };
+
+  const softwareUpload = multer({ storage: softwareStorage, fileFilter: softwareFileFilter, limits: { fileSize: 10 * 1024 * 1024 } });
+  const uploadSoftwareMultiple = softwareUpload.array('attachments', 5);
+
+  // Upload attachments for a software asset
+  router.post('/:id/attachments', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), (req, res, next) => {
+    uploadSoftwareMultiple(req, res, async function (err) {
+      try {
+        if (err instanceof multer.MulterError) {
+          return res.status(400).json({ success: false, message: err.message });
+        } else if (err) {
+          return res.status(400).json({ success: false, message: err.message });
+        }
+
+        const { id } = req.params;
+
+        // Verify software asset exists
+        const softwareAsset = await prisma.softwareAsset.findUnique({ where: { id } });
+        if (!softwareAsset) {
+          return res.status(404).json({ success: false, message: 'Software asset not found' });
+        }
+
+        if (!req.files || req.files.length === 0) {
+          return res.status(400).json({ success: false, message: 'No files uploaded' });
+        }
+
+        const created = [];
+        for (const file of req.files) {
+          let attachmentType = 'OTHER';
+          if (file.mimetype.startsWith('image/')) attachmentType = 'IMAGE';
+          else if (file.mimetype === 'application/pdf' || file.mimetype.includes('word') || file.mimetype.includes('excel')) attachmentType = 'DOCUMENT';
+
+          const record = await prisma.softwareAttachment.create({
+            data: {
+              fileName: file.filename,
+              originalName: file.originalname,
+              filePath: file.path,
+              fileSize: file.size,
+              mimeType: file.mimetype,
+              attachmentType: attachmentType,
+              description: file.originalname,
+              softwareAssetId: id,
+              companyId: req.user.companyId,
+              uploadedById: req.user.id
+            }
+          });
+
+          created.push(record);
+        }
+
+        res.status(201).json({ success: true, message: 'Software attachments uploaded', data: created });
+      } catch (error) {
+        next(error);
+      }
+    });
+  });
 
 module.exports = router

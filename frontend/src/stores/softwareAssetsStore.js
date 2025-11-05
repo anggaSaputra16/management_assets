@@ -5,6 +5,7 @@ const useSoftwareAssetsStore = create((set) => ({
   // State
   softwareAssets: [],
   currentSoftwareAsset: null,
+  expiringLicensesCount: 0,
   loading: false,
   error: null,
 
@@ -33,10 +34,9 @@ const useSoftwareAssetsStore = create((set) => ({
     set({ loading: true, error: null });
     try {
       const newSoftwareAsset = await softwareAssetsService.create(softwareAssetData);
-      set(state => ({
-        softwareAssets: [...state.softwareAssets, newSoftwareAsset],
-        loading: false
-      }));
+      // Refetch the full list to ensure state consistency
+      await useSoftwareAssetsStore.getState().fetchSoftwareAssets();
+      set({ loading: false });
       return newSoftwareAsset;
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -97,11 +97,11 @@ const useSoftwareAssetsStore = create((set) => ({
     }
   },
 
-  fetchExpiringLicenses: async (days = 30) => {
+  fetchExpiringLicenses: async () => {
     set({ loading: true, error: null });
     try {
-      const softwareAssets = await softwareAssetsService.getExpiringLicenses(days);
-      set({ softwareAssets, loading: false });
+      const count = await softwareAssetsService.getExpiringLicenses();
+      set({ expiringLicensesCount: count, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
     }

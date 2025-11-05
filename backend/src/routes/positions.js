@@ -11,8 +11,9 @@ const positionSchema = Joi.object({
   title: Joi.string().required().min(2).max(100),
   description: Joi.string().optional().allow('').max(500),
   level: Joi.string().optional().valid('STAFF', 'SUPERVISOR', 'MANAGER', 'HEAD', 'DIRECTOR'),
-  isActive: Joi.boolean().default(true)
-})
+  isActive: Joi.boolean().default(true),
+  companyId: Joi.string().optional() // Allow companyId to be passed but not required
+}).unknown(true) // Allow unknown fields to pass through
 
 // GET /api/positions - Get all positions with multi-company filtering
 router.get('/', authenticate, async (req, res) => {
@@ -21,7 +22,7 @@ router.get('/', authenticate, async (req, res) => {
     const offset = (parseInt(page) - 1) * parseInt(limit)
 
     const where = {
-      companyId: req.user.companyId // Multi-company filtering
+      companyId: req.user.companyId 
     }
     
     if (search) {
@@ -124,7 +125,8 @@ router.get('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params
     
-    const position = await prisma.position.findUnique({
+    // Use findFirst when filtering by non-unique compound criteria (id + company)
+    const position = await prisma.position.findFirst({
       where: { 
         id,
         companyId: req.user.companyId // Multi-company filtering
@@ -239,7 +241,8 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
     }
 
     // Check if position exists and belongs to user's company
-    const existingPosition = await prisma.position.findUnique({
+    // Find the position within the user's company
+    const existingPosition = await prisma.position.findFirst({
       where: { 
         id,
         companyId: req.user.companyId
@@ -304,7 +307,8 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
     const { id } = req.params
 
     // Check if position exists and belongs to user's company
-    const existingPosition = await prisma.position.findUnique({
+    // Find the position and ensure it belongs to the user's company
+    const existingPosition = await prisma.position.findFirst({
       where: { 
         id,
         companyId: req.user.companyId

@@ -37,7 +37,7 @@ const statusIcons = {
 
 export default function DecompositionPage() {
   const router = useRouter()
-  const { showToast } = useToast()
+  const { showSuccess, showError } = useToast()
   
   const [decompositions, setDecompositions] = useState([])
   const [assets, setAssets] = useState([])
@@ -67,11 +67,11 @@ export default function DecompositionPage() {
       setAssets(assetsRes.data || [])
     } catch (err) {
       console.error('Failed to fetch data:', err)
-      showToast('Failed to fetch data', 'error')
+  showError('Failed to fetch data')
     } finally {
       setLoading(false)
     }
-  }, [searchTerm, statusFilter, showToast])
+  }, [searchTerm, statusFilter, showError])
 
   useEffect(() => {
     fetchData()
@@ -84,18 +84,36 @@ export default function DecompositionPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      // Normalize formData to backend expected shape
+      const payload = {
+        sourceAssetId: formData.sourceAssetId,
+        title: formData.reason || '',
+        description: formData.description || formData.notes || '',
+        plannedDate: formData.plannedDate || null,
+        // Map UI items (componentName/componentDetails/condition/action...) to backend items (name/description/quantity/unitPrice/...)
+        items: (formData.items || []).map(it => ({
+          name: it.componentName || it.name || '',
+          description: it.componentDetails || it.description || '',
+          quantity: it.quantity || 1,
+          // unitPrice intentionally omitted for decomposition-planned items; pricing is handled elsewhere
+          // Include category and partType selected in the item form
+          category: (it.category || 'HARDWARE').toUpperCase(),
+          partType: (it.partType || 'COMPONENT').toUpperCase()
+        }))
+      }
+
       if (editingDecomposition) {
-        await decompositionService.updateDecomposition(editingDecomposition.id, formData)
-        showToast('Decomposition updated successfully', 'success')
+        await decompositionService.updateDecomposition(editingDecomposition.id, payload)
+  showSuccess('Decomposition updated successfully')
       } else {
-        await decompositionService.createDecomposition(formData)
-        showToast('Decomposition plan created successfully', 'success')
+        await decompositionService.createDecomposition(payload)
+  showSuccess('Decomposition plan created successfully')
       }
       resetForm()
       fetchData()
     } catch (err) {
       console.error('Failed to save decomposition:', err)
-      showToast(err.message, 'error')
+  showError(err.message || 'Failed to save decomposition')
     }
   }
 
@@ -103,11 +121,11 @@ export default function DecompositionPage() {
     if (window.confirm('Are you sure you want to execute this decomposition? This action cannot be undone.')) {
       try {
         await decompositionService.executeDecomposition(decomposition.id)
-        showToast('Decomposition executed successfully', 'success')
+  showSuccess('Decomposition executed successfully')
         fetchData()
       } catch (err) {
         console.error('Failed to execute decomposition:', err)
-        showToast(err.message, 'error')
+  showError(err.message || 'Failed to execute decomposition')
       }
     }
   }
@@ -116,17 +134,30 @@ export default function DecompositionPage() {
     if (window.confirm('Are you sure you want to delete this decomposition plan?')) {
       try {
         await decompositionService.deleteDecomposition(decomposition.id)
-        showToast('Decomposition deleted successfully', 'success')
+  showSuccess('Decomposition deleted successfully')
         fetchData()
       } catch (err) {
         console.error('Failed to delete decomposition:', err)
-        showToast(err.message, 'error')
+  showError(err.message || 'Failed to delete decomposition')
       }
     }
   }
 
   const handleEdit = (decomposition) => {
     setEditingDecomposition(decomposition)
+    // Map backend items (name/description/quantity) into UI shape (componentName/componentDetails/...)
+    const mappedItems = (decomposition.items || []).map(it => ({
+      componentName: it.componentName || it.name || '',
+      componentDetails: it.componentDetails || it.description || '',
+      quantity: it.quantity || it.stock || 1,
+      condition: it.condition || 'Good',
+      action: it.action || 'Store',
+      category: it.category || 'HARDWARE',
+      partType: it.partType || 'COMPONENT',
+      targetLocation: it.targetLocation || '',
+      notes: it.notes || ''
+    }))
+
     setFormData({
       sourceAssetId: decomposition.sourceAssetId || '',
       targetAssetId: decomposition.targetAssetId || '',
@@ -134,7 +165,7 @@ export default function DecompositionPage() {
       description: decomposition.description || '',
       plannedDate: decomposition.plannedDate ? decomposition.plannedDate.split('T')[0] : '',
       notes: decomposition.notes || '',
-      items: decomposition.items || []
+      items: mappedItems
     })
     setShowModal(true)
   }
@@ -167,6 +198,8 @@ export default function DecompositionPage() {
         quantity: 1,
         condition: 'Good',
         action: 'Transfer',
+        category: 'HARDWARE',
+        partType: 'COMPONENT',
         targetLocation: '',
         notes: ''
       }]
@@ -365,7 +398,10 @@ export default function DecompositionPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredDecompositions.length > 0 ? (
                     filteredDecompositions.map((decomposition) => {
-                      const StatusIcon = statusIcons[decomposition.status]
+                      // Ensure we have a fallback icon and color for unknown/new statuses (e.g., PENDING)
+                      const StatusIcon = statusIcons[decomposition.status] || Package
+                      const statusClass = statusColors[decomposition.status] || 'bg-gray-100 text-gray-800'
+                      const statusLabel = (decomposition.status || '').replace('_', ' ')
                       return (
                         <tr key={decomposition.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4">
@@ -399,9 +435,9 @@ export default function DecompositionPage() {
                             )}
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${statusColors[decomposition.status]}`}>
+                            <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${statusClass}`}>
                               <StatusIcon className="h-3 w-3 mr-1" />
-                              {decomposition.status.replace('_', ' ')}
+                              {statusLabel || 'UNKNOWN'}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-900">
@@ -468,7 +504,7 @@ export default function DecompositionPage() {
 
         {/* Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { useMaintenanceStore } from '@/stores'
 import { useToast } from '@/contexts/ToastContext'
 import {
@@ -201,7 +202,7 @@ const MaintenancePage = () => {
     if (!showDetailModal || !selectedMaintenance) return null
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -355,7 +356,7 @@ const MaintenancePage = () => {
     if (!showModal) return null
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">
@@ -586,7 +587,8 @@ const MaintenancePage = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <DashboardLayout title="Maintenance">
+      <div className="p-6 space-y-6">
       {/* Header */}
       <div className="glass-header p-6 rounded-lg flex items-center justify-between">
         <div>
@@ -890,7 +892,8 @@ const MaintenancePage = () => {
       {/* Modals */}
       {renderModal()}
       {renderDetailModal()}
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }
 

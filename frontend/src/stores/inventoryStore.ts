@@ -146,9 +146,20 @@ export const useInventoryStore = create<InventoryState & InventoryActions>()(
         if (filters.condition) params.condition = filters.condition;
 
         const response = await inventoryService.getInventories(params);
-        
+
+        // Normalize numeric fields to avoid runtime issues in UI
+        const normalized = (response.inventories || []).map((inv: unknown) => {
+          const obj = inv as Record<string, unknown>
+          return {
+            ...obj,
+            quantity: obj['quantity'] != null ? Number(String(obj['quantity'])) : 0,
+            availableQty: obj['availableQty'] != null ? Number(String(obj['availableQty'])) : 0,
+            minStockLevel: obj['minStockLevel'] != null ? Number(String(obj['minStockLevel'])) : 0
+          }
+        });
+
         set({
-          inventories: response.inventories,
+          inventories: normalized as InventoryItem[],
           inventoryPagination: response.pagination,
           inventoryLoading: false,
         });
@@ -313,6 +324,25 @@ export const useInventoryStore = create<InventoryState & InventoryActions>()(
         throw error;
       }
     },
+
+      // Approve loan (Manager/Admin)
+      approveLoan: async (id: string, approvalData?: { approvalNotes?: string }) => {
+        try {
+          set({ loansLoading: true, loansError: null });
+
+          const updatedLoan = await inventoryService.approveLoan(id, approvalData);
+
+          // Refresh loans list
+          await get().fetchLoans();
+
+          set({ loansLoading: false });
+          return updatedLoan;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to approve loan';
+          set({ loansError: errorMessage, loansLoading: false });
+          throw error;
+        }
+      },
 
     setLoansFilters: (filters) => {
       set((state) => ({

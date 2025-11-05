@@ -21,6 +21,8 @@ const updateRequestSchema = Joi.object({
   justification: Joi.string().optional(),
   priority: Joi.string().valid('LOW', 'MEDIUM', 'HIGH', 'URGENT').optional(),
   notes: Joi.string().optional()
+  ,
+  companyId: Joi.string().optional()
 });
 
 const approvalSchema = Joi.object({
@@ -31,6 +33,8 @@ const approvalSchema = Joi.object({
     otherwise: Joi.optional()
   }),
   notes: Joi.string().optional()
+  ,
+  companyId: Joi.string().optional()
 });
 
 // Generate request number

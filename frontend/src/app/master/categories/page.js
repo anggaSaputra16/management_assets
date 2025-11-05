@@ -212,7 +212,7 @@ export default function MasterCategoriesPage() {
 
         {/* Create/Edit Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
             <div className="glass-card p-6 w-full max-w-md mx-4">
               <h3 className="text-lg font-semibold mb-4">
                 {editingCategory ? 'Edit Category' : 'Create Category'}
@@ -309,7 +309,7 @@ export default function MasterCategoriesPage() {
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
             <div className="glass-card p-6 w-full max-w-md mx-4">
               <h3 className="text-lg font-semibold mb-4 text-red-600">Delete Category</h3>
               <p className="text-gray-600 mb-4">

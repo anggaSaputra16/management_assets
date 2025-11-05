@@ -65,7 +65,8 @@ export default function CreateAssetPage() {
         setVendors(vendorsRes.data?.data?.vendors || [])
         setDepartments(departmentsRes.data?.data?.departments || [])
         setUsers(usersRes.data?.data?.users || [])
-        setSoftwareAssets(softwareRes.data?.data?.softwareAssets || [])
+        // backend returns an array in data for software-assets; support both shapes
+        setSoftwareAssets(softwareRes.data?.data?.softwareAssets || softwareRes.data?.data || [])
       } catch (error) {
         console.error('Failed to fetch master data:', error)
         alert('Failed to load form data. Please refresh the page.')
@@ -560,7 +561,17 @@ export default function CreateAssetPage() {
 
             {/* Required Software Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Required Software</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">Required Software</h3>
+                <a
+                  href="/master/software-assets"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  Add / Manage Software
+                </a>
+              </div>
               
               {/* Software Selection */}
               <div>

@@ -37,6 +37,8 @@ const authenticate = async (req, res, next) => {
       });
     }
 
+    // Normalize role to uppercase to avoid case-sensitivity issues
+    user.role = (user.role || '').toString().toUpperCase()
     req.user = user;
     next();
   } catch (error) {
@@ -54,14 +56,23 @@ const validateCompany = async (req, res, next) => {
     const userCompanyId = req.user.companyId;
 
     // If company_id is provided in request, validate it matches user's company
+    // Allow users with ADMIN or TOP_MANAGEMENT role to set a different companyId (group-level admin)
     if (requestCompanyId && requestCompanyId !== userCompanyId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Company mismatch.'
-      });
+      const allowedOverrideRoles = ['ADMIN', 'TOP_MANAGEMENT'];
+      if (!allowedOverrideRoles.includes(req.user.role)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. Company mismatch.'
+        });
+      }
+      // If allowed override, ensure the target company exists and is active
+      const targetCompany = await prisma.company.findUnique({ where: { id: requestCompanyId } });
+      if (!targetCompany || !targetCompany.isActive) {
+        return res.status(400).json({ success: false, message: 'Target company not found or inactive.' });
+      }
     }
 
-    // Auto-inject company_id if not provided
+    // Auto-inject company_id if not provided (or leave provided companyId when override allowed)
     if (!requestCompanyId) {
       req.body.companyId = userCompanyId;
       req.query.companyId = userCompanyId;
@@ -78,6 +89,8 @@ const validateCompany = async (req, res, next) => {
 
 // Authorization middleware
 const authorize = (...roles) => {
+  // Normalize expected roles once
+  const allowedRoles = roles.map(r => r && r.toString().toUpperCase())
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ 
@@ -86,7 +99,9 @@ const authorize = (...roles) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    const userRole = (req.user.role || '').toString().toUpperCase()
+
+    if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. Insufficient permissions.' 
@@ -99,15 +114,17 @@ const authorize = (...roles) => {
 
 // Check if user can approve requests
 const canApprove = (req, res, next) => {
-  const approverRoles = ['MANAGER', 'ADMIN', 'TOP_MANAGEMENT'];
-  
-  if (!approverRoles.includes(req.user.role)) {
+  // Allow managers, company admins and asset admins, and top management to approve
+  const approverRoles = ['MANAGER', 'ADMIN', 'ASSET_ADMIN', 'TOP_MANAGEMENT'];
+  const userRole = (req.user.role || '').toString().toUpperCase()
+
+  if (!approverRoles.includes(userRole)) {
     return res.status(403).json({ 
       success: false, 
-      message: 'Access denied. Only managers can approve requests.' 
+      message: 'Access denied. Only managers, admins, or asset admins can approve requests.' 
     });
   }
-  
+
   next();
 };
 

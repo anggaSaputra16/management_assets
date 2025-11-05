@@ -33,15 +33,10 @@ export const requestService = {
     return response.data
   },
 
-  // Approve request - companyId validation on backend
-  approveRequest: async (id, approvalData = {}) => {
-    const response = await api.post(`/requests/${id}/approve`, approvalData)
-    return response.data
-  },
-
-  // Reject request - companyId validation on backend
-  rejectRequest: async (id, rejectionData) => {
-    const response = await api.post(`/requests/${id}/reject`, rejectionData)
+  // Approve/reject request - backend expects a single approval endpoint
+  // Body: { action: 'APPROVE' | 'REJECT', notes?: string, rejectionReason?: string }
+  approval: async (id, approvalData = {}) => {
+    const response = await api.post(`/requests/${id}/approval`, approvalData)
     return response.data
   },
 

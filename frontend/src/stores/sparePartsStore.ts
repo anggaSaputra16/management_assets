@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import api from '@/lib/api'
+import { toast } from '@/hooks/useToast'
 
 // Types for Spare Parts Management
 interface SparePart {
@@ -10,7 +11,6 @@ interface SparePart {
   brand?: string
   model?: string
   category: 'Hardware' | 'Software' | 'Accessory' | 'Consumable'
-  unitPrice: number
   stockLevel: number
   minStockLevel: number
   maxStockLevel: number
@@ -344,6 +344,13 @@ const sparePartsAPI = {
   }
 }
 
+// Helper to coerce unknown values to numbers safely
+function toNumber(v: unknown): number {
+  if (v === undefined || v === null || v === '') return 0
+  const n = Number(String(v))
+  return Number.isFinite(n) ? n : 0
+}
+
 const initialInventoryFormData = {
   partNumber: '',
   name: '',
@@ -351,7 +358,6 @@ const initialInventoryFormData = {
   brand: '',
   model: '',
   category: 'Hardware' as const,
-  unitPrice: 0,
   stockLevel: 0,
   minStockLevel: 10,
   maxStockLevel: 100,
@@ -446,10 +452,36 @@ export const useSparePartsStore = create<SparePartsState & SparePartsActions>((s
       }
       
       const response = await sparePartsAPI.getSpareParts(params)
-      if (response.success) {
-        set({ spareParts: response.data.spareParts, loading: false })
+      if (response && response.success) {
+        // Backend returns: { success: true, data: [...], pagination: {...} }
+        // Normalize different possible shapes for compatibility
+        let parts = []
+        if (Array.isArray(response.data)) {
+          parts = response.data
+        } else if (response.data && Array.isArray(response.data.spareParts)) {
+          parts = response.data.spareParts
+        } else if (response.data && Array.isArray(response.data.items)) {
+          parts = response.data.items
+        } else if (response.data && typeof response.data === 'object') {
+          // Fallback: if data contains a direct array under unknown key, try to extract values
+          parts = Array.isArray(response.data) ? response.data : []
+        }
+
+        // Normalize numeric fields that may come as strings from the API
+        const normalized = parts.map((p: unknown) => {
+          const obj = p as Record<string, unknown>
+          return {
+            ...obj,
+            stockLevel: toNumber(obj['stockLevel']),
+            minStockLevel: toNumber(obj['minStockLevel']),
+            maxStockLevel: toNumber(obj['maxStockLevel']),
+            reorderPoint: toNumber(obj['reorderPoint'])
+          }
+        })
+
+        set({ spareParts: normalized, loading: false })
       } else {
-        set({ error: response.message, loading: false })
+        set({ error: response?.message || 'Failed to fetch spare parts', loading: false })
       }
     } catch (err) {
       console.error('Failed to fetch spare parts:', err)
@@ -475,13 +507,26 @@ export const useSparePartsStore = create<SparePartsState & SparePartsActions>((s
   createSparePart: async (data: Partial<SparePart>) => {
     set({ loading: true, error: null })
     try {
-      const response = await sparePartsAPI.createSparePart(data)
-      if (response.success) {
-        get().fetchSpareParts()
+      // Normalize payload: send category uppercase and remove empty vendorId
+      let payload: Partial<Record<string, unknown>> = { ...data }
+      if (payload.category && typeof payload.category === 'string') {
+        const categoryUpper = payload.category.toUpperCase()
+        payload = { ...payload, category: categoryUpper }
+      }
+      if (payload.vendorId === '' || payload.vendorId === null) {
+        delete payload.vendorId
+      }
+      // unitPrice intentionally omitted from inventory payload in this module
+
+      const response = await sparePartsAPI.createSparePart(payload)
+      if (response && response.success) {
+        // Refresh inventory and provide user feedback
+        await get().fetchSpareParts()
         get().resetForm()
         set({ showInventoryModal: false, loading: false })
+        toast.success(response.message || 'Spare part created successfully')
       } else {
-        set({ error: response.message, loading: false })
+        set({ error: response?.message || 'Failed to create spare part', loading: false })
       }
     } catch (err) {
       console.error('Failed to create spare part:', err)

@@ -23,7 +23,7 @@ const createLocationSchema = Joi.object({
   description: Joi.string().allow('').optional(),
   companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional()
-});
+}).unknown(true);
 
 const updateLocationSchema = Joi.object({
   name: Joi.string().optional(),
@@ -42,7 +42,7 @@ const updateLocationSchema = Joi.object({
   description: Joi.string().allow('').optional(),
   companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional()
-});
+}).unknown(true);
 
 // Get all locations
 router.get('/', authenticate, async (req, res, next) => {

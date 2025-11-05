@@ -3,35 +3,34 @@ import { useAuthStore } from '../../stores/authStore';
 
 const getCompanyId = () => {
   const { user } = useAuthStore.getState();
-  return user?.company_id;
+  // Support both backend shapes: camelCase `companyId` or snake_case `company_id`
+  return user?.companyId || user?.company_id || null;
 };
 
 export const softwareAssetsService = {
-  // Get all software assets (auto-filtered by company_id in backend)
+  // Get all software assets
   getAll: async () => {
     const response = await api.get('/software-assets');
-    return response.data;
+    return response.data.data || [];
   },
 
   // Get software asset by ID
   getById: async (id) => {
     const response = await api.get(`/software-assets/${id}`);
-    return response.data;
+    return response.data.data;
   },
 
   // Create new software asset
   create: async (softwareAssetData) => {
     const company_id = getCompanyId();
-    // Map frontend fields to backend expected format
     const mappedData = {
       name: softwareAssetData.name,
       version: softwareAssetData.version || '',
       publisher: softwareAssetData.publisher || '',
       description: softwareAssetData.description || '',
-      softwareType: 'APPLICATION', // Default type
+      softwareType: softwareAssetData.softwareType || 'APPLICATION',
       category: softwareAssetData.category || '',
       isActive: true,
-      // License data
       license_type: softwareAssetData.license_type || 'PERPETUAL',
       license_key: softwareAssetData.license_key || '',
       status: softwareAssetData.status || 'ACTIVE',
@@ -45,22 +44,30 @@ export const softwareAssetsService = {
     };
     
     const response = await api.post('/software-assets', mappedData);
-    return response.data;
+    return response.data.data;
+  },
+
+  // Batch create multiple software assets
+  batchCreate: async (items) => {
+    if (!Array.isArray(items)) throw new Error('items must be an array')
+    const company_id = getCompanyId()
+    // Map each item to include company_id if missing
+    const payload = items.map(item => ({ ...item, company_id: item.company_id || company_id }))
+    const response = await api.post('/software-assets/batch', payload)
+    return response.data.data
   },
 
   // Update software asset
   update: async (id, softwareAssetData) => {
     const company_id = getCompanyId();
-    // Map frontend fields to backend expected format
     const mappedData = {
       name: softwareAssetData.name,
       version: softwareAssetData.version || '',
       publisher: softwareAssetData.publisher || '',
       description: softwareAssetData.description || '',
-      softwareType: 'APPLICATION', // Default type
+      softwareType: softwareAssetData.softwareType || 'APPLICATION',
       category: softwareAssetData.category || '',
       isActive: true,
-      // License data
       license_type: softwareAssetData.license_type || 'PERPETUAL',
       license_key: softwareAssetData.license_key || '',
       status: softwareAssetData.status || 'ACTIVE',
@@ -74,7 +81,7 @@ export const softwareAssetsService = {
     };
     
     const response = await api.put(`/software-assets/${id}`, mappedData);
-    return response.data;
+    return response.data.data;
   },
 
   // Delete software asset
@@ -85,20 +92,34 @@ export const softwareAssetsService = {
 
   // Get software assets by type
   getByType: async (type) => {
-    const response = await api.get(`/software-assets?type=${type}`);
-    return response.data;
+    // Backend expects `softwareType` query param
+    const response = await api.get(`/software-assets?softwareType=${encodeURIComponent(type)}`);
+    return response.data.data || [];
   },
 
   // Get software assets by status
   getByStatus: async (status) => {
-    const response = await api.get(`/software-assets?status=${status}`);
-    return response.data;
+    // Map higher-level status strings to the backend `isActive` filter when possible
+    let q = '';
+    if (typeof status === 'boolean') {
+      q = `?isActive=${status}`;
+    } else if (status === 'ACTIVE') {
+      q = '?isActive=true';
+    } else if (status === 'INACTIVE' || status === 'INACTIVE') {
+      q = '?isActive=false';
+    } else {
+      q = `?status=${encodeURIComponent(status)}`; // fallback
+    }
+    const response = await api.get(`/software-assets${q}`);
+    return response.data.data || [];
   },
 
   // Get expiring licenses
-  getExpiringLicenses: async (days = 30) => {
-    const response = await api.get(`/software-assets?expiring=${days}`);
-    return response.data;
+  getExpiringLicenses: async () => {
+    // Backend currently exposes expiring license counts via /software-assets/stats
+    // Return the number of expiring licenses (30-day window is used server-side)
+    const response = await api.get('/software-assets/stats');
+    return (response.data && response.data.data && response.data.data.expiringLicenses) || 0;
   }
 };
 
