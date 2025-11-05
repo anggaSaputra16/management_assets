@@ -22,10 +22,10 @@ echo
 echo "====================================================="
 echo " Asset Management System is starting up!"
 echo "====================================================="
-echo " Frontend:  http://localhost:3000"
-echo " Backend:   http://localhost:5000/api"
+echo " Frontend:  http://localhost:3001"
+echo " Backend:   http://localhost:5001/api"
 echo " Database:  localhost:5432"
-echo " Health:    http://localhost:5000/api/health"
+echo " Health:    http://localhost:5001/api/health"
 echo "====================================================="
 echo
 echo "Default Login Credentials:"

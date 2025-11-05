@@ -18,11 +18,12 @@ const companySchema = Joi.object({
   taxNumber: Joi.string().optional().allow('').max(50),
   registrationNumber: Joi.string().optional().allow('').max(50),
   description: Joi.string().optional().allow('').max(1000),
-  isActive: Joi.boolean().default(true)
-})
+  isActive: Joi.boolean().default(true),
+  companyId: Joi.string().optional() // Allow companyId to be passed but not required
+}).unknown(true) // Allow unknown fields to be passed
 
-// GET /api/companies - Get all companies (Admin and Asset Admin)
-router.get('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res) => {
+// GET /api/companies - Get all companies (Admin, Asset Admin, and Top Management)
+router.get('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TOP_MANAGEMENT'), async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', isActive } = req.query
     const offset = (parseInt(page) - 1) * parseInt(limit)
@@ -78,8 +79,8 @@ router.get('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res
   }
 })
 
-// GET /api/companies/stats - Get company statistics (Admin only)
-router.get('/stats', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res) => {
+// GET /api/companies/stats - Get company statistics (Admin, Asset Admin, and Top Management)
+router.get('/stats', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TOP_MANAGEMENT'), async (req, res) => {
   try {
     const stats = await prisma.company.aggregate({
       _count: { id: true },
@@ -120,14 +121,9 @@ router.get('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params
 
-    // Admin can view any company, users can only view their own company
-    const where = { id }
-    if (req.user.role !== 'ADMIN') {
-      where.id = req.user.companyId
-    }
-
+    // Fetch company by id (unique)
     const company = await prisma.company.findUnique({
-      where,
+      where: { id },
       include: {
         _count: {
           select: {
@@ -146,6 +142,14 @@ router.get('/:id', authenticate, async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Company not found'
+      })
+    }
+
+    // Only ADMIN and TOP_MANAGEMENT can view any company; other users can view only their own company
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'TOP_MANAGEMENT' && company.id !== req.user.companyId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
       })
     }
 
@@ -175,12 +179,15 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       })
     }
 
+    // Remove companyId from value as it shouldn't be part of creation data
+    const { companyId, ...companyData } = value
+
     // Check if company with same name or code exists
     const existingCompany = await prisma.company.findFirst({
       where: {
         OR: [
-          { name: value.name },
-          { code: value.code }
+          { name: companyData.name },
+          { code: companyData.code }
         ]
       }
     })
@@ -193,7 +200,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
     }
 
     const company = await prisma.company.create({
-      data: value,
+      data: companyData,
       include: {
         _count: {
           select: {
@@ -246,6 +253,9 @@ router.put('/:id', authenticate, async (req, res) => {
       })
     }
 
+    // Remove companyId from value as it shouldn't be part of update data
+    const { companyId, ...companyData } = value
+
     // Check if company exists
     const existingCompany = await prisma.company.findUnique({
       where: { id: targetCompanyId }
@@ -282,7 +292,7 @@ router.put('/:id', authenticate, async (req, res) => {
 
     const updatedCompany = await prisma.company.update({
       where: { id: targetCompanyId },
-      data: value,
+      data: companyData,
       include: {
         _count: {
           select: {

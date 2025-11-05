@@ -7,23 +7,35 @@ const router = express.Router();
 
 // Validation schemas
 const createVendorSchema = Joi.object({
-  name: Joi.string().required(),
-  code: Joi.string().required(),
-  email: Joi.string().email().allow('').optional(),
-  phone: Joi.string().allow('').optional(),
-  address: Joi.string().allow('').optional(),
-  contactPerson: Joi.string().allow('').optional(),
-  companyId: Joi.string().optional(),
-  isActive: Joi.boolean().optional()
-});
-
-const updateVendorSchema = Joi.object({
+    name: Joi.string().required(),
+    code: Joi.string().required(),
+    email: Joi.string().email().allow('').optional(),
+    phone: Joi.string().allow('').optional(),
+    address: Joi.string().allow('').optional(),
+    city: Joi.string().allow('').optional(),
+    state: Joi.string().allow('').optional(),
+    postalCode: Joi.string().allow('').optional(),
+    country: Joi.string().allow('').optional(),
+    contactPerson: Joi.string().allow('').optional(),
+    website: Joi.string().allow('').optional(),
+    taxId: Joi.string().allow('').optional(),
+    description: Joi.string().allow('').optional(),
+    companyId: Joi.string().optional(),
+    isActive: Joi.boolean().optional()
+  });const updateVendorSchema = Joi.object({
   name: Joi.string().optional(),
   code: Joi.string().optional(),
   email: Joi.string().email().allow('').optional(),
   phone: Joi.string().allow('').optional(),
   address: Joi.string().allow('').optional(),
+  city: Joi.string().allow('').optional(),
+  state: Joi.string().allow('').optional(),
+  postalCode: Joi.string().allow('').optional(),
+  country: Joi.string().allow('').optional(),
   contactPerson: Joi.string().allow('').optional(),
+  website: Joi.string().allow('').optional(),
+  taxId: Joi.string().allow('').optional(),
+  description: Joi.string().allow('').optional(),
   companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional()
 });
@@ -166,14 +178,20 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       });
     }
 
-    const { name, code, email, phone, address, contactPerson } = value;
+    const { name, code, email, phone, address, city, state, postalCode, 
+      country, contactPerson, website, taxId, description, isActive } = value;
 
     // Check if vendor name or code already exists
     const existingVendor = await prisma.vendor.findFirst({
       where: {
-        OR: [
-          { name },
-          { code }
+        AND: [
+          {
+            OR: [
+              { name },
+              { code }
+            ]
+          },
+          { companyId: req.user.companyId } // Check within same company
         ]
       }
     });
@@ -193,7 +211,16 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         email,
         phone,
         address,
-        contactPerson
+        city,
+        state,
+        postalCode,
+        country,
+        contactPerson,
+        website,
+        taxId,
+        description,
+        isActive,
+        companyId: req.user.companyId // Add company relation
       }
     });
 
@@ -222,8 +249,11 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
     }
 
     // Check if vendor exists
-    const existingVendor = await prisma.vendor.findUnique({
-      where: { id }
+    const existingVendor = await prisma.vendor.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId // Only find vendor from same company
+      }
     });
 
     if (!existingVendor) {
@@ -239,6 +269,7 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
         where: {
           AND: [
             { id: { not: id } },
+            { companyId: req.user.companyId }, // Check within same company
             {
               OR: [
                 ...(value.name ? [{ name: value.name }] : []),

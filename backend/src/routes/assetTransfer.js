@@ -71,10 +71,18 @@ router.get('/', authenticate, async (req, res) => {
     const where = {}
     if (status) where.status = status
     if (assetId) where.assetId = assetId
+    // Scope transfers to the user's company via related asset.companyId
+    const companyId = req.user.companyId
+    const whereWithCompany = {
+      AND: [
+        where,
+        { asset: { is: { companyId } } }
+      ]
+    }
 
     const [transfers, totalCount] = await Promise.all([
       prisma.assetTransfer.findMany({
-        where,
+        where: whereWithCompany,
         include: {
           asset: {
             select: {
@@ -97,7 +105,7 @@ router.get('/', authenticate, async (req, res) => {
         skip: parseInt(offset),
         take: parseInt(limit)
       }),
-      prisma.assetTransfer.count({ where })
+      prisma.assetTransfer.count({ where: whereWithCompany })
     ])
 
     res.json({
@@ -147,6 +155,11 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), asy
         success: false,
         message: 'Asset not found'
       })
+    }
+
+    // Enforce company scoping: asset must belong to user's company
+    if (asset.companyId !== req.user.companyId) {
+      return res.status(403).json({ success: false, message: 'Asset does not belong to your company' })
     }
 
     // Generate transfer number
@@ -264,6 +277,12 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), a
       })
     }
 
+    // Verify company scoping: only operate on transfers for assets in the same company
+    const assetCheck = await prisma.asset.findUnique({ where: { id: existingTransfer.assetId }, select: { companyId: true } })
+    if (!assetCheck || assetCheck.companyId !== req.user.companyId) {
+      return res.status(403).json({ success: false, message: 'Transfer does not belong to your company' })
+    }
+
     // Update the transfer
     const updateData = { ...value }
     if (value.status === 'APPROVED') {
@@ -347,6 +366,12 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
       })
     }
 
+    // Verify company scoping before deletion
+    const assetCheck = await prisma.asset.findUnique({ where: { id: transfer.assetId }, select: { companyId: true } })
+    if (!assetCheck || assetCheck.companyId !== req.user.companyId) {
+      return res.status(403).json({ success: false, message: 'Transfer does not belong to your company' })
+    }
+
     await prisma.assetTransfer.delete({
       where: { id }
     })
@@ -369,6 +394,14 @@ router.post('/:id/approve', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MAN
   try {
     const { id } = req.params
     const { approvalNotes } = req.body
+
+    // Ensure transfer exists and belongs to company
+    const existing = await prisma.assetTransfer.findUnique({ where: { id } })
+    if (!existing) return res.status(404).json({ success: false, message: 'Transfer not found' })
+    const assetCheck = await prisma.asset.findUnique({ where: { id: existing.assetId }, select: { companyId: true } })
+    if (!assetCheck || assetCheck.companyId !== req.user.companyId) {
+      return res.status(403).json({ success: false, message: 'Transfer does not belong to your company' })
+    }
 
     const transfer = await prisma.assetTransfer.update({
       where: { id },
@@ -406,16 +439,25 @@ router.post('/:id/approve', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MAN
 router.post('/:id/complete', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), async (req, res) => {
   try {
     const { id } = req.params
+    // Accept optional body params:
+    // - priceDeduction: number | string (amount to deduct from asset.currentValue)
+    // - inventoryId / inventoryQuantity: to update inventory counts if the transfer involves inventory records
+    const { priceDeduction, inventoryId, inventoryQuantity } = req.body || {}
 
-    const transfer = await prisma.assetTransfer.findUnique({
-      where: { id }
-    })
+    // Find transfer and ensure ready
+    const transfer = await prisma.assetTransfer.findUnique({ where: { id } })
 
     if (!transfer) {
       return res.status(404).json({
         success: false,
         message: 'Transfer not found'
       })
+    }
+
+    // Company scope check
+    const assetCheck = await prisma.asset.findUnique({ where: { id: transfer.assetId }, select: { companyId: true } })
+    if (!assetCheck || assetCheck.companyId !== req.user.companyId) {
+      return res.status(403).json({ success: false, message: 'Transfer does not belong to your company' })
     }
 
     if (transfer.status !== 'APPROVED') {
@@ -425,30 +467,102 @@ router.post('/:id/complete', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MA
       })
     }
 
-    // Update transfer status
-    await prisma.assetTransfer.update({
-      where: { id },
-      data: {
-        status: 'COMPLETED',
-        effectiveDate: new Date()
+    // Parse priceDeduction (optional)
+    let priceDeductNumber = null
+    if (priceDeduction !== undefined && priceDeduction !== null && priceDeduction !== '') {
+      priceDeductNumber = Number(priceDeduction)
+      if (Number.isNaN(priceDeductNumber) || priceDeductNumber < 0) {
+        return res.status(400).json({ success: false, message: 'Invalid priceDeduction value' })
       }
-    })
-
-    // Update asset location/department/assignment
-    const updateAssetData = {}
-    if (transfer.toLocationId) updateAssetData.locationId = transfer.toLocationId
-    if (transfer.toDepartmentId) updateAssetData.departmentId = transfer.toDepartmentId
-    if (transfer.toUserId) updateAssetData.assignedToId = transfer.toUserId
-
-    if (Object.keys(updateAssetData).length > 0) {
-      await prisma.asset.update({
-        where: { id: transfer.assetId },
-        data: updateAssetData
-      })
     }
+
+    // Perform all DB updates in a single transaction to ensure atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // Lock/read current asset state inside transaction
+      const assetBefore = await tx.asset.findUnique({ where: { id: transfer.assetId } })
+      if (!assetBefore) {
+        throw new Error('Asset not found for this transfer')
+      }
+
+      // Update transfer status
+      const updatedTransfer = await tx.assetTransfer.update({
+        where: { id },
+        data: {
+          status: 'COMPLETED',
+          effectiveDate: new Date()
+        }
+      })
+
+      // Prepare asset update
+      const updateAssetData = {}
+      if (transfer.toLocationId) updateAssetData.locationId = transfer.toLocationId
+      if (transfer.toDepartmentId) updateAssetData.departmentId = transfer.toDepartmentId
+      if (transfer.toUserId) updateAssetData.assignedToId = transfer.toUserId
+
+      // Apply price deduction if requested
+      if (priceDeductNumber !== null) {
+        // Prevent negative resulting value
+        const currentVal = assetBefore.currentValue ? Number(assetBefore.currentValue) : 0
+        const finalValue = Math.max(0, currentVal - priceDeductNumber)
+
+        // Use explicit value assignment for Decimal safety
+        updateAssetData.currentValue = finalValue
+      }
+
+      let updatedAsset = assetBefore
+      if (Object.keys(updateAssetData).length > 0) {
+        updatedAsset = await tx.asset.update({
+          where: { id: transfer.assetId },
+          data: updateAssetData
+        })
+      }
+
+      // If inventory update requested (optional) update availableQty / status
+      if (inventoryId && inventoryQuantity) {
+        // ensure inventory exists
+        const inv = await tx.inventory.findUnique({ where: { id: inventoryId } })
+        if (!inv) {
+          throw new Error('Inventory record not found')
+        }
+
+        const newAvailable = Math.max(0, inv.availableQty - Number(inventoryQuantity))
+        await tx.inventory.update({
+          where: { id: inventoryId },
+          data: {
+            availableQty: newAvailable,
+            status: newAvailable === 0 ? 'LOANED' : inv.status
+          }
+        })
+      }
+
+      // Record a transaction entry using AuditTrail (serves as immutable transaction log)
+      const descriptionParts = []
+      descriptionParts.push(`Transfer ${updatedTransfer.transferNumber} completed`)
+      if (priceDeductNumber !== null) descriptionParts.push(`price deduction: ${priceDeductNumber}`)
+      if (transfer.fromDepartmentId || transfer.toDepartmentId) descriptionParts.push(`fromDept:${transfer.fromDepartmentId || 'N/A'} toDept:${transfer.toDepartmentId || 'N/A'}`)
+
+      await tx.auditTrail.create({
+        data: {
+          action: 'TRANSFER',
+          entityType: 'ASSET',
+          entityId: transfer.assetId,
+          oldValues: assetBefore ? JSON.stringify({ currentValue: assetBefore.currentValue, locationId: assetBefore.locationId, departmentId: assetBefore.departmentId, assignedToId: assetBefore.assignedToId }) : null,
+          newValues: JSON.stringify({ currentValue: updatedAsset.currentValue, locationId: updatedAsset.locationId, departmentId: updatedAsset.departmentId, assignedToId: updatedAsset.assignedToId }),
+          description: descriptionParts.join(' | '),
+          ipAddress: req.ip || null,
+          userAgent: req.get('User-Agent') || null,
+          sessionId: null,
+          userId: req.user.id,
+          companyId: req.user.companyId
+        }
+      })
+
+      return { updatedTransfer, updatedAsset }
+    })
 
     res.json({
       success: true,
+      data: result,
       message: 'Asset transfer completed successfully'
     })
   } catch (error) {

@@ -2,7 +2,7 @@
 console.log('=== Testing Frontend Auth Flow ===');
 
 // Test 1: Check if API is accessible
-fetch('http://localhost:5000/api/health')
+fetch('http://localhost:5001/api/health')
   .then(response => response.json())
   .then(data => console.log('✅ Backend Health Check:', data))
   .catch(error => console.error('❌ Backend Health Check Failed:', error));
@@ -10,7 +10,7 @@ fetch('http://localhost:5000/api/health')
 // Test 2: Try login
 const testLogin = async () => {
   try {
-    const response = await fetch('http://localhost:5000/api/auth/login', {
+  const response = await fetch('http://localhost:5001/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -29,7 +29,7 @@ const testLogin = async () => {
       console.log('Token received:', token.substring(0, 50) + '...');
       
       // Test 3: Try accessing companies with token
-      const companyResponse = await fetch('http://localhost:5000/api/companies', {
+  const companyResponse = await fetch('http://localhost:5001/api/companies', {
         headers: {
           'Authorization': `Bearer ${token}`
         }

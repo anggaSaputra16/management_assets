@@ -2,6 +2,9 @@ const express = require('express');
 const Joi = require('joi');
 const { prisma } = require('../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
 
@@ -587,6 +590,109 @@ router.post('/:id/complete', authenticate, authorize('TECHNICIAN', 'ADMIN', 'ASS
   } catch (error) {
     next(error);
   }
+});
+
+// Configure multer for maintenance file uploads (images and documents)
+const maintenanceStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.resolve(__dirname, '..', '..', 'uploads', 'maintenance');
+    try {
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    } catch (err) {
+      console.error('Failed to prepare upload directory for maintenance:', uploadDir, err);
+      try {
+        const os = require('os');
+        const tmpDir = path.resolve(os.tmpdir(), 'management-assets-uploads');
+        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+        console.warn('Falling back to tmp upload directory for maintenance:', tmpDir);
+        cb(null, tmpDir);
+      } catch (err2) {
+        console.error('Fallback upload directory creation failed for maintenance:', err2);
+        cb(err2);
+      }
+    }
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'maintenance-' + uniqueSuffix + ext);
+  }
+});
+
+const maintenanceFileFilter = (req, file, cb) => {
+  const allowedTypes = [
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'application/pdf', 'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain'
+  ];
+
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('File type not allowed! Only images and documents are permitted.'), false);
+  }
+};
+
+const maintenanceUpload = multer({ storage: maintenanceStorage, fileFilter: maintenanceFileFilter, limits: { fileSize: 10 * 1024 * 1024 } });
+const uploadMaintenanceMultiple = maintenanceUpload.array('attachments', 5);
+
+// Upload attachments for a maintenance record
+router.post('/:id/attachments', authenticate, authorize('TECHNICIAN', 'ADMIN', 'ASSET_ADMIN'), (req, res, next) => {
+  uploadMaintenanceMultiple(req, res, async function (err) {
+    try {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ success: false, message: err.message });
+      } else if (err) {
+        return res.status(400).json({ success: false, message: err.message });
+      }
+
+      const { id } = req.params;
+
+      // Verify maintenance record exists
+      const maintenanceRecord = await prisma.maintenanceRecord.findUnique({ where: { id } });
+      if (!maintenanceRecord) {
+        return res.status(404).json({ success: false, message: 'Maintenance record not found' });
+      }
+
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ success: false, message: 'No files uploaded' });
+      }
+
+      // Create maintenance attachment records
+      const created = [];
+      for (const file of req.files) {
+        // Determine attachment type
+        let attachmentType = 'GENERAL';
+        if (file.mimetype.startsWith('image/')) attachmentType = 'BEFORE';
+
+        const record = await prisma.maintenanceAttachment.create({
+          data: {
+            filename: file.filename,
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            fileSize: file.size,
+            filePath: file.path,
+            description: file.originalname,
+            attachmentType,
+            maintenanceId: id,
+            uploadedById: req.user.id
+          }
+        });
+
+        created.push(record);
+      }
+
+      res.status(201).json({ success: true, message: 'Attachments uploaded', data: created });
+    } catch (error) {
+      next(error);
+    }
+  });
 });
 
 // Get maintenance statistics

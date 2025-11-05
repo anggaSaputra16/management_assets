@@ -1,5 +1,5 @@
 // Frontend service for inventory management
-import { API_BASE_URL } from '../api';
+import { api } from '@/lib/api';
 
 export interface InventoryItem {
   id: string;
@@ -140,15 +140,7 @@ export interface InventoryStats {
 }
 
 class InventoryService {
-  private baseURL = `${API_BASE_URL}/inventory`;
-
-  private async getAuthHeaders() {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  }
+  private basePath = '/inventory';
 
   async getInventories(params?: {
     page?: number;
@@ -158,69 +150,22 @@ class InventoryService {
     status?: string;
     condition?: string;
   }): Promise<InventoryResponse> {
-    const queryParams = new URLSearchParams();
-    
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.search) queryParams.append('search', params.search);
-    if (params?.departmentId) queryParams.append('departmentId', params.departmentId);
-    if (params?.status) queryParams.append('status', params.status);
-    if (params?.condition) queryParams.append('condition', params.condition);
-
-    const response = await fetch(`${this.baseURL}?${queryParams}`, {
-      headers: await this.getAuthHeaders()
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data;
+    const response = await api.get(this.basePath, { params });
+    return response.data.data as InventoryResponse;
   }
 
   async createInventory(inventoryData: CreateInventoryData): Promise<InventoryItem> {
-    const response = await fetch(this.baseURL, {
-      method: 'POST',
-      headers: await this.getAuthHeaders(),
-      body: JSON.stringify(inventoryData)
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data;
+    const response = await api.post(this.basePath, inventoryData);
+    return response.data.data as InventoryItem;
   }
 
   async updateInventory(id: string, inventoryData: UpdateInventoryData): Promise<InventoryItem> {
-    const response = await fetch(`${this.baseURL}/${id}`, {
-      method: 'PUT',
-      headers: await this.getAuthHeaders(),
-      body: JSON.stringify(inventoryData)
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data;
+    const response = await api.put(`${this.basePath}/${id}`, inventoryData);
+    return response.data.data as InventoryItem;
   }
 
   async deleteInventory(id: string): Promise<void> {
-    const response = await fetch(`${this.baseURL}/${id}`, {
-      method: 'DELETE',
-      headers: await this.getAuthHeaders()
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || `HTTP error! status: ${response.status}`);
-    }
+    await api.delete(`${this.basePath}/${id}`);
   }
 
   // Loan management
@@ -231,69 +176,28 @@ class InventoryService {
     status?: string;
     borrowerId?: string;
   }): Promise<LoanResponse> {
-    const queryParams = new URLSearchParams();
-    
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.search) queryParams.append('search', params.search);
-    if (params?.status) queryParams.append('status', params.status);
-    if (params?.borrowerId) queryParams.append('borrowerId', params.borrowerId);
-
-    const response = await fetch(`${this.baseURL}/loans?${queryParams}`, {
-      headers: await this.getAuthHeaders()
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data;
+    const response = await api.get(`${this.basePath}/loans`, { params });
+    return response.data.data as LoanResponse;
   }
 
   async createLoan(loanData: CreateLoanData): Promise<InventoryLoan> {
-    const response = await fetch(`${this.baseURL}/loans`, {
-      method: 'POST',
-      headers: await this.getAuthHeaders(),
-      body: JSON.stringify(loanData)
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data;
+    const response = await api.post(`${this.basePath}/loans`, loanData);
+    return response.data.data as InventoryLoan;
   }
 
   async returnLoan(id: string, returnData: ReturnLoanData): Promise<InventoryLoan> {
-    const response = await fetch(`${this.baseURL}/loans/${id}/return`, {
-      method: 'POST',
-      headers: await this.getAuthHeaders(),
-      body: JSON.stringify(returnData)
-    });
+    const response = await api.post(`${this.basePath}/loans/${id}/return`, returnData);
+    return response.data.data as InventoryLoan;
+  }
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || `HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data;
+  async approveLoan(id: string, approvalData?: { approvalNotes?: string }): Promise<InventoryLoan> {
+    const response = await api.post(`${this.basePath}/loans/${id}/approve`, approvalData || {});
+    return response.data.data as InventoryLoan;
   }
 
   async getStats(): Promise<InventoryStats> {
-    const response = await fetch(`${this.baseURL}/stats`, {
-      headers: await this.getAuthHeaders()
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data;
+    const response = await api.get(`${this.basePath}/stats`);
+    return response.data.data as InventoryStats;
   }
 
   // Generate loan label for printing

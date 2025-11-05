@@ -51,7 +51,7 @@ export default function MasterVendorsPage() {
     setFormData({
       name: vendor.name || '',
       code: vendor.code || '',
-      contact_person: vendor.contact_person || '',
+      contactPerson: vendor.contactPerson || '',
       phone: vendor.phone || '',
       email: vendor.email || '',
       address: vendor.address || ''
@@ -75,7 +75,7 @@ export default function MasterVendorsPage() {
     setFormData({
       name: '',
       code: '',
-      contact_person: '',
+      contactPerson: '',
       phone: '',
       email: '',
       address: ''
@@ -173,7 +173,7 @@ export default function MasterVendorsPage() {
                           {vendor.code}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-gray-700">{vendor.contact_person || '-'}</td>
+                      <td className="py-3 px-4 text-gray-700">{vendor.contactPerson || '-'}</td>
                       <td className="py-3 px-4 text-gray-700">{vendor.phone || '-'}</td>
                       <td className="py-3 px-4 text-gray-700">{vendor.email || '-'}</td>
                       <td className="py-3 px-4">
@@ -207,7 +207,7 @@ export default function MasterVendorsPage() {
 
         {/* Create/Edit Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
             <div className="glass-card p-6 w-full max-w-md mx-4">
               <h3 className="text-lg font-semibold mb-4">
                 {editingVendor ? 'Edit Vendor' : 'Create Vendor'}
@@ -245,8 +245,8 @@ export default function MasterVendorsPage() {
                   </label>
                   <input
                     type="text"
-                    value={formData.contact_person}
-                    onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                    value={formData.contactPerson}
+                    onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
                     className="glass-input w-full px-3 py-2 rounded-lg"
                     placeholder="Enter contact person"
                   />
@@ -314,7 +314,7 @@ export default function MasterVendorsPage() {
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
             <div className="glass-card p-6 w-full max-w-md mx-4">
               <h3 className="text-lg font-semibold mb-4 text-red-600">Delete Vendor</h3>
               <p className="text-gray-600 mb-4">

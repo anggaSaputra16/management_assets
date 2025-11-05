@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'http://localhost:5001/api';
 
 // Default admin credentials
 const adminCredentials = {
@@ -287,7 +287,7 @@ async function seedData() {
     
     console.log('\n🌐 Access URLs:');
     console.log('Frontend: http://localhost:3001');
-    console.log('Backend API: http://localhost:5000/api');
+  console.log('Backend API: http://localhost:5001/api');
 
   } catch (error) {
     console.error('❌ Seeding failed:', error.message);

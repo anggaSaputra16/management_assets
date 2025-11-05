@@ -26,7 +26,7 @@ echo ====================================
 echo Hot Reload Setup Complete!
 echo ====================================
 echo Frontend: http://localhost:3002
-echo Backend API: http://localhost:5000/api
+echo Backend API: http://localhost:5001/api
 echo Database: localhost:5432
 echo ====================================
 echo.

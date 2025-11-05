@@ -18,13 +18,22 @@ export const useCompanyStore = create((set) => ({
       if (params.page) queryParams.append('page', params.page);
       if (params.limit) queryParams.append('limit', params.limit);
 
+      console.log('Fetching companies from API...');
       const response = await api.get(`/companies?${queryParams.toString()}`);
+      console.log('Companies API response:', response.data);
+      console.log('Companies data:', response.data.data);
+      
       set({ 
         companies: response.data.data, 
         loading: false 
       });
+      
+      return response.data.data;
     } catch (error) {
+      console.error('Error in fetchCompanies:', error);
+      console.error('Error response:', error.response?.data);
       set({ error: error.message, loading: false });
+      throw error;
     }
   },
 

@@ -3,13 +3,13 @@ import { categoryService } from '@/lib/services/categoryService'
 import { toast } from '@/hooks/useToast'
 
 interface Category {
-  id: number
+  id: string
   name: string
   code: string
   description?: string
-  parentId?: number
+  parentId?: string
   isActive: boolean
-  companyId: number // Added for multi-company support
+  companyId: string // Added for multi-company support
   createdAt: string
   updatedAt: string
   children?: Category[]
@@ -29,15 +29,14 @@ interface CategoryState {
     description: string
     parentId: string
     isActive: boolean
-    // companyId will be auto-injected by API interceptor
   }
 }
 
 interface CategoryActions {
   fetchCategories: () => Promise<void>
   createCategory: (data: Partial<Category>) => Promise<void>
-  updateCategory: (id: number, data: Partial<Category>) => Promise<void>
-  deleteCategory: (id: number) => Promise<void>
+  updateCategory: (id: string, data: Partial<Category>) => Promise<void>
+  deleteCategory: (id: string) => Promise<void>
   setSearchTerm: (term: string) => void
   setShowModal: (show: boolean) => void
   setEditingCategory: (category: Category | null) => void
@@ -76,9 +75,25 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
     set({ loading: true, error: null })
     try {
       const response = await categoryService.getAllCategories()
-      // Handle the nested response structure
-      const categories = response.data?.categories || response.categories || response.data || []
-      set({ categories: Array.isArray(categories) ? categories : [], loading: false })
+      const categories = response.data?.categories || []
+      
+      // Memastikan data kategori lengkap dengan parent dan children
+      const processedCategories = categories.map((category: Partial<Category>) => ({
+        ...category,
+        id: category.id || '',
+        name: category.name || '',
+        code: category.code || '',
+        description: category.description || '',
+        parent: category.parent || null,
+        children: category.children || [],
+        parentId: category.parentId || category.parent?.id || null,
+        isActive: category.isActive !== false,
+        companyId: category.companyId || '',
+        createdAt: category.createdAt || '',
+        updatedAt: category.updatedAt || ''
+      })) as Category[]
+      
+      set({ categories: processedCategories, loading: false })
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to fetch categories', loading: false })
     }
@@ -86,10 +101,17 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
 
   createCategory: async (data) => {
     try {
+      // Filter out any undefined/empty values
+      const filteredData = Object.fromEntries(
+        Object.entries(data).filter(([_, value]) => value !== undefined && value !== '')
+      )
+      
+      // Make sure parentId is properly handled
       const categoryData = {
-        ...data,
-        parentId: data.parentId ? parseInt(data.parentId.toString()) : null
+        ...filteredData,
+        parentId: filteredData.parentId || null
       }
+      
       await categoryService.createCategory(categoryData)
       await get().fetchCategories()
       get().resetForm()
@@ -103,10 +125,17 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
 
   updateCategory: async (id, data) => {
     try {
+      // Filter out any undefined/empty values
+      const filteredData = Object.fromEntries(
+        Object.entries(data).filter(([_, value]) => value !== undefined && value !== '')
+      )
+      
+      // Make sure parentId is properly handled
       const categoryData = {
-        ...data,
-        parentId: data.parentId ? parseInt(data.parentId.toString()) : null
+        ...filteredData,
+        parentId: filteredData.parentId || null
       }
+      
       await categoryService.updateCategory(id, categoryData)
       await get().fetchCategories()
       get().resetForm()

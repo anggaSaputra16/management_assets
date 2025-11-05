@@ -4,7 +4,7 @@ echo  Asset Management System - Development Ready!
 echo ===============================================
 echo.
 echo Services Status:
-echo ✓ Backend API:  http://localhost:5000/api
+echo ✓ Backend API:  http://localhost:5001/api
 echo ✓ Frontend:     http://localhost:3000
 echo ✓ Database:     localhost:5432
 echo.
@@ -17,7 +17,7 @@ echo.
 echo Opening application...
 timeout /t 2 /nobreak >nul
 start http://localhost:3000
-start http://localhost:5000/api/health
+start http://localhost:5001/api/health
 echo.
 echo Development environment is ready! 🚀
 echo Press any key to continue...

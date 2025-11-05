@@ -6,7 +6,6 @@ import {
   Package, 
   Plus, 
   Search, 
-  Eye, 
   Edit3, 
   Trash2, 
   Archive,
@@ -14,6 +13,7 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
+import { useCompanyStore, useDepartmentStore } from '../../stores'
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { useInventoryStore } from '../../stores';
 
@@ -34,13 +34,18 @@ export default function InventoryPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedCondition, setSelectedCondition] = useState('');
+  const [generated, setGenerated] = useState(false)
 
+  const { companies, fetchCompanies } = useCompanyStore()
+  const { departments: departmentOptions, fetchDepartmentsByCompany } = useDepartmentStore()
+
+  // initial: load companies only. Do NOT auto-load inventory data until user generates
   useEffect(() => {
-    fetchInventories();
-    fetchStats();
-  }, [fetchInventories, fetchStats]);
+    fetchCompanies()
+  }, [fetchCompanies]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -54,6 +59,19 @@ export default function InventoryPage() {
 
     return () => clearTimeout(timeoutId);
   }, [searchTerm, selectedDepartment, selectedStatus, selectedCondition, setInventoryFilters]);
+
+  // Generate button: load inventories for chosen company+department
+  const handleGenerate = async () => {
+    if (!selectedCompany || !selectedDepartment) {
+      alert('Please select a Company and Department before generating inventory data.')
+      return
+    }
+
+    // fetch department scoped inventories and stats
+    setGenerated(true)
+    await fetchInventories(1, { companyId: selectedCompany, departmentId: selectedDepartment })
+    await fetchStats()
+  }
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -202,14 +220,37 @@ export default function InventoryPage() {
               />
             </div>
 
-            <select
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">All Departments</option>
-              {/* TODO: Add department options */}
-            </select>
+            <div className="flex space-x-2">
+              <select
+                value={selectedCompany}
+                onChange={(e) => {
+                  setSelectedCompany(e.target.value)
+                  // load departments for selected company
+                  fetchDepartmentsByCompany(e.target.value)
+                }}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select Company</option>
+                {companies.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select Department</option>
+                {departmentOptions.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center">
+              <button onClick={handleGenerate} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Generate</button>
+            </div>
 
             <select
               value={selectedStatus}
@@ -289,7 +330,7 @@ export default function InventoryPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {inventories.length > 0 ? inventories.map((inventory) => (
+                    {generated && inventories.length > 0 ? inventories.map((inventory) => (
                       <tr key={inventory.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
@@ -336,13 +377,7 @@ export default function InventoryPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-2">
-                            <button
-                              onClick={() => router.push(`/inventory/${inventory.id}`)}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="View Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
+                            {/* FIX: Removed View Mode - only Edit and Delete buttons shown */}
                             <button
                               onClick={() => router.push(`/inventory/${inventory.id}/edit`)}
                               className="text-yellow-600 hover:text-yellow-900"

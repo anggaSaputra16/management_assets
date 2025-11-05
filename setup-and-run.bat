@@ -54,14 +54,14 @@ echo ================================================================
 echo.
 
 :: Start Backend
-echo 🚀 Starting Backend Server (Port 5000)...
+echo 🚀 Starting Backend Server (Port 5001)...
 start "Backend - Management Assets" cmd /k "cd /d %~dp0backend && npm run dev"
 
 :: Wait a bit
 timeout /t 3 /nobreak > nul
 
 :: Start Frontend
-echo 🎨 Starting Frontend Server (Port 3000)...
+echo 🎨 Starting Frontend Server (Port 3001)...
 start "Frontend - Management Assets" cmd /k "cd /d %~dp0frontend && npm run dev"
 
 echo.
@@ -70,8 +70,8 @@ echo    Setup Complete!
 echo ================================================================
 echo.
 echo 🌐 Application URLs:
-echo   Frontend: http://localhost:3000
-echo   Backend API: http://localhost:5000/api
+echo   Frontend: http://localhost:3001
+echo   Backend API: http://localhost:5001/api
 echo   pgAdmin: http://localhost:8080 (admin@admin.com / admin123)
 echo.
 echo 🔐 Test Login Credentials:

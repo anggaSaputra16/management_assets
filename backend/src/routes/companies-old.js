@@ -1,395 +1,395 @@
-const express = require('express')
-const { authenticate, authorize } = require('../middleware/auth')
-const { PrismaClient } = require('@prisma/client')
-const Joi = require('joi')
+// const express = require('express')
+// const { authenticate, authorize } = require('../middleware/auth')
+// const { PrismaClient } = require('@prisma/client')
+// const Joi = require('joi')
 
-const router = express.Router()
-const prisma = new PrismaClient()
+// const router = express.Router()
+// const prisma = new PrismaClient()
 
-// Validation schema untuk Company
-const companySchema = Joi.object({
-  name: Joi.string().required().min(2).max(255),
-  code: Joi.string().required().min(2).max(10).uppercase(),
-  address: Joi.string().optional().allow('').max(500),
-  phone: Joi.string().optional().allow('').max(20),
-  email: Joi.string().email().optional().allow(''),
-  website: Joi.string().uri().optional().allow(''),
-  logo: Joi.string().optional().allow(''),
-  taxNumber: Joi.string().optional().allow('').max(50),
-  registrationNumber: Joi.string().optional().allow('').max(50),
-  description: Joi.string().optional().allow('').max(1000),
-  isActive: Joi.boolean().default(true)
-})
+// // Validation schema untuk Company
+// const companySchema = Joi.object({
+//   name: Joi.string().required().min(2).max(255),
+//   code: Joi.string().required().min(2).max(10).uppercase(),
+//   address: Joi.string().optional().allow('').max(500),
+//   phone: Joi.string().optional().allow('').max(20),
+//   email: Joi.string().email().optional().allow(''),
+//   website: Joi.string().uri().optional().allow(''),
+//   logo: Joi.string().optional().allow(''),
+//   taxNumber: Joi.string().optional().allow('').max(50),
+//   registrationNumber: Joi.string().optional().allow('').max(50),
+//   description: Joi.string().optional().allow('').max(1000),
+//   isActive: Joi.boolean().default(true)
+// })
 
-// GET /api/companies - Get all companies (Admin only)
-router.get('/', authenticate, authorize('ADMIN'), async (req, res) => {
-  try {
-    const { page = 1, limit = 10, search = '', isActive } = req.query
-    const offset = (parseInt(page) - 1) * parseInt(limit)
+// // GET /api/companies - Get all companies (Admin only)
+// router.get('/', authenticate, authorize('ADMIN'), async (req, res) => {
+//   try {
+//     const { page = 1, limit = 10, search = '', isActive } = req.query
+//     const offset = (parseInt(page) - 1) * parseInt(limit)
 
-    const where = {}
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { code: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } }
-      ]
-    }
-    if (isActive !== undefined) {
-      where.isActive = isActive === 'true'
-    }
+//     const where = {}
+//     if (search) {
+//       where.OR = [
+//         { name: { contains: search, mode: 'insensitive' } },
+//         { code: { contains: search, mode: 'insensitive' } },
+//         { email: { contains: search, mode: 'insensitive' } }
+//       ]
+//     }
+//     if (isActive !== undefined) {
+//       where.isActive = isActive === 'true'
+//     }
 
-    const [companies, total] = await Promise.all([
-      prisma.company.findMany({
-        where,
-        skip: offset,
-        take: parseInt(limit),
-        orderBy: { createdAt: 'desc' },
-        include: {
-          _count: {
-            select: {
-              users: true,
-              departments: true,
-              assets: true
-            }
-          }
-        }
-      }),
-      prisma.company.count({ where })
-    ])
+//     const [companies, total] = await Promise.all([
+//       prisma.company.findMany({
+//         where,
+//         skip: offset,
+//         take: parseInt(limit),
+//         orderBy: { createdAt: 'desc' },
+//         include: {
+//           _count: {
+//             select: {
+//               users: true,
+//               departments: true,
+//               assets: true
+//             }
+//           }
+//         }
+//       }),
+//       prisma.company.count({ where })
+//     ])
 
-    res.json({
-      success: true,
-      data: companies,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit))
-      }
-    })
-  } catch (error) {
-    console.error('Error fetching companies:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch companies',
-      error: error.message
-    })
-  }
-})
+//     res.json({
+//       success: true,
+//       data: companies,
+//       pagination: {
+//         page: parseInt(page),
+//         limit: parseInt(limit),
+//         total,
+//         pages: Math.ceil(total / parseInt(limit))
+//       }
+//     })
+//   } catch (error) {
+//     console.error('Error fetching companies:', error)
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to fetch companies',
+//       error: error.message
+//     })
+//   }
+// })
 
-// GET /api/companies/:id - Get company by ID
-router.get('/:id', authenticate, async (req, res) => {
-  try {
-    const { id } = req.params
+// // GET /api/companies/:id - Get company by ID
+// router.get('/:id', authenticate, async (req, res) => {
+//   try {
+//     const { id } = req.params
 
-    // Admin can view any company, users can only view their own company
-    const where = { id }
-    if (req.user.role !== 'ADMIN') {
-      where.id = req.user.companyId
-    }
+//     // Admin can view any company, users can only view their own company
+//     const where = { id }
+//     if (req.user.role !== 'ADMIN') {
+//       where.id = req.user.companyId
+//     }
 
-    const company = await prisma.company.findUnique({
-      where,
-      include: {
-        _count: {
-          select: {
-            users: true,
-            departments: true,
-            assets: true,
-            locations: true,
-            categories: true,
-            vendors: true
-          }
-        }
-      }
-    })
+//     const company = await prisma.company.findUnique({
+//       where,
+//       include: {
+//         _count: {
+//           select: {
+//             users: true,
+//             departments: true,
+//             assets: true,
+//             locations: true,
+//             categories: true,
+//             vendors: true
+//           }
+//         }
+//       }
+//     })
 
-    if (!company) {
-      return res.status(404).json({
-        success: false,
-        message: 'Company not found'
-      })
-    }
+//     if (!company) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Company not found'
+//       })
+//     }
 
-    res.json({
-      success: true,
-      data: company
-    })
-  } catch (error) {
-    console.error('Error fetching company:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch company',
-      error: error.message
-    })
-  }
-}
+//     res.json({
+//       success: true,
+//       data: company
+//     })
+//   } catch (error) {
+//     console.error('Error fetching company:', error)
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to fetch company',
+//       error: error.message
+//     })
+//   }
+// }
 
-// POST /api/companies - Create new company (Admin only)
-exports.createCompany = async (req, res) => {
-  try {
-    // Only ADMIN can create companies
-    if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin role required.'
-      })
-    }
+// // POST /api/companies - Create new company (Admin only)
+// exports.createCompany = async (req, res) => {
+//   try {
+//     // Only ADMIN can create companies
+//     if (req.user.role !== 'ADMIN') {
+//       return res.status(403).json({
+//         success: false,
+//         message: 'Access denied. Admin role required.'
+//       })
+//     }
 
-    const { error, value } = companySchema.validate(req.body)
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        details: error.details.map(detail => detail.message)
-      })
-    }
+//     const { error, value } = companySchema.validate(req.body)
+//     if (error) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Validation error',
+//         details: error.details.map(detail => detail.message)
+//       })
+//     }
 
-    // Check if company with same name or code exists
-    const existingCompany = await prisma.company.findFirst({
-      where: {
-        OR: [
-          { name: value.name },
-          { code: value.code }
-        ]
-      }
-    })
+//     // Check if company with same name or code exists
+//     const existingCompany = await prisma.company.findFirst({
+//       where: {
+//         OR: [
+//           { name: value.name },
+//           { code: value.code }
+//         ]
+//       }
+//     })
 
-    if (existingCompany) {
-      return res.status(400).json({
-        success: false,
-        message: 'Company with this name or code already exists'
-      })
-    }
+//     if (existingCompany) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Company with this name or code already exists'
+//       })
+//     }
 
-    const company = await prisma.company.create({
-      data: value,
-      include: {
-        _count: {
-          select: {
-            users: true,
-            departments: true,
-            assets: true
-          }
-        }
-      }
-    })
+//     const company = await prisma.company.create({
+//       data: value,
+//       include: {
+//         _count: {
+//           select: {
+//             users: true,
+//             departments: true,
+//             assets: true
+//           }
+//         }
+//       }
+//     })
 
-    res.status(201).json({
-      success: true,
-      message: 'Company created successfully',
-      data: company
-    })
-  } catch (error) {
-    console.error('Error creating company:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create company',
-      error: error.message
-    })
-  }
-}
+//     res.status(201).json({
+//       success: true,
+//       message: 'Company created successfully',
+//       data: company
+//     })
+//   } catch (error) {
+//     console.error('Error creating company:', error)
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to create company',
+//       error: error.message
+//     })
+//   }
+// }
 
-// PUT /api/companies/:id - Update company
-exports.updateCompany = async (req, res) => {
-  try {
-    const { id } = req.params
+// // PUT /api/companies/:id - Update company
+// exports.updateCompany = async (req, res) => {
+//   try {
+//     const { id } = req.params
 
-    // Admin can update any company, users can only update their own company
-    let targetCompanyId = id
-    if (req.user.role !== 'ADMIN') {
-      targetCompanyId = req.user.companyId
-      if (id !== req.user.companyId) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied. You can only update your own company.'
-        })
-      }
-    }
+//     // Admin can update any company, users can only update their own company
+//     let targetCompanyId = id
+//     if (req.user.role !== 'ADMIN') {
+//       targetCompanyId = req.user.companyId
+//       if (id !== req.user.companyId) {
+//         return res.status(403).json({
+//           success: false,
+//           message: 'Access denied. You can only update your own company.'
+//         })
+//       }
+//     }
 
-    const { error, value } = companySchema.validate(req.body)
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        details: error.details.map(detail => detail.message)
-      })
-    }
+//     const { error, value } = companySchema.validate(req.body)
+//     if (error) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Validation error',
+//         details: error.details.map(detail => detail.message)
+//       })
+//     }
 
-    // Check if company exists
-    const existingCompany = await prisma.company.findUnique({
-      where: { id: targetCompanyId }
-    })
+//     // Check if company exists
+//     const existingCompany = await prisma.company.findUnique({
+//       where: { id: targetCompanyId }
+//     })
 
-    if (!existingCompany) {
-      return res.status(404).json({
-        success: false,
-        message: 'Company not found'
-      })
-    }
+//     if (!existingCompany) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Company not found'
+//       })
+//     }
 
-    // Check if name or code conflicts with other companies
-    const conflictCompany = await prisma.company.findFirst({
-      where: {
-        AND: [
-          { id: { not: targetCompanyId } },
-          {
-            OR: [
-              { name: value.name },
-              { code: value.code }
-            ]
-          }
-        ]
-      }
-    })
+//     // Check if name or code conflicts with other companies
+//     const conflictCompany = await prisma.company.findFirst({
+//       where: {
+//         AND: [
+//           { id: { not: targetCompanyId } },
+//           {
+//             OR: [
+//               { name: value.name },
+//               { code: value.code }
+//             ]
+//           }
+//         ]
+//       }
+//     })
 
-    if (conflictCompany) {
-      return res.status(400).json({
-        success: false,
-        message: 'Company with this name or code already exists'
-      })
-    }
+//     if (conflictCompany) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Company with this name or code already exists'
+//       })
+//     }
 
-    const updatedCompany = await prisma.company.update({
-      where: { id: targetCompanyId },
-      data: value,
-      include: {
-        _count: {
-          select: {
-            users: true,
-            departments: true,
-            assets: true
-          }
-        }
-      }
-    })
+//     const updatedCompany = await prisma.company.update({
+//       where: { id: targetCompanyId },
+//       data: value,
+//       include: {
+//         _count: {
+//           select: {
+//             users: true,
+//             departments: true,
+//             assets: true
+//           }
+//         }
+//       }
+//     })
 
-    res.json({
-      success: true,
-      message: 'Company updated successfully',
-      data: updatedCompany
-    })
-  } catch (error) {
-    console.error('Error updating company:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update company',
-      error: error.message
-    })
-  }
-}
+//     res.json({
+//       success: true,
+//       message: 'Company updated successfully',
+//       data: updatedCompany
+//     })
+//   } catch (error) {
+//     console.error('Error updating company:', error)
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to update company',
+//       error: error.message
+//     })
+//   }
+// }
 
-// DELETE /api/companies/:id - Delete company (Admin only)
-exports.deleteCompany = async (req, res) => {
-  try {
-    const { id } = req.params
+// // DELETE /api/companies/:id - Delete company (Admin only)
+// exports.deleteCompany = async (req, res) => {
+//   try {
+//     const { id } = req.params
 
-    // Only ADMIN can delete companies
-    if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin role required.'
-      })
-    }
+//     // Only ADMIN can delete companies
+//     if (req.user.role !== 'ADMIN') {
+//       return res.status(403).json({
+//         success: false,
+//         message: 'Access denied. Admin role required.'
+//       })
+//     }
 
-    // Check if company exists
-    const existingCompany = await prisma.company.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: {
-            users: true,
-            departments: true,
-            assets: true
-          }
-        }
-      }
-    })
+//     // Check if company exists
+//     const existingCompany = await prisma.company.findUnique({
+//       where: { id },
+//       include: {
+//         _count: {
+//           select: {
+//             users: true,
+//             departments: true,
+//             assets: true
+//           }
+//         }
+//       }
+//     })
 
-    if (!existingCompany) {
-      return res.status(404).json({
-        success: false,
-        message: 'Company not found'
-      })
-    }
+//     if (!existingCompany) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Company not found'
+//       })
+//     }
 
-    // Check if company has related data
-    const hasRelatedData = existingCompany._count.users > 0 || 
-                          existingCompany._count.departments > 0 || 
-                          existingCompany._count.assets > 0
+//     // Check if company has related data
+//     const hasRelatedData = existingCompany._count.users > 0 || 
+//                           existingCompany._count.departments > 0 || 
+//                           existingCompany._count.assets > 0
 
-    if (hasRelatedData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete company with existing users, departments, or assets. Please transfer or delete related data first.',
-        details: {
-          users: existingCompany._count.users,
-          departments: existingCompany._count.departments,
-          assets: existingCompany._count.assets
-        }
-      })
-    }
+//     if (hasRelatedData) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Cannot delete company with existing users, departments, or assets. Please transfer or delete related data first.',
+//         details: {
+//           users: existingCompany._count.users,
+//           departments: existingCompany._count.departments,
+//           assets: existingCompany._count.assets
+//         }
+//       })
+//     }
 
-    await prisma.company.delete({
-      where: { id }
-    })
+//     await prisma.company.delete({
+//       where: { id }
+//     })
 
-    res.json({
-      success: true,
-      message: 'Company deleted successfully'
-    })
-  } catch (error) {
-    console.error('Error deleting company:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete company',
-      error: error.message
-    })
-  }
-}
+//     res.json({
+//       success: true,
+//       message: 'Company deleted successfully'
+//     })
+//   } catch (error) {
+//     console.error('Error deleting company:', error)
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to delete company',
+//       error: error.message
+//     })
+//   }
+// }
 
-// GET /api/companies/stats - Get company statistics (Admin only)
-exports.getCompanyStats = async (req, res) => {
-  try {
-    // Only ADMIN can view company stats
-    if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin role required.'
-      })
-    }
+// // GET /api/companies/stats - Get company statistics (Admin only)
+// exports.getCompanyStats = async (req, res) => {
+//   try {
+//     // Only ADMIN can view company stats
+//     if (req.user.role !== 'ADMIN') {
+//       return res.status(403).json({
+//         success: false,
+//         message: 'Access denied. Admin role required.'
+//       })
+//     }
 
-    const stats = await prisma.company.aggregate({
-      _count: { id: true },
-      where: { isActive: true }
-    })
+//     const stats = await prisma.company.aggregate({
+//       _count: { id: true },
+//       where: { isActive: true }
+//     })
 
-    const recentCompanies = await prisma.company.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        createdAt: true,
-        isActive: true
-      }
-    })
+//     const recentCompanies = await prisma.company.findMany({
+//       take: 5,
+//       orderBy: { createdAt: 'desc' },
+//       select: {
+//         id: true,
+//         name: true,
+//         code: true,
+//         createdAt: true,
+//         isActive: true
+//       }
+//     })
 
-    res.json({
-      success: true,
-      data: {
-        totalCompanies: stats._count.id,
-        recentCompanies
-      }
-    })
-  } catch (error) {
-    console.error('Error fetching company stats:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch company stats',
-      error: error.message
-    })
-  }
-}
+//     res.json({
+//       success: true,
+//       data: {
+//         totalCompanies: stats._count.id,
+//         recentCompanies
+//       }
+//     })
+//   } catch (error) {
+//     console.error('Error fetching company stats:', error)
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to fetch company stats',
+//       error: error.message
+//     })
+//   }
+// }

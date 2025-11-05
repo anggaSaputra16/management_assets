@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, ReactNode, ComponentType } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { 
   Package,
@@ -24,15 +24,29 @@ import {
   Plus
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { useNotificationStore } from '@/stores/notificationStore'
 import { getGreeting, getRoleDisplayName } from '@/lib/utils'
 
-const menuItems = [
+interface MenuItem {
+  name: string
+  href?: string
+  icon: ComponentType<React.SVGProps<SVGSVGElement>>
+  roles?: string[]
+  parent?: string
+  isSection?: boolean
+  children?: MenuItem[]
+}
+
+const menuItems: MenuItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Inventory', href: '/inventory', icon: Package, roles: ['ADMIN', 'ASSET_ADMIN', 'MANAGER', 'DEPARTMENT_USER', 'TECHNICIAN'] },
-  { name: 'Assets', href: '/assets', icon: Package },
+  // Assets moved under Master Data (will be displayed from the Master Data page/section)
+  { name: 'Assets', href: '/assets', icon: Package, parent: 'Master Data' },
   { name: 'Requests', href: '/requests', icon: FileText },
   { name: 'Maintenance', href: '/maintenance', icon: Wrench },
   { name: 'Decomposition', href: '/decomposition', icon: GitBranch, roles: ['ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'] },
+  // FIX: Sidebar Loans - role-specific loan pages (Manage / Approval) rendered based on user role
+  // NOTE: individual entries are rendered dynamically below based on current user role
   { name: 'Audit', href: '/audit', icon: Shield, roles: ['ADMIN', 'AUDITOR'] },
   { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
@@ -49,7 +63,6 @@ const menuItems = [
   { name: 'Spare Parts', href: '/master/spare-parts', icon: Settings, roles: ['ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'], parent: 'Master Data' }
 ]
 
-import { ReactNode } from 'react'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -64,12 +77,51 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const profileFirstButtonRef = useRef<HTMLButtonElement | null>(null)
+  const { getStatistics, fetchNotifications } = useNotificationStore()
 
   useEffect(() => {
     if (isHydrated && !user) {
       router.push('/login')
     }
   }, [user, isHydrated, router])
+
+  // Fetch notification stats (unread count) when user is available
+  useEffect(() => {
+    let mounted = true
+    const loadStats = async () => {
+      if (!user) return
+      try {
+        const stats = await getStatistics()
+        const s = stats as { unreadNotifications?: number }
+        if (mounted && s && typeof s.unreadNotifications === 'number') {
+          setUnreadCount(s.unreadNotifications)
+        }
+      } catch {
+        // ignore silently
+      }
+    }
+    loadStats()
+
+    // Also fetch basic notifications list in background to keep store in sync
+    fetchNotifications().catch(() => {})
+
+    return () => { mounted = false }
+  }, [user, getStatistics, fetchNotifications])
+
+  // Accessibility: close profile menu on Escape and focus first button when opened
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowProfileMenu(false)
+    }
+    if (showProfileMenu) {
+      document.addEventListener('keydown', handleKey)
+      // focus first actionable element in the menu
+      setTimeout(() => (profileFirstButtonRef.current as HTMLButtonElement | null)?.focus(), 0)
+    }
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [showProfileMenu])
 
   const handleLogout = () => {
     logout()
@@ -80,11 +132,40 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
     setSidebarCollapsed(!sidebarCollapsed)
   }
 
-  const filteredMenuItems = menuItems.filter(item => 
-    !item.roles || (user?.role && item.roles.includes(user.role))
-  )
+  // Hanya tampilkan menu utama, module master (parent: 'Master Data') disembunyikan dari sidebar
+  const filteredMenuItems = menuItems.filter(item => {
+    // Sembunyikan semua menu yang punya parent 'Master Data'
+    if (item.parent === 'Master Data') return false;
+    // Tampilkan menu sesuai role
+    return !item.roles || (user?.role && item.roles.includes(user.role));
+  })
 
-  const filteredSearchItems = filteredMenuItems.filter(item =>
+  // Inject role-specific loan menu entries
+  const loanMenuItems: MenuItem[] = []
+  // Staff => Manage Loans (DEPARTMENT_USER considered 'staff') and Admin
+  // Staff/Admin => Request Loan (create/request a loan)
+  if (user?.role === 'DEPARTMENT_USER' || user?.role === 'ADMIN') {
+    loanMenuItems.push({ name: 'Request Loan', href: '/loans/manage', icon: FileText })
+  }
+  // Manager, Top Management, and Admin => Approval Loans
+  if (user?.role === 'MANAGER' || user?.role === 'TOP_MANAGEMENT' || user?.role === 'ADMIN') {
+    loanMenuItems.push({ name: 'Approval Loan', href: '/loans/approvals', icon: FileText })
+  }
+
+  // Build a Loans parent grouping when there are loan items
+  const auditIndex = filteredMenuItems.findIndex(i => i.name === 'Audit')
+  const loanParent: MenuItem | null = loanMenuItems.length
+    ? { name: 'Loans', href: '#', icon: FileText, children: loanMenuItems }
+    : null
+
+  // Append loan parent (if present) after Audit
+  const finalMenuItems = [
+    ...filteredMenuItems.slice(0, auditIndex + 1),
+    ...(loanParent ? [loanParent] : []),
+    ...filteredMenuItems.slice(auditIndex + 1)
+  ]
+
+  const filteredSearchItems = finalMenuItems.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
@@ -161,7 +242,50 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
-            {(searchQuery ? filteredSearchItems : filteredMenuItems).map((item) => {
+            {(searchQuery ? filteredSearchItems : finalMenuItems).map((item) => {
+              // If item has children, render a grouped section
+              if (item.children && Array.isArray(item.children)) {
+                return (
+                  <div key={item.name} className="space-y-1">
+                    {/* Parent label (non-navigable) */}
+                    <div className={`menu-item flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'space-x-3 px-4'} py-3 rounded-xl text-sm font-semibold text-gray-700`}>
+                      <item.icon className="h-5 w-5 text-gray-600" />
+                      {!sidebarCollapsed && <span className="sidebar-text">{item.name}</span>}
+                    </div>
+
+                    {/* Children links */}
+                    <div className="pl-8">
+                      {item.children.map((child: MenuItem) => {
+                        const isActiveChild = pathname === child.href
+                        return (
+                          <a
+                            key={child.name}
+                            href={child.href}
+                            className={`menu-item flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'space-x-3 px-4'} py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                              isActiveChild
+                                ? 'active glass-button text-gray-800 shadow-lg'
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                            onClick={() => setSidebarOpen(false)}
+                            title={sidebarCollapsed ? child.name : ''}
+                          >
+                            <child.icon className={`h-4 w-4 ${isActiveChild ? 'text-gray-800' : 'text-gray-500'}`} />
+                            {!sidebarCollapsed && (
+                              <>
+                                <span className="sidebar-text">{child.name}</span>
+                                {isActiveChild && (
+                                  <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
+                                )}
+                              </>
+                            )}
+                          </a>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              }
+
               const isActive = pathname === item.href
               return (
                 <a
@@ -248,7 +372,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
 
       {/* Main content */}
       <div className="flex-1 flex flex-col lg:pl-0">
-        {/* Top bar */}
+
         <header className="glass-header backdrop-blur-md border-b border-gray-300/20 sticky top-0 z-30">
           <div className="flex items-center justify-between h-20 px-6">
             <div className="flex items-center space-x-4">
@@ -271,18 +395,33 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
             <div className="flex items-center space-x-4">
               {/* Quick Actions */}
               <div className="hidden md:flex items-center space-x-2">
+                {/* Quick Add Asset */}
                 <button 
-                  onClick={() => router.push('/assets')}
+                  onClick={() => router.push('/assets/add')}
                   className="glass-button p-3 rounded-xl text-gray-600 hover:text-gray-800 transition-all hover:scale-105" 
                   title="Quick Add Asset"
                 >
                   <Plus className="h-5 w-5" />
                 </button>
-                <button className="glass-button p-3 rounded-xl text-gray-600 hover:text-gray-800 transition-all hover:scale-105" title="Search">
+                {/* Search */}
+                <button 
+                  onClick={() => router.push('/assets')}
+                  className="glass-button p-3 rounded-xl text-gray-600 hover:text-gray-800 transition-all hover:scale-105" 
+                  title="Search"
+                >
                   <Search className="h-5 w-5" />
                 </button>
+                {/* FIX: Action dropdown - consolidated Request/Maintenance/Decomposition quick links */}
+                <div className="relative">
+                  <button
+                    onClick={() => router.push('/actions')}
+                    className="glass-button p-3 rounded-xl text-gray-600 hover:text-gray-800 transition-all hover:scale-105"
+                    title="Actions"
+                  >
+                    <FileText className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
-
               {/* Notifications */}
               <div className="relative">
                 <button 
@@ -291,14 +430,21 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                   title="Notifications"
                 >
                   <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                  {unreadCount > 0 ? (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  ) : (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full opacity-0" aria-hidden="true"></span>
+                  )}
                 </button>
               </div>
-
-              {/* Profile Menu */}
+              {/* Profile & Settings */}
               <div className="relative">
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  aria-haspopup="true"
+                  aria-expanded={showProfileMenu}
                   className="flex items-center space-x-2 glass-button p-2 rounded-xl hover:scale-105 transition-all"
                 >
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
@@ -309,7 +455,6 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                     <p className="text-xs text-gray-600">{getRoleDisplayName(user.role)}</p>
                   </div>
                 </button>
-
                 {/* Profile Dropdown */}
                 {showProfileMenu && (
                   <div className="absolute right-0 mt-2 w-64 glass-modal rounded-xl shadow-xl z-50">
@@ -327,14 +472,15 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                     </div>
                     <div className="p-2">
                       <button 
-                        onClick={() => router.push('/profile')}
+                        ref={profileFirstButtonRef}
+                        onClick={() => { setShowProfileMenu(false); router.push('/profile') }}
                         className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 glass-button rounded-lg transition-all"
                       >
                         <User className="h-4 w-4" />
                         <span>View Profile</span>
                       </button>
                       <button 
-                        onClick={() => router.push('/settings')}
+                        onClick={() => { setShowProfileMenu(false); router.push('/settings') }}
                         className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 glass-button rounded-lg transition-all"
                       >
                         <Settings className="h-4 w-4" />
@@ -342,7 +488,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                       </button>
                       <hr className="my-2 border-gray-300/20" />
                       <button
-                        onClick={handleLogout}
+                        onClick={() => { setShowProfileMenu(false); handleLogout() }}
                         className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-red-600 hover:text-red-800 glass-button rounded-lg transition-all"
                       >
                         <LogOut className="h-4 w-4" />
@@ -355,10 +501,9 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
             </div>
           </div>
         </header>
-
-        {/* Page content */}
-        <main className="flex-1 p-6 overflow-y-auto">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto">
+          {/* Use full-width responsive container so pages can render wide layouts consistently */}
+          <div className="w-full max-w-full px-4 sm:px-6 lg:px-8 py-6 mx-auto">
             {children}
           </div>
         </main>

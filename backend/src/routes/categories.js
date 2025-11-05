@@ -13,8 +13,8 @@ const createCategorySchema = Joi.object({
   parentId: Joi.string().allow(null, '').optional(),
   companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional(),
-  depreciation_rate: Joi.number().min(0).max(100).optional(),
-  useful_life_years: Joi.number().integer().min(1).optional()
+  // FIX: Depreciation fields moved to Assets entity
+  isActive: Joi.boolean().optional()
 }).unknown(true);
 
 const updateCategorySchema = Joi.object({
@@ -24,8 +24,8 @@ const updateCategorySchema = Joi.object({
   parentId: Joi.string().allow(null, '').optional(),
   companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional(),
-  depreciation_rate: Joi.number().min(0).max(100).optional(),
-  useful_life_years: Joi.number().integer().min(1).optional()
+  // FIX: Depreciation fields moved to Assets entity
+  isActive: Joi.boolean().optional()
 }).unknown(true);
 
 // Get all categories
@@ -273,8 +273,12 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         name,
         code,
         description,
-        parentId,
-        companyId: finalCompanyId
+        parent: parentId ? {
+          connect: { id: parentId }
+        } : undefined,
+        company: {
+          connect: { id: finalCompanyId }
+        }
       },
       include: {
         company: {
@@ -391,9 +395,16 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
     }
 
     // Update category
+    const { parentId, ...updateData } = value;
     const updatedCategory = await prisma.category.update({
       where: { id },
-      data: value,
+      data: {
+        ...updateData,
+        parent: {
+          connect: parentId ? { id: parentId } : undefined,
+          disconnect: parentId === null ? true : undefined
+        }
+      },
       include: {
         parent: {
           select: {

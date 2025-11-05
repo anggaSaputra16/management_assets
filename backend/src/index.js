@@ -18,6 +18,7 @@ const categoryRoutes = require('./routes/categories');
 const locationRoutes = require('./routes/locations');
 const vendorRoutes = require('./routes/vendors');
 const assetRoutes = require('./routes/assets');
+const companiesRoutes = require('./routes/companies');
 const requestRoutes = require('./routes/requests');
 const maintenanceRoutes = require('./routes/maintenance');
 const auditRoutes = require('./routes/audit');
@@ -27,8 +28,12 @@ const inventoryRoutes = require('./routes/inventory');
 const softwareAssetsRoutes = require('./routes/softwareAssets');
 const assetSoftwareRoutes = require('./routes/assetSoftware');
 const sparePartsRoutes = require('./routes/spareParts');
+const decompositionRoutes = require('./routes/decomposition');
 const qrCodeRoutes = require('./routes/qrCode');
+const dashboardRoutes = require('./routes/dashboard');
 // const componentsRoutes = require('./routes/components');
+const { prisma } = require('./config/database');
+const { startSoftwareExpiryNotifier } = require('./jobs/softwareExpiryNotifier');
 
 const app = express();
 
@@ -38,7 +43,7 @@ connectDB();
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
   credentials: true
 }));
 
@@ -78,6 +83,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api/assets', assetRoutes);
+app.use('/api/companies', companiesRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/audit', auditRoutes);
@@ -87,7 +93,9 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/software-assets', softwareAssetsRoutes);
 app.use('/api/asset-software', assetSoftwareRoutes);
 app.use('/api/spare-parts', sparePartsRoutes);
+app.use('/api/decomposition', decompositionRoutes);
 app.use('/api/qr-codes', qrCodeRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 // app.use('/api/components', componentsRoutes);
 
 // Health check endpoint
@@ -146,7 +154,15 @@ app.use(errorHandler);
 // Graceful shutdown
 const gracefulShutdown = (signal) => {
   console.log(`Received ${signal}. Shutting down gracefully...`);
-  
+  // Stop background jobs if running
+  try {
+    if (global.__softwareExpiryNotifier && typeof global.__softwareExpiryNotifier.stop === 'function') {
+      global.__softwareExpiryNotifier.stop();
+    }
+  } catch (err) {
+    console.error('Error stopping background jobs:', err);
+  }
+
   server.close(() => {
     console.log('Process terminated');
     process.exit(0);
@@ -178,7 +194,7 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => {
   console.log(`
 🚀 Asset Management System API Server is running!
@@ -189,5 +205,13 @@ const server = app.listen(PORT, () => {
 ⏰ Started at: ${new Date().toISOString()}
   `);
 });
+
+// Start background jobs after server is up
+try {
+  global.__softwareExpiryNotifier = startSoftwareExpiryNotifier(prisma, { intervalMs: 24 * 60 * 60 * 1000, daysBefore: 7 });
+  console.log('[jobs] softwareExpiryNotifier started');
+} catch (err) {
+  console.error('[jobs] Failed to start softwareExpiryNotifier', err);
+}
 
 module.exports = app;

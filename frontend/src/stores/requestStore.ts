@@ -179,6 +179,28 @@ export const useRequestStore = create<RequestState & RequestActions>((set, get) 
     }
   },
 
+  // Approve a request (manager/admin)
+  approveRequest: async (id: number, approvalData: { notes?: string } = {}) => {
+    try {
+      // backend expects { action: 'APPROVE' }
+      await requestService.approval(id, { action: 'APPROVE', ...approvalData })
+      await get().fetchRequests()
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to approve request')
+    }
+  },
+
+  // Reject a request (manager/admin)
+  rejectRequest: async (id: number, rejectionData: { rejectionReason?: string, notes?: string } = {}) => {
+    try {
+      // backend expects { action: 'REJECT', rejectionReason }
+      await requestService.approval(id, { action: 'REJECT', ...rejectionData })
+      await get().fetchRequests()
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to reject request')
+    }
+  },
+
   setSearchTerm: (term) => set({ searchTerm: term }),
   setTypeFilter: (type) => set({ typeFilter: type }),
   setStatusFilter: (status) => set({ statusFilter: status }),

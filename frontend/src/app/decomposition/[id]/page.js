@@ -19,11 +19,13 @@ import {
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { useToast } from '@/contexts/ToastContext'
 import { decompositionService } from '@/lib/services/decompositionService'
+import { useSparePartsStore } from '@/stores/sparePartsStore'
 
 export default function DecompositionDetailPage() {
   const router = useRouter()
   const params = useParams()
   const { showSuccess, showError } = useToast()
+  const { fetchSpareParts } = useSparePartsStore()
   const [loading, setLoading] = useState(true)
   const [decomposition, setDecomposition] = useState(null)
   const [compatibleAssets, setCompatibleAssets] = useState([])
@@ -71,7 +73,9 @@ export default function DecompositionDetailPage() {
       
       if (response.success) {
         showSuccess('Decomposition executed successfully')
-        fetchDecomposition() // Refresh data
+        // Refresh decomposition data and spare parts inventory so newly created spare parts are visible
+        fetchDecomposition()
+        try { fetchSpareParts() } catch (e) { /* ignore */ }
         setShowExecuteModal(false)
       } else {
         showError(response.message || 'Failed to execute decomposition')
@@ -174,7 +178,7 @@ export default function DecompositionDetailPage() {
   }
 
   const ExecuteModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+  <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-md w-full">
         <div className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Execute Decomposition</h3>

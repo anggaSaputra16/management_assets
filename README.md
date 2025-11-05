@@ -1779,9 +1779,9 @@ RATE_LIMIT_MAX_REQUESTS=1000
 **Frontend (.env.local)**
 ```env
 # API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-NEXT_PUBLIC_UPLOAD_URL=http://localhost:5000/uploads
-NEXT_PUBLIC_QR_SCANNER_URL=http://localhost:5000/qr
+NEXT_PUBLIC_API_URL=http://localhost:5001/api
+NEXT_PUBLIC_UPLOAD_URL=http://localhost:5001/uploads
+NEXT_PUBLIC_QR_SCANNER_URL=http://localhost:5001/qr
 
 # Company Settings
 NEXT_PUBLIC_MULTI_COMPANY_ENABLED=true
@@ -1963,7 +1963,7 @@ services:
     networks:
       - asset_management_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+  test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3

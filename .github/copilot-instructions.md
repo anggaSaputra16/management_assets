@@ -60,7 +60,7 @@ export const api = axios.create({ baseURL: API_BASE_URL })
 .\dev-start-docker.bat  # Windows
 ./dev-start-docker.sh   # Linux/Mac
 
-# Access: Frontend (3000), Backend (5000), Database (5432)
+# Access: Frontend (3001), Backend (5001), Database (5432)
 ```
 
 ### Manual Development

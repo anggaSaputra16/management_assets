@@ -576,6 +576,16 @@ export default function AssetDetailPage() {
                             <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${componentStatusColors[component.status]}`}>
                               {component.status}
                             </span>
+                            {component.sourcePart && component.sourcePart.id && (
+                              <div className="mt-2">
+                                <button
+                                  onClick={() => router.push(`/master/spare-parts/${component.sourcePart.id}`)}
+                                  className="text-sm text-purple-600 hover:underline"
+                                >
+                                  View Source Part: {component.sourcePart.partNumber || component.sourcePart.name}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center space-x-1 ml-2">
@@ -1022,7 +1032,7 @@ export default function AssetDetailPage() {
 
         {/* Component Modal */}
         {showComponentModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">
@@ -1228,7 +1238,7 @@ export default function AssetDetailPage() {
 
         {/* Specification Modal */}
         {showSpecModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">
@@ -1343,7 +1353,7 @@ export default function AssetDetailPage() {
 
         {/* Component Transfer Modal */}
         {showTransferModal && selectedComponent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">
@@ -1459,7 +1469,7 @@ export default function AssetDetailPage() {
 
         {/* Component Maintenance Modal */}
         {showMaintenanceModal && selectedComponent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">
@@ -1587,7 +1597,7 @@ export default function AssetDetailPage() {
 
         {/* Software Installation Modal */}
         {showSoftwareModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">Install Software</h3>
@@ -1709,7 +1719,7 @@ export default function AssetDetailPage() {
 
         {/* Software Uninstall Modal */}
         {showUninstallModal && selectedInstallation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">
