@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-  "dev": "next dev --turbo --hostname 0.0.0.0 --port 3001",
+    "dev": "next dev --turbo --hostname 0.0.0.0 --port 3001",
     "build": "next build",
-  "start": "next start --hostname 0.0.0.0 --port 3001",
+    "start": "next start --hostname 0.0.0.0 --port 3001",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
   },
@@ -23,6 +23,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.62.0",
+    "react-select": "^5.10.2",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "xlsx": "^0.18.5",

@@ -115,7 +115,7 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
           <h2 className="text-xl font-semibold">Setup Asset Depreciation</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button onClick={onClose} className="text-[#333] hover:text-[#111]">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -125,13 +125,13 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
         <form onSubmit={handleSubmit} className="overflow-y-auto">
           <div className="p-4">
             {error && (
-              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              <div className="mb-4 bg-white/60 border border-black/10 text-[#111] px-4 py-3 rounded">
                 {error}
               </div>
             )}
 
             {currentAsset && (
-              <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+              <div className="mb-4 bg-white/60 border border-black/10 text-[#111] px-4 py-3 rounded">
                 <p><strong>Asset:</strong> {currentAsset.name} ({currentAsset.assetTag})</p>
                 <p className="text-sm mt-1">
                   <strong>Purchase Price:</strong> {formatCurrency(currentAsset.purchasePrice)} | 
@@ -143,7 +143,7 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
             )}
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-medium mb-2">
+              <label className="block text-[#111] text-sm font-medium mb-2">
                 Depreciation Method *
               </label>
               <select
@@ -151,13 +151,13 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                 value={formData.depreciationMethod}
                 onChange={handleChange}
                 required
-                className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="block w-full rounded-md border border-black/10 py-2 px-3 shadow-sm focus:border-black/30 focus:outline-none focus:ring-1 focus:ring-black/20"
               >
                 <option value="STRAIGHT_LINE">Straight Line</option>
                 <option value="DECLINING_BALANCE">Declining Balance</option>
                 <option value="UNITS_OF_PRODUCTION">Units of Production</option>
               </select>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[#333] mt-1">
                 {formData.depreciationMethod === 'STRAIGHT_LINE'
                   ? 'Straight Line: Equal depreciation over useful life'
                   : formData.depreciationMethod === 'DECLINING_BALANCE'
@@ -167,7 +167,7 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-medium mb-2">
+              <label className="block text-[#111] text-sm font-medium mb-2">
                 Useful Life (Years) *
               </label>
               <input
@@ -178,12 +178,12 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                 min="1"
                 max="50"
                 required
-                className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="block w-full rounded-md border border-black/10 py-2 px-3 shadow-sm focus:border-black/30 focus:outline-none focus:ring-1 focus:ring-black/20"
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-medium mb-2">
+              <label className="block text-[#111] text-sm font-medium mb-2">
                 Salvage Value *
               </label>
               <input
@@ -194,16 +194,16 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                 min="0"
                 step="0.01"
                 required
-                className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="block w-full rounded-md border border-black/10 py-2 px-3 shadow-sm focus:border-black/30 focus:outline-none focus:ring-1 focus:ring-black/20"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[#333] mt-1">
                 Estimated value at the end of its useful life.
               </p>
             </div>
 
             {formData.depreciationMethod === 'DECLINING_BALANCE' && (
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-medium mb-2">
+                <label className="block text-[#111] text-sm font-medium mb-2">
                   Depreciation Rate *
                 </label>
                 <input
@@ -215,16 +215,16 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                   max="0.99"
                   step="0.01"
                   required
-                  className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="block w-full rounded-md border border-black/10 py-2 px-3 shadow-sm focus:border-black/30 focus:outline-none focus:ring-1 focus:ring-black/20"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-[#333] mt-1">
                   Rate at which the asset value declines (e.g., 0.2 for 20% per year)
                 </p>
               </div>
             )}
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-medium mb-2">
+              <label className="block text-[#111] text-sm font-medium mb-2">
                 Notes
               </label>
               <textarea
@@ -232,7 +232,7 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                 value={formData.notes}
                 onChange={handleChange}
                 rows={3}
-                className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="block w-full rounded-md border border-black/10 py-2 px-3 shadow-sm focus:border-black/30 focus:outline-none focus:ring-1 focus:ring-black/20"
                 placeholder="Additional notes about depreciation..."
               ></textarea>
             </div>
@@ -242,14 +242,14 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition"
+              className="px-4 py-2 bg-gray-200 text-[#111] rounded hover:bg-gray-300 transition"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center"
+              className="px-4 py-2 glass-button text-white rounded hover:scale-105 transition-transform transition flex items-center"
               disabled={loading}
             >
               {loading ? (

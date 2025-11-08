@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { assetService } from '@/lib/services'
-import { useAssetStore, useLocationStore, useDepartmentStore } from '@/stores'
+import { useAssetStore, useLocationStore, useDepartmentStore, useEnumStore } from '@/stores'
 import { Package, MapPin, Building, FileText, ArrowRight } from 'lucide-react'
 import HighContrastModal from '@/components/ui/HighContrastModal'
 
@@ -10,6 +10,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
   const { currentAsset, fetchAsset } = useAssetStore()
   const { locations, fetchLocations } = useLocationStore()
   const { departments, fetchDepartments } = useDepartmentStore()
+  const { transferReasons } = useEnumStore()
   
   const [formData, setFormData] = useState({
     locationId: '',
@@ -108,8 +109,8 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
         <form onSubmit={handleSubmit} className="flex-1">
           <div className="p-0 space-y-4">
             {error && (
-              <div className="p-4 border border-red-300 bg-red-50 text-red-700 rounded-lg flex items-center space-x-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full" />
+              <div className="p-4 border border-black/10 bg-white/60 text-[#111] rounded-lg flex items-center space-x-2">
+                <div className="w-2 h-2 bg-white/600 rounded-full" />
                 <span>{error}</span>
               </div>
             )}
@@ -122,21 +123,21 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
                   <span>Current Status</span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-600 flex items-center space-x-2">
+                  <div className="flex items-center justify-between py-2 px-3 bg-white/60 rounded-lg">
+                    <span className="text-[#333] flex items-center space-x-2">
                       <MapPin className="w-3 h-3" />
                       <span>Location:</span>
                     </span>
-                    <span className="text-gray-900 font-medium">
+                    <span className="text-[#111] font-medium">
                       {currentAsset.location?.name || 'N/A'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-600 flex items-center space-x-2">
+                  <div className="flex items-center justify-between py-2 px-3 bg-white/60 rounded-lg">
+                    <span className="text-[#333] flex items-center space-x-2">
                       <Building className="w-3 h-3" />
                       <span>Department:</span>
                     </span>
-                    <span className="text-gray-900 font-medium">
+                    <span className="text-[#111] font-medium">
                       {currentAsset.department?.name || 'N/A'}
                     </span>
                   </div>
@@ -154,7 +155,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="locationId" className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="locationId" className="flex items-center space-x-2 text-sm font-medium text-[#111] mb-2">
                       <MapPin className="w-3 h-3" />
                       <span>New Location</span>
                     </label>
@@ -163,7 +164,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
                       name="locationId"
                       value={formData.locationId}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-400"
+                      className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-black/20"
                     >
                       <option value="">Select location...</option>
                       {locations.map(location => (
@@ -179,7 +180,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
                   </div>
 
                   <div>
-                    <label htmlFor="departmentId" className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="departmentId" className="flex items-center space-x-2 text-sm font-medium text-[#111] mb-2">
                       <Building className="w-3 h-3" />
                       <span>New Department</span>
                     </label>
@@ -188,7 +189,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
                       name="departmentId"
                       value={formData.departmentId}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-400"
+                      className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-black/20"
                     >
                       <option value="">Select department...</option>
                       {departments.map(department => (
@@ -205,29 +206,29 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
                 </div>
 
                 <div>
-                  <label htmlFor="reason" className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="reason" className="flex items-center space-x-2 text-sm font-medium text-[#111] mb-2">
                     <FileText className="w-3 h-3" />
-                    <span>Reason for Transfer <span className="text-red-400">*</span></span>
+                    <span>Reason for Transfer <span className="text-[#111]">*</span></span>
                   </label>
                   <select
                     id="reason"
                     name="reason"
                     value={formData.reason}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-400"
+                    className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-black/20"
                     required
                   >
                     <option value="">Select reason...</option>
-                    <option value="DEPARTMENT_CHANGE">Department Change</option>
-                    <option value="LOCATION_CHANGE">Location Change</option>
-                    <option value="PROJECT_REASSIGNMENT">Project Reassignment</option>
-                    <option value="MAINTENANCE">Maintenance</option>
-                    <option value="OTHER">Other</option>
+                    {transferReasons && transferReasons.map((reason) => (
+                      <option key={reason.value} value={reason.value}>
+                        {reason.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="notes" className="block text-sm font-medium text-[#111] mb-2">
                     Additional Notes
                   </label>
                   <textarea
@@ -236,7 +237,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
                     rows={3}
                     value={formData.notes}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-400 resize-none"
+                    className="w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-black/20 resize-none"
                     placeholder="Enter any additional notes or instructions..."
                   />
                 </div>
@@ -248,7 +249,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="px-6 py-2 rounded-lg text-gray-700 border hover:bg-gray-50"
+                className="px-6 py-2 rounded-lg text-[#111] border hover:bg-white/60"
               >
                 Cancel
               </button>
@@ -256,7 +257,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
                 type="submit"
                 disabled={loading}
                 className={`px-6 py-2 rounded-lg text-white font-medium ${
-                  loading ? 'bg-gray-400 opacity-70' : 'bg-blue-600 hover:bg-blue-700'
+                  loading ? 'bg-gray-400 opacity-70' : 'bg-blue-600 hover:scale-105 transition-transform'
                 }`}
               >
                 {loading ? 'Processing...' : 'Transfer Asset'}

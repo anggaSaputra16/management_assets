@@ -7,7 +7,6 @@ export default function LoansRedirect() {
   const router = useRouter()
 
   useEffect(() => {
-    // Redirect legacy inventory loans route to new loans/manage page
     router.replace('/loans/manage')
   }, [router])
 

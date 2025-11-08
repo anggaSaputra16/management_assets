@@ -606,7 +606,7 @@ router.get('/software/:softwareId', authenticate, async (req, res) => {
             department: {
               select: { id: true, name: true }
             },
-            assignedTo: {
+            assignedEmployee: {
               select: { id: true, firstName: true, lastName: true, email: true }
             }
           }

@@ -12,8 +12,8 @@ const notFound = require('./middleware/notFound');
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
+const employeeRoutes = require('./routes/employees');
 const departmentRoutes = require('./routes/departments');
-const positionRoutes = require('./routes/positions');
 const categoryRoutes = require('./routes/categories');
 const locationRoutes = require('./routes/locations');
 const vendorRoutes = require('./routes/vendors');
@@ -31,9 +31,12 @@ const sparePartsRoutes = require('./routes/spareParts');
 const decompositionRoutes = require('./routes/decomposition');
 const qrCodeRoutes = require('./routes/qrCode');
 const dashboardRoutes = require('./routes/dashboard');
+const enumsRoutes = require('./routes/enums');
+const rolesRoutes = require('./routes/roles');
 // const componentsRoutes = require('./routes/components');
 const { prisma } = require('./config/database');
 const { startSoftwareExpiryNotifier } = require('./jobs/softwareExpiryNotifier');
+const { startScheduler: startLoanScheduler } = require('./jobs/loanNotificationScheduler');
 
 const app = express();
 
@@ -77,8 +80,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/employees', employeeRoutes);
 app.use('/api/departments', departmentRoutes);
-app.use('/api/positions', positionRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/vendors', vendorRoutes);
@@ -96,6 +99,8 @@ app.use('/api/spare-parts', sparePartsRoutes);
 app.use('/api/decomposition', decompositionRoutes);
 app.use('/api/qr-codes', qrCodeRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/enums', enumsRoutes);
+app.use('/api/roles', rolesRoutes);
 // app.use('/api/components', componentsRoutes);
 
 // Health check endpoint
@@ -212,6 +217,13 @@ try {
   console.log('[jobs] softwareExpiryNotifier started');
 } catch (err) {
   console.error('[jobs] Failed to start softwareExpiryNotifier', err);
+}
+
+try {
+  startLoanScheduler();
+  console.log('[jobs] loanNotificationScheduler started');
+} catch (err) {
+  console.error('[jobs] Failed to start loanNotificationScheduler', err);
 }
 
 module.exports = app;

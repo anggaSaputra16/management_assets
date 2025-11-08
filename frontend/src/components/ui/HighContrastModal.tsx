@@ -9,14 +9,14 @@ export default function HighContrastModal({ isOpen, title, onClose, children, cl
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div
-        className={`w-full max-w-3xl bg-white text-gray-900 rounded-lg shadow-2xl ring-1 ring-black/10 ${className || ''}`}
+        className={`w-full max-w-3xl bg-white text-[#111] rounded-lg shadow-2xl ring-1 ring-black/10 ${className || ''}`}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-black/10">
           <h3 className="text-lg font-semibold">{title}</h3>
           <div className="flex items-center space-x-2">
             <button
               onClick={onClose}
-              className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm"
+              className="px-3 py-1 rounded bg-white/60 hover:bg-gray-200 text-[#111] text-sm"
             >
               Close
             </button>

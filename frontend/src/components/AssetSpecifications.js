@@ -57,12 +57,12 @@ const AssetSpecifications = ({ asset, onUpdate, readOnly = false }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium text-gray-900">Specifications</h4>
+        <h4 className="text-sm font-medium text-[#111]">Specifications</h4>
         {!readOnly && (
           <button
             type="button"
             onClick={() => setShowAddForm(true)}
-            className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100"
+            className="inline-flex items-center px-2 py-1 text-xs font-medium text-[#111] bg-white/60 rounded hover:bg-white/60"
           >
             <Plus className="h-3 w-3 mr-1" />
             Add
@@ -71,11 +71,11 @@ const AssetSpecifications = ({ asset, onUpdate, readOnly = false }) => {
       </div>
 
       {specEntries.length === 0 ? (
-        <p className="text-sm text-gray-500 italic">No specifications added</p>
+        <p className="text-sm text-[#333] italic">No specifications added</p>
       ) : (
         <div className="space-y-2">
           {specEntries.map(([key, value]) => (
-            <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+            <div key={key} className="flex items-center justify-between p-2 bg-white/60 rounded">
               {editingKey === key ? (
                 <div className="flex-1 flex items-center space-x-2">
                   <input
@@ -88,7 +88,7 @@ const AssetSpecifications = ({ asset, onUpdate, readOnly = false }) => {
                       }
                       setEditingKey(null)
                     }}
-                    className="flex-1 text-xs border border-gray-300 rounded px-2 py-1"
+                    className="flex-1 text-xs border border-black/10 rounded px-2 py-1"
                     autoFocus
                   />
                   <input
@@ -97,28 +97,28 @@ const AssetSpecifications = ({ asset, onUpdate, readOnly = false }) => {
                     onBlur={(e) => {
                       handleUpdateSpec(editingKey, e.target.value.trim())
                     }}
-                    className="flex-1 text-xs border border-gray-300 rounded px-2 py-1"
+                    className="flex-1 text-xs border border-black/10 rounded px-2 py-1"
                   />
                 </div>
               ) : (
                 <>
                   <div className="flex-1">
-                    <span className="text-xs font-medium text-gray-700">{key}:</span>
-                    <span className="text-xs text-gray-600 ml-2">{value}</span>
+                    <span className="text-xs font-medium text-[#111]">{key}:</span>
+                    <span className="text-xs text-[#333] ml-2">{value}</span>
                   </div>
                   {!readOnly && (
                     <div className="flex items-center space-x-1">
                       <button
                         type="button"
                         onClick={() => setEditingKey(key)}
-                        className="p-1 text-gray-400 hover:text-blue-600"
+                        className="p-1 text-[#333] hover:text-[#111]"
                       >
                         <Edit className="h-3 w-3" />
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteSpec(key)}
-                        className="p-1 text-gray-400 hover:text-red-600"
+                        className="p-1 text-[#333] hover:text-[#111]"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
@@ -132,21 +132,21 @@ const AssetSpecifications = ({ asset, onUpdate, readOnly = false }) => {
       )}
 
       {showAddForm && (
-        <div className="p-3 border border-gray-200 rounded-lg bg-white">
+        <div className="p-3 glass-input rounded-lg bg-white">
           <div className="space-y-2">
             <input
               type="text"
               placeholder="Specification name (e.g., CPU, RAM, Storage)"
               value={newSpec.key}
               onChange={(e) => setNewSpec({ ...newSpec, key: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full text-sm border border-black/10 rounded px-3 py-2 focus:ring-2 focus:ring-black/20 focus:border-black/30"
             />
             <input
               type="text"
               placeholder="Value (e.g., Intel i7, 16GB, 512GB SSD)"
               value={newSpec.value}
               onChange={(e) => setNewSpec({ ...newSpec, value: e.target.value })}
-              className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full text-sm border border-black/10 rounded px-3 py-2 focus:ring-2 focus:ring-black/20 focus:border-black/30"
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
                   handleAddSpec()
@@ -160,7 +160,7 @@ const AssetSpecifications = ({ asset, onUpdate, readOnly = false }) => {
                   setShowAddForm(false)
                   setNewSpec({ key: '', value: '' })
                 }}
-                className="px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                className="px-3 py-1 text-sm text-[#333] border border-black/10 rounded hover:bg-white/60"
               >
                 Cancel
               </button>
@@ -168,7 +168,7 @@ const AssetSpecifications = ({ asset, onUpdate, readOnly = false }) => {
                 type="button"
                 onClick={handleAddSpec}
                 disabled={!newSpec.key.trim() || !newSpec.value.trim()}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1 text-sm glass-button text-white rounded hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add
               </button>

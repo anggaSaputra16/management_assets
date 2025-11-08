@@ -33,7 +33,7 @@ const generateAssetQRData = (asset) => {
     id: asset.id,
     assetTag: asset.assetTag,
     name: asset.name,
-    assignedTo: asset.assignedTo ? `${asset.assignedTo.firstName} ${asset.assignedTo.lastName}`.trim() : null,
+    assignedEmployee: asset.assignedEmployee ? `${asset.assignedEmployee.firstName} ${asset.assignedEmployee.lastName}`.trim() : null,
     type: 'asset',
     timestamp: new Date().toISOString()
   })
@@ -49,9 +49,9 @@ router.get('/asset/:id', authenticate, async (req, res) => {
     const asset = await prisma.asset.findUnique({
       where: { id },
       include: {
-        category: { select: { name: true } },
-        assignedTo: { select: { firstName: true, lastName: true } }
-      }
+          category: { select: { name: true } },
+          assignedEmployee: { select: { firstName: true, lastName: true } }
+        }
     })
 
     if (!asset) {
@@ -303,7 +303,7 @@ router.post('/scan', authenticate, upload.single('qrImage'), async (req, res) =>
           category: { select: { name: true } },
           location: { select: { name: true } },
           department: { select: { name: true } },
-          assignedTo: { select: { firstName: true, lastName: true } },
+          assignedEmployee: { select: { firstName: true, lastName: true } },
           vendor: { select: { name: true } }
         }
       })

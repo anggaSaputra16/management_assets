@@ -238,13 +238,13 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="glass-card p-6 max-w-md w-full mx-4">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+          <h3 className="text-lg font-semibold text-[#111] flex items-center">
             <QrCode className="h-5 w-5 mr-2" />
             Asset QR Code
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-[#333] hover:text-[#111] transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -252,17 +252,17 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
 
           <div className="text-center">
           <div className="mb-4">
-            <h4 className="font-medium text-gray-800">{asset?.name}</h4>
-            <p className="text-sm text-gray-600">{asset?.assetTag}</p>
+            <h4 className="font-medium text-[#111]">{asset?.name}</h4>
+            <p className="text-sm text-[#333]">{asset?.assetTag}</p>
             {asset?.assignedTo && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[#333] mt-1">
                 Assigned to: {asset.assignedTo.firstName} {asset.assignedTo.lastName}
               </p>
             )}
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+            <div className="mb-4 p-3 bg-white/60 border border-black/10 rounded text-[#111] text-sm">
               {error}
             </div>
           )}          <div className="mb-6">
@@ -272,8 +272,8 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
               </div>
             ) : qrCodeImage ? (
               <div className="flex flex-col items-center">
-                <p className="text-sm text-gray-600 mb-4">High Resolution QR Code:</p>
-                <div className="border-2 border-gray-300 p-4 rounded-lg shadow-lg bg-white">
+                <p className="text-sm text-[#333] mb-4">High Resolution QR Code:</p>
+                <div className="border-2 border-black/10 p-4 rounded-lg shadow-lg bg-white">
                   <Image
                     src={qrCodeImage}
                     alt="QR Code Preview"
@@ -283,7 +283,7 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
                     style={{ imageRendering: 'crisp-edges' }}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-3 text-center max-w-sm">
+                <p className="text-xs text-[#333] mt-3 text-center max-w-sm">
                   This QR code contains asset information including tag, name, and assigned user. 
                   When printed, it will be exactly 2cm x 2cm for optimal scanning.
                 </p>
@@ -292,7 +292,7 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
               <div className="w-full h-64 glass-button rounded-lg flex items-center justify-center mx-auto">
                 <button
                   onClick={generateQRCode}
-                  className="glass-button px-6 py-3 text-gray-700 rounded-lg hover:scale-105 transition-transform"
+                  className="glass-button px-6 py-3 text-[#111] rounded-lg hover:scale-105 transition-transform"
                 >
                   Generate QR Code
                 </button>
@@ -301,7 +301,7 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
           </div>
 
           {qrCodeImage && (
-            <div className="text-xs text-gray-500 mb-4">
+            <div className="text-xs text-[#333] mb-4">
               Scan this QR code to quickly view asset details
             </div>
           )}
@@ -311,7 +311,7 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
           {qrCodeImage && (
             <button
               onClick={printQRCode}
-              className="glass-button px-4 py-2 text-gray-700 rounded-lg hover:scale-105 transition-transform flex items-center"
+              className="glass-button px-4 py-2 text-[#111] rounded-lg hover:scale-105 transition-transform flex items-center"
             >
               <Printer className="h-4 w-4 mr-2" />
               Print
@@ -319,7 +319,7 @@ const QRCodeDisplay = ({ asset, isOpen, onClose }) => {
           )}
           <button
             onClick={onClose}
-            className="glass-button px-4 py-2 text-gray-700 rounded-lg hover:scale-105 transition-transform"
+            className="glass-button px-4 py-2 text-[#111] rounded-lg hover:scale-105 transition-transform"
           >
             Close
           </button>

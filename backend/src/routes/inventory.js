@@ -30,8 +30,8 @@ const updateInventorySchema = Joi.object({
 
 const createLoanSchema = Joi.object({
   inventoryId: Joi.string().required(),
-  borrowerId: Joi.string().required(),
-  responsibleId: Joi.string().required(),
+  borrowerEmployeeId: Joi.string().required(),  // Changed to Employee
+  responsibleEmployeeId: Joi.string().required(), // Changed to Employee
   purpose: Joi.string().required(),
   quantity: Joi.number().integer().min(1).default(1),
   expectedReturnDate: Joi.date().required(),
@@ -98,18 +98,18 @@ const generateLoanNumber = async (companyId) => {
 const pagination = require('../middleware/pagination')
 
 // Get all inventories
-// TODO: use pagination middleware for server-side pagination
 router.get('/', authenticate, pagination, async (req, res, next) => {
   try {
     const { search, departmentId, status, condition } = req.query;
-    const { page, limit, skip, take } = req.pagination;
+  // Defensive pagination values: ensure numeric defaults in case middleware wasn't applied
+  const { page = 1, limit = 10, skip = 0, take = 10 } = req.pagination || {};
+  const safePage = Number.isFinite(Number(page)) && Number(page) > 0 ? Number(page) : 1;
+  const safeLimit = Number.isFinite(Number(limit)) && Number(limit) > 0 ? Math.min(100, Number(limit)) : 10;
+  const safeSkip = Number.isFinite(Number(skip)) ? Number(skip) : (safePage - 1) * safeLimit;
+  const safeTake = Number.isFinite(Number(take)) ? Number(take) : safeLimit;
+    const companyId = req.user.companyId;
 
-  // Note: `inventory` model in Prisma schema does not have a direct `companyId` field
-  // (see error: Unknown argument `companyId`). Instead enforce company scoping via
-  // related models (for example, the linked `asset` or `department`) when needed.
-  const companyId = req.user.companyId;
-
-  const where = {};
+    const where = { companyId };
 
     if (search) {
       where.OR = [
@@ -132,29 +132,43 @@ router.get('/', authenticate, pagination, async (req, res, next) => {
       where.condition = condition;
     }
 
-    // When scoping inventories to the current company, filter by related asset's companyId
-    // if the asset relation exists. This avoids passing an unknown `companyId` arg to Prisma.
-    const inventoryWhere = { ...where };
-    if (companyId) {
-      // Only apply company filter through the related asset if asset relation exists
-      inventoryWhere.asset = { is: { companyId } }
-    }
-
     const [inventories, total] = await Promise.all([
       prisma.inventory.findMany({
-        where: inventoryWhere,
+        where,
         include: {
           asset: {
             select: {
               id: true,
               name: true,
               assetTag: true,
+              serialNumber: true,
               description: true,
+              status: true,
               category: {
                 select: {
                   name: true
                 }
+              },
+              location: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                  building: true,
+                  floor: true,
+                  room: true
+                }
               }
+            }
+          },
+          // Include latest active loan (if any) with borrower/responsible for display
+          loans: {
+            where: { status: 'ACTIVE' },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            include: {
+              borrowerEmployee: { select: { id: true, firstName: true, lastName: true, npk: true } },
+              responsibleEmployee: { select: { id: true, firstName: true, lastName: true, npk: true } }
             }
           },
           department: {
@@ -169,17 +183,24 @@ router.get('/', authenticate, pagination, async (req, res, next) => {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
+              email: true,
+              username: true,
+              role: true
+            }
+          },
+          _count: {
+            select: {
+              loans: true
             }
           }
         },
-        skip,
-        take,
+        skip: safeSkip,
+        take: safeTake,
         orderBy: {
           createdAt: 'desc'
         }
       }),
-      prisma.inventory.count({ where: inventoryWhere })
+      prisma.inventory.count({ where })
     ]);
 
     res.json({
@@ -188,12 +209,123 @@ router.get('/', authenticate, pagination, async (req, res, next) => {
         inventories,
         pagination: {
           total,
-          pages: Math.ceil(total / take),
-          current: page,
-          hasNext: skip + take < total,
-          hasPrev: page > 1
+          pages: Math.ceil(total / safeTake),
+          current: safePage,
+          hasNext: safeSkip + safeTake < total,
+          hasPrev: safePage > 1
         }
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get available assets for inventory allocation to department
+router.get('/available-assets', authenticate, async (req, res, next) => {
+  try {
+    const { departmentId } = req.query;
+    const companyId = req.user.companyId;
+
+    if (!departmentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Department ID is required'
+      });
+    }
+
+    // Get existing inventory for this department to show allocated quantities
+    const existingInventory = await prisma.inventory.findMany({
+      where: {
+        companyId,
+        departmentId
+      },
+      select: { 
+        assetId: true,
+        quantity: true
+      }
+    });
+
+    const inventoryMap = {};
+    existingInventory.forEach(inv => {
+      inventoryMap[inv.assetId] = inv.quantity;
+    });
+
+    // Get all AVAILABLE assets in company for selected department
+    // Filter assets by departmentId to show only assets in selected department
+    const assets = await prisma.asset.findMany({
+      where: {
+        companyId,
+        departmentId, // Filter by department
+        status: 'AVAILABLE',
+        isActive: true
+      },
+      select: {
+        id: true,
+        assetTag: true,
+        name: true,
+        description: true,
+        serialNumber: true,
+        category: {
+          select: {
+            name: true
+          }
+        },
+        department: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+
+    // Calculate available quantity for each asset
+    // Available = total assets with same name/model - already allocated to this department
+    const assetGroups = {};
+    
+    assets.forEach(asset => {
+      const key = `${asset.name}|${asset.category?.name || 'Uncategorized'}`;
+      if (!assetGroups[key]) {
+        assetGroups[key] = {
+          assets: [],
+          totalQty: 0,
+          allocatedToThisDept: inventoryMap[asset.id] || 0
+        };
+      }
+      assetGroups[key].assets.push(asset);
+      assetGroups[key].totalQty += 1;
+    });
+
+    // Format response with allocation info
+    const availableAssets = assets.map(asset => {
+      const key = `${asset.name}|${asset.category?.name || 'Uncategorized'}`;
+      const group = assetGroups[key];
+      const allocatedQty = inventoryMap[asset.id] || 0;
+      const availableForAllocation = group.totalQty - allocatedQty;
+
+      return {
+        id: asset.id,
+        assetTag: asset.assetTag,
+        name: asset.name,
+        description: asset.description,
+        serialNumber: asset.serialNumber,
+        category: asset.category,
+        currentDepartment: asset.department,
+        // Allocation info
+        totalInCompany: group.totalQty,
+        allocatedToThisDepartment: allocatedQty,
+        availableToAllocate: availableForAllocation,
+        isAlreadyAllocated: allocatedQty > 0
+      };
+    });
+
+    res.json({
+      success: true,
+      data: availableAssets
     });
   } catch (error) {
     next(error);
@@ -211,10 +343,12 @@ router.post('/', authenticate, require('../middleware/auth').authorize('ADMIN', 
       });
     }
 
-    // Get department code for tag generation
+    const companyId = req.user.companyId;
+
+    // Get department with company check
     const department = await prisma.department.findUnique({
       where: { id: value.departmentId },
-      select: { code: true }
+      select: { code: true, companyId: true }
     });
 
     if (!department) {
@@ -224,51 +358,129 @@ router.post('/', authenticate, require('../middleware/auth').authorize('ADMIN', 
       });
     }
 
-    // Ensure referenced asset and department belong to the same company as the authenticated user
-    const asset = await prisma.asset.findUnique({ where: { id: value.assetId }, select: { companyId: true } })
+    if (department.companyId !== companyId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Department does not belong to your company'
+      });
+    }
+
+    // Verify asset exists and belongs to company
+    const asset = await prisma.asset.findUnique({
+      where: { id: value.assetId },
+      select: { 
+        companyId: true, 
+        status: true, 
+        name: true,
+        assetTag: true,
+        serialNumber: true
+      }
+    });
+
     if (!asset) {
-      return res.status(404).json({ success: false, message: 'Asset not found' })
+      return res.status(404).json({ success: false, message: 'Asset not found' });
     }
 
-    if (asset.companyId !== req.user.companyId || department.companyId !== req.user.companyId) {
-      return res.status(403).json({ success: false, message: 'Asset or Department does not belong to your company' })
+    if (asset.companyId !== companyId) {
+      return res.status(403).json({ success: false, message: 'Asset does not belong to your company' });
     }
 
-    // Generate inventory tag (using companyId from authenticated user)
-    const inventoryTag = await generateInventoryTag(department.code, req.user.companyId);
+    if (asset.status !== 'AVAILABLE') {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Asset "${asset.name}" is not available. Current status: ${asset.status}` 
+      });
+    }
 
-    const inventory = await prisma.inventory.create({
-      data: {
+    // Check if inventory already exists for this asset-department combination
+    const existingInventory = await prisma.inventory.findFirst({
+      where: {
         assetId: value.assetId,
         departmentId: value.departmentId,
-        custodianId: value.custodianId,
-        quantity: value.quantity,
-        condition: value.condition,
-        location: value.location,
-        notes: value.notes,
-        minStockLevel: value.minStockLevel,
-        inventoryTag,
-        availableQty: value.quantity
-      },
-      include: {
-        asset: {
-          select: {
-            name: true,
-            assetTag: true
-          }
+        companyId
+      }
+    });
+
+    if (existingInventory) {
+      return res.status(400).json({
+        success: false,
+        message: `Inventory already exists for asset "${asset.name}" (${asset.assetTag}) in this department. Current quantity: ${existingInventory.quantity}. Please edit the existing inventory instead.`
+      });
+    }
+
+    // Count total assets with same name in company to validate max quantity
+    const totalSameAssets = await prisma.asset.count({
+      where: {
+        companyId,
+        name: asset.name,
+        status: 'AVAILABLE',
+        isActive: true
+      }
+    });
+
+    // Check if requested quantity exceeds available assets
+    if (value.quantity > totalSameAssets) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot allocate ${value.quantity} units. Only ${totalSameAssets} unit(s) of "${asset.name}" available in company.`
+      });
+    }
+
+    // Generate inventory tag
+    const inventoryTag = await generateInventoryTag(department.code, companyId);
+
+    // Create inventory and update asset status in transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create inventory
+      const inventory = await tx.inventory.create({
+        data: {
+          assetId: value.assetId,
+          departmentId: value.departmentId,
+          companyId,
+          custodianId: value.custodianId,
+          quantity: value.quantity,
+          condition: value.condition,
+          location: value.location,
+          notes: value.notes,
+          minStockLevel: value.minStockLevel,
+          inventoryTag,
+          availableQty: value.quantity
         },
-        department: {
-          select: {
-            name: true
+        include: {
+          asset: {
+            select: {
+              name: true,
+              assetTag: true,
+              locationId: true,
+              location: {
+                select: { id: true, name: true }
+              }
+            }
+          },
+          department: {
+            select: {
+              name: true,
+              code: true
+            }
           }
         }
-      }
+      });
+
+      // Update asset status to IN_USE since it's now allocated to department
+      await tx.asset.update({
+        where: { id: value.assetId },
+        data: {
+          status: 'IN_USE'
+        }
+      });
+
+      return inventory;
     });
 
     res.status(201).json({
       success: true,
-      data: inventory,
-      message: 'Inventory created successfully'
+      data: result,
+      message: 'Inventory created successfully. Asset status updated to IN_USE.'
     });
   } catch (error) {
     next(error);
@@ -311,6 +523,26 @@ router.post('/loans', authenticate, async (req, res, next) => {
       });
     }
 
+    // Verify employees exist and belong to company
+    const [borrowerEmployee, responsibleEmployee] = await Promise.all([
+      prisma.employee.findUnique({
+        where: { id: value.borrowerEmployeeId },
+        select: { companyId: true, firstName: true, lastName: true, email: true, department: { select: { name: true } } }
+      }),
+      prisma.employee.findUnique({
+        where: { id: value.responsibleEmployeeId },
+        select: { companyId: true, firstName: true, lastName: true, email: true, department: { select: { name: true } } }
+      })
+    ]);
+
+    if (!borrowerEmployee || borrowerEmployee.companyId !== req.user.companyId) {
+      return res.status(404).json({ success: false, message: 'Borrower employee not found or does not belong to your company' });
+    }
+
+    if (!responsibleEmployee || responsibleEmployee.companyId !== req.user.companyId) {
+      return res.status(404).json({ success: false, message: 'Responsible employee not found or does not belong to your company' });
+    }
+
     // Generate loan number
     const loanNumber = await generateLoanNumber(req.user.companyId);
 
@@ -322,14 +554,14 @@ router.post('/loans', authenticate, async (req, res, next) => {
       const loan = await tx.inventoryLoan.create({
         data: {
           inventoryId: value.inventoryId,
-          borrowerId: value.borrowerId,
-          responsibleId: value.responsibleId,
+          borrowerEmployeeId: value.borrowerEmployeeId,
+          responsibleEmployeeId: value.responsibleEmployeeId,
+          requestedById: req.user.id, // User who creates the loan
           purpose: value.purpose,
           quantity: value.quantity,
           expectedReturnDate: value.expectedReturnDate,
           notes: value.notes,
-          loanNumber,
-          approvedById: req.user.id
+          loanNumber
         },
         include: {
           inventory: {
@@ -342,15 +574,35 @@ router.post('/loans', authenticate, async (req, res, next) => {
               }
             }
           },
-          borrower: {
+          borrowerEmployee: {
             select: {
+              id: true,
               firstName: true,
               lastName: true,
-              email: true
+              email: true,
+              department: {
+                select: {
+                  name: true
+                }
+              }
             }
           },
-          responsible: {
+          responsibleEmployee: {
             select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              department: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          },
+          requestedBy: {
+            select: {
+              id: true,
               firstName: true,
               lastName: true,
               email: true
@@ -375,35 +627,45 @@ router.post('/loans', authenticate, async (req, res, next) => {
 
     // Notify via in-app notifications
     try {
-      // Notify borrower and responsible
-      if (result.borrower?.email) {
-        notifications.createSystemNotification(result.borrower.id, 'Loan Requested', `Your loan request ${result.loanNumber} has been created.`, 'GENERAL')
-      }
-      if (result.responsible?.email) {
-        notifications.createSystemNotification(result.responsible.id, 'Loan Requested', `A loan request ${result.loanNumber} referencing ${result.inventory?.asset?.name} has been created.`, 'GENERAL')
-      }
-
       // Notify company managers via in-app notification and email
       const managers = await prisma.user.findMany({
-        where: { companyId: req.user.companyId, role: 'MANAGER', isActive: true },
+        where: { companyId: req.user.companyId, role: { in: ['MANAGER', 'ADMIN', 'ASSET_ADMIN'] }, isActive: true },
         select: { id: true, email: true, firstName: true, lastName: true }
       })
 
       const managerEmails = managers.filter(m => m.email).map(m => m.email)
 
+      const requesterName = `${result.requestedBy.firstName} ${result.requestedBy.lastName}`
+      const borrowerName = `${result.borrowerEmployee.firstName} ${result.borrowerEmployee.lastName}`
+
       for (const m of managers) {
-        notifications.createSystemNotification(m.id, 'New Loan Request', `Loan ${result.loanNumber} was requested by ${req.user.name || req.user.email}.`, 'REQUEST_APPROVAL')
+        notifications.createSystemNotification(
+          m.id, 
+          'New Loan Request', 
+          `Loan ${result.loanNumber} created by ${requesterName} for ${borrowerName} (${result.borrowerEmployee.department?.name || 'No Dept'})`, 
+          'REQUEST_APPROVAL'
+        )
       }
 
       // Send emails (best-effort, do not block response on failure)
       const emailSubject = `Loan Request: ${result.loanNumber}`
-      const emailText = `A new loan request (${result.loanNumber}) has been created for asset ${result.inventory?.asset?.name} (inventory: ${result.inventoryId}).\n\nRequester: ${req.user.name || req.user.email}\nQuantity: ${result.quantity}\nPurpose: ${result.purpose}`
+      const emailText = `A new loan request has been created:
+      
+Loan Number: ${result.loanNumber}
+Asset: ${result.inventory?.asset?.name} (${result.inventory?.asset?.assetTag})
+Requested By: ${requesterName} (${result.requestedBy.email})
 
-      // send to borrower/responsible and managers
-      const toEmails = []
-      if (result.borrower?.email) toEmails.push(result.borrower.email)
-      if (result.responsible?.email) toEmails.push(result.responsible.email)
-      if (managerEmails.length) toEmails.push(...managerEmails)
+Borrower: ${borrowerName} (${result.borrowerEmployee.department?.name || 'No Dept'})
+Responsible: ${result.responsibleEmployee.firstName} ${result.responsibleEmployee.lastName}
+
+Quantity: ${result.quantity}
+Purpose: ${result.purpose}
+Expected Return: ${new Date(result.expectedReturnDate).toLocaleDateString()}
+
+Please review and approve this loan request.`
+
+      // send to managers
+      const toEmails = managerEmails
 
       if (toEmails.length) {
         // fire-and-forget
@@ -429,7 +691,7 @@ router.post('/loans', authenticate, async (req, res, next) => {
 router.post('/loans/:id/approve', authenticate, authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
   try {
     const { id } = req.params
-    const loan = await prisma.inventoryLoan.findUnique({ where: { id }, include: { inventory: { include: { asset: { select: { companyId: true } } } }, borrower: true, responsible: true } })
+  const loan = await prisma.inventoryLoan.findUnique({ where: { id }, include: { inventory: { include: { asset: { select: { companyId: true } } } }, borrowerEmployee: true, responsibleEmployee: true } })
     if (!loan) {
       return res.status(404).json({ success: false, message: 'Loan not found' })
     }
@@ -448,8 +710,8 @@ router.post('/loans/:id/approve', authenticate, authorize('ADMIN', 'MANAGER'), a
         approvalNotes: req.body.approvalNotes || null
       },
       include: {
-        borrower: { select: { id: true, email: true, firstName: true, lastName: true } },
-        responsible: { select: { id: true, email: true, firstName: true, lastName: true } },
+        borrowerEmployee: { select: { id: true, email: true, firstName: true, lastName: true } },
+        responsibleEmployee: { select: { id: true, email: true, firstName: true, lastName: true } },
         inventory: { include: { asset: { select: { id: true, name: true } } } }
       }
     })
@@ -457,11 +719,11 @@ router.post('/loans/:id/approve', authenticate, authorize('ADMIN', 'MANAGER'), a
     // Optionally: notify borrower/responsible (best-effort)
     try {
       const notifications = require('./notifications')
-      if (updated.borrower) {
-        notifications.createSystemNotification(updated.borrower.id, 'Loan Approved', `Your loan ${updated.loanNumber} has been approved.`, 'REQUEST_APPROVAL')
+      if (updated.borrowerEmployee) {
+        notifications.createSystemNotification(updated.borrowerEmployee.id, 'Loan Approved', `Your loan ${updated.loanNumber} has been approved.`, 'REQUEST_APPROVAL')
       }
-      if (updated.responsible) {
-        notifications.createSystemNotification(updated.responsible.id, 'Loan Approved', `Loan ${updated.loanNumber} has been approved.`, 'REQUEST_APPROVAL')
+      if (updated.responsibleEmployee) {
+        notifications.createSystemNotification(updated.responsibleEmployee.id, 'Loan Approved', `Loan ${updated.loanNumber} has been approved.`, 'REQUEST_APPROVAL')
       }
     } catch (notifyErr) {
       console.error('Notify on loan approve failed:', notifyErr)
@@ -497,12 +759,12 @@ router.get('/loans', authenticate, pagination, async (req, res, next) => {
       where.borrowerId = borrowerId;
     }
 
-    // Scope loans to the company via related inventory -> asset
+    // Scope loans to the company via inventory.companyId
     const companyId = req.user.companyId
     const whereWithCompany = {
       AND: [
         where,
-        { inventory: { is: { asset: { is: { companyId } } } } }
+        { inventory: { is: { companyId } } }
       ]
     }
 
@@ -517,18 +779,54 @@ router.get('/loans', authenticate, pagination, async (req, res, next) => {
                   name: true,
                   assetTag: true
                 }
+              },
+              department: {
+                select: {
+                  name: true
+                }
               }
             }
           },
-          borrower: {
+          borrowerEmployee: {
+            select: {
+              id: true,
+              npk: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              position: true,
+              department: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          },
+          responsibleEmployee: {
+            select: {
+              id: true,
+              npk: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              position: true,
+              department: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          },
+          requestedBy: {
             select: {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
+              email: true,
+              role: true
             }
           },
-          responsible: {
+          approvedBy: {
             select: {
               firstName: true,
               lastName: true,

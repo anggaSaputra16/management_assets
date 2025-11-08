@@ -139,6 +139,13 @@ router.post('/login', async (req, res, next) => {
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         department: {
           select: {
             id: true,
@@ -167,7 +174,12 @@ router.post('/login', async (req, res, next) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.id, role: user.role },
+      { 
+        userId: user.id, 
+        role: user.role, 
+        companyId: user.companyId,
+        departmentId: user.departmentId 
+      },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { useMaintenanceStore } from '@/stores'
+import { useEnumStore } from '@/stores'
 import { useToast } from '@/contexts/ToastContext'
 import {
   Wrench,
@@ -51,6 +52,14 @@ const MaintenancePage = () => {
     getMaintenanceStats
   } = useMaintenanceStore()
 
+  const {
+    maintenanceTypes,
+    maintenanceStatuses,
+    priorityLevels,
+    loading: enumLoading,
+    initializeEnums
+  } = useEnumStore()
+
   const { showSuccess, showError } = useToast()
   const [showFilters, setShowFilters] = useState(false)
   const [selectedMaintenance, setSelectedMaintenance] = useState(null)
@@ -74,7 +83,8 @@ const MaintenancePage = () => {
 
   useEffect(() => {
     fetchMaintenance()
-  }, [fetchMaintenance])
+    initializeEnums()
+  }, [fetchMaintenance, initializeEnums])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -139,30 +149,30 @@ const MaintenancePage = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'SCHEDULED':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-white/60 text-[#111]'
       case 'IN_PROGRESS':
-        return 'bg-yellow-100 text-yellow-800'
+        return 'bg-white/60 text-[#111]'
       case 'COMPLETED':
-        return 'bg-green-100 text-green-800'
+        return 'bg-white/60 text-[#111]'
       case 'CANCELLED':
-        return 'bg-red-100 text-red-800'
+        return 'bg-white/60 text-[#111]'
       case 'OVERDUE':
-        return 'bg-red-100 text-red-800'
+        return 'bg-white/60 text-[#111]'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-gray-100 text-[#111]'
     }
   }
 
   const getPriorityColor = (priority) => {
     switch (priority) {
       case 'HIGH':
-        return 'bg-red-100 text-red-800'
+        return 'bg-white/60 text-[#111]'
       case 'MEDIUM':
-        return 'bg-yellow-100 text-yellow-800'
+        return 'bg-white/60 text-[#111]'
       case 'LOW':
-        return 'bg-green-100 text-green-800'
+        return 'bg-white/60 text-[#111]'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-gray-100 text-[#111]'
     }
   }
 
@@ -203,15 +213,15 @@ const MaintenancePage = () => {
 
     return (
       <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6 border-b border-gray-200">
+        <div className="glass-card max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b border-black/10">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-[#111]">
                 Maintenance Details
               </h3>
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-[#333] hover:text-[#333]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -221,23 +231,23 @@ const MaintenancePage = () => {
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Title</label>
-                <p className="text-sm text-gray-900">{selectedMaintenance.title}</p>
+                <label className="block text-sm font-medium text-[#111]">Title</label>
+                <p className="text-sm text-[#111]">{selectedMaintenance.title}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Type</label>
-                <span className="inline-flex px-2 py-1 text-xs font-semibold bg-purple-100 text-purple-800 rounded-full">
+                <label className="block text-sm font-medium text-[#111]">Type</label>
+                <span className="inline-flex px-2 py-1 text-xs font-semibold bg-white/60 text-[#111] rounded-full">
                   {selectedMaintenance.type}
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <label className="block text-sm font-medium text-[#111]">Status</label>
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedMaintenance.status)}`}>
                   {selectedMaintenance.status}
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Priority</label>
+                <label className="block text-sm font-medium text-[#111]">Priority</label>
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(selectedMaintenance.priority)}`}>
                   {selectedMaintenance.priority}
                 </span>
@@ -246,34 +256,34 @@ const MaintenancePage = () => {
 
             {selectedMaintenance.description && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <p className="text-sm text-gray-900">{selectedMaintenance.description}</p>
+                <label className="block text-sm font-medium text-[#111] mb-2">Description</label>
+                <p className="text-sm text-[#111]">{selectedMaintenance.description}</p>
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Asset</label>
-                <p className="text-sm text-gray-900">
+                <label className="block text-sm font-medium text-[#111]">Asset</label>
+                <p className="text-sm text-[#111]">
                   {selectedMaintenance.asset?.name} ({selectedMaintenance.asset?.assetTag})
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Assignee</label>
-                <p className="text-sm text-gray-900">
+                <label className="block text-sm font-medium text-[#111]">Assignee</label>
+                <p className="text-sm text-[#111]">
                   {selectedMaintenance.assignee?.name || 'Not assigned'}
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Scheduled Date</label>
-                <p className="text-sm text-gray-900">
+                <label className="block text-sm font-medium text-[#111]">Scheduled Date</label>
+                <p className="text-sm text-[#111]">
                   {new Date(selectedMaintenance.scheduledDate).toLocaleDateString()}
                 </p>
               </div>
               {selectedMaintenance.completedDate && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Completed Date</label>
-                  <p className="text-sm text-gray-900">
+                  <label className="block text-sm font-medium text-[#111]">Completed Date</label>
+                  <p className="text-sm text-[#111]">
                     {new Date(selectedMaintenance.completedDate).toLocaleDateString()}
                   </p>
                 </div>
@@ -282,8 +292,8 @@ const MaintenancePage = () => {
 
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Estimated Cost</label>
-                <p className="text-sm text-gray-900">
+                <label className="block text-sm font-medium text-[#111]">Estimated Cost</label>
+                <p className="text-sm text-[#111]">
                   {selectedMaintenance.estimatedCost 
                     ? new Intl.NumberFormat('id-ID', {
                         style: 'currency',
@@ -295,8 +305,8 @@ const MaintenancePage = () => {
               </div>
               {selectedMaintenance.actualCost && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Actual Cost</label>
-                  <p className="text-sm text-gray-900">
+                  <label className="block text-sm font-medium text-[#111]">Actual Cost</label>
+                  <p className="text-sm text-[#111]">
                     {new Intl.NumberFormat('id-ID', {
                       style: 'currency',
                       currency: 'IDR'
@@ -308,39 +318,63 @@ const MaintenancePage = () => {
 
             {selectedMaintenance.notes && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                <p className="text-sm text-gray-900">{selectedMaintenance.notes}</p>
+                <label className="block text-sm font-medium text-[#111] mb-2">Notes</label>
+                <p className="text-sm text-[#111]">{selectedMaintenance.notes}</p>
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-6 text-sm text-gray-500">
+            <div className="grid grid-cols-2 gap-6 text-sm text-[#333]">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Created</label>
+                <label className="block text-sm font-medium text-[#111]">Created</label>
                 <p>{new Date(selectedMaintenance.createdAt).toLocaleDateString()}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Updated</label>
+                <label className="block text-sm font-medium text-[#111]">Updated</label>
                 <p>{new Date(selectedMaintenance.updatedAt).toLocaleDateString()}</p>
               </div>
             </div>
+
+            {/* Edit History */}
+            {selectedMaintenance.editedBy && selectedMaintenance.lastEditedAt && (
+              <div className="pt-4 border-t border-black/10">
+                <div className="flex items-center text-sm text-[#333]">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  <span>
+                    Terakhir diedit oleh <span className="font-medium text-[#111]">
+                      {selectedMaintenance.editedByUser ? 
+                        `${selectedMaintenance.editedByUser.firstName} ${selectedMaintenance.editedByUser.lastName}` : 
+                        'Unknown User'}
+                    </span> pada {new Date(selectedMaintenance.lastEditedAt).toLocaleDateString('id-ID', { 
+                      day: '2-digit', 
+                      month: 'short', 
+                      year: 'numeric', 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {selectedMaintenance.status !== 'COMPLETED' && selectedMaintenance.status !== 'CANCELLED' && (
               <div className="flex space-x-2 pt-4 border-t">
                 <button
                   onClick={() => handleStatusUpdate(selectedMaintenance, 'IN_PROGRESS')}
-                  className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700"
+                  className="px-3 py-1 glass-button text-white rounded text-sm hover:scale-105 transition-transform"
                 >
                   Mark In Progress
                 </button>
                 <button
                   onClick={() => handleStatusUpdate(selectedMaintenance, 'COMPLETED')}
-                  className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                  className="px-3 py-1 glass-button text-white rounded text-sm hover:scale-105 transition-transform"
                 >
                   Mark Completed
                 </button>
                 <button
                   onClick={() => handleStatusUpdate(selectedMaintenance, 'CANCELLED')}
-                  className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                  className="px-3 py-1 glass-button text-white rounded text-sm hover:scale-105 transition-transform"
                 >
                   Cancel
                 </button>
@@ -357,9 +391,9 @@ const MaintenancePage = () => {
 
     return (
       <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
+        <div className="glass-card max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-[#111]">
               {editingMaintenance ? 'Edit Maintenance' : 'Add New Maintenance'}
             </h3>
             <button
@@ -367,7 +401,7 @@ const MaintenancePage = () => {
                 setShowModal(false)
                 resetForm()
               }}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-[#333] hover:text-[#333]"
             >
               <X className="h-5 w-5" />
             </button>
@@ -375,7 +409,7 @@ const MaintenancePage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#111] mb-1">
                 Title *
               </label>
               <input
@@ -383,7 +417,7 @@ const MaintenancePage = () => {
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
                 placeholder="Enter maintenance title"
                 required
               />
@@ -391,14 +425,14 @@ const MaintenancePage = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Asset *
                 </label>
                 <select
                   name="assetId"
                   value={formData.assetId}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
                   required
                 >
                   <option value="">Select Asset</option>
@@ -411,25 +445,27 @@ const MaintenancePage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Type
                 </label>
                 <select
                   name="type"
                   value={formData.type}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
                 >
-                  <option value="PREVENTIVE">Preventive</option>
-                  <option value="CORRECTIVE">Corrective</option>
-                  <option value="EMERGENCY">Emergency</option>
-                  <option value="ROUTINE">Routine</option>
+                  <option value="">Select Type</option>
+                  {maintenanceTypes.map(type => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#111] mb-1">
                 Description
               </label>
               <textarea
@@ -437,56 +473,61 @@ const MaintenancePage = () => {
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 placeholder="Enter description"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Status
                 </label>
                 <select
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 >
-                  <option value="SCHEDULED">Scheduled</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="CANCELLED">Cancelled</option>
+                  <option value="">Select Status</option>
+                  {maintenanceStatuses.map(status => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Priority
                 </label>
                 <select
                   name="priority"
                   value={formData.priority}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
+                  <option value="">Select Priority</option>
+                  {priorityLevels.map(priority => (
+                    <option key={priority.value} value={priority.value}>
+                      {priority.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Assignee
                 </label>
                 <select
                   name="assigneeId"
                   value={formData.assigneeId}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
                 >
                   <option value="">Select Assignee</option>
                   {users.map(user => (
@@ -498,7 +539,7 @@ const MaintenancePage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Scheduled Date *
                 </label>
                 <input
@@ -506,14 +547,14 @@ const MaintenancePage = () => {
                   name="scheduledDate"
                   value={formData.scheduledDate}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#111] mb-1">
                 Estimated Cost
               </label>
               <input
@@ -521,7 +562,7 @@ const MaintenancePage = () => {
                 name="estimatedCost"
                 value={formData.estimatedCost}
                 onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
                 placeholder="Enter estimated cost"
                 min="0"
                 step="0.01"
@@ -529,7 +570,7 @@ const MaintenancePage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#111] mb-1">
                 Notes
               </label>
               <textarea
@@ -537,7 +578,7 @@ const MaintenancePage = () => {
                 value={formData.notes}
                 onChange={handleInputChange}
                 rows={2}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
                 placeholder="Additional notes"
               />
             </div>
@@ -549,13 +590,13 @@ const MaintenancePage = () => {
                   setShowModal(false)
                   resetForm()
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-black/10 rounded-lg text-sm font-medium text-[#111] hover:bg-white/60"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                className="flex-1 px-4 py-2 glass-button text-white rounded-lg text-sm font-medium hover:scale-105 transition-transform"
               >
                 {editingMaintenance ? 'Update' : 'Create'}
               </button>
@@ -569,14 +610,14 @@ const MaintenancePage = () => {
   if (error) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-white/60 border border-black/10 rounded-lg p-4">
           <div className="flex">
             <div className="flex-shrink-0">
-              <AlertTriangle className="h-5 w-5 text-red-400" />
+              <AlertTriangle className="h-5 w-5 text-[#111]" />
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <div className="mt-2 text-sm text-red-700">
+              <h3 className="text-sm font-medium text-[#111]">Error</h3>
+              <div className="mt-2 text-sm text-[#111]">
                 {error}
               </div>
             </div>
@@ -592,8 +633,8 @@ const MaintenancePage = () => {
       {/* Header */}
       <div className="glass-header p-6 rounded-lg flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Maintenance</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-[#111]">Maintenance</h1>
+          <p className="text-[#333]">
             Manage asset maintenance schedules and records
           </p>
         </div>
@@ -639,8 +680,8 @@ const MaintenancePage = () => {
                   <IconComponent className="h-6 w-6 text-white" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-800">
+                  <p className="text-sm font-medium text-[#333]">{stat.title}</p>
+                  <p className="text-2xl font-bold text-[#111]">
                     {stat.value}
                   </p>
                 </div>
@@ -655,11 +696,11 @@ const MaintenancePage = () => {
         <div className="glass-card p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#111] mb-2">
                 Search
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#333]" />
                 <input
                   type="text"
                   value={searchTerm}
@@ -671,7 +712,7 @@ const MaintenancePage = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#111] mb-2">
                 Type
               </label>
               <select
@@ -680,54 +721,58 @@ const MaintenancePage = () => {
                 className="glass-input w-full rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">All Types</option>
-                <option value="PREVENTIVE">Preventive</option>
-                <option value="CORRECTIVE">Corrective</option>
-                <option value="EMERGENCY">Emergency</option>
-                <option value="ROUTINE">Routine</option>
+                {maintenanceTypes.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#111] mb-2">
                 Status
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm"
               >
                 <option value="">All Status</option>
-                <option value="SCHEDULED">Scheduled</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
+                {maintenanceStatuses.map(status => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#111] mb-2">
                 Priority
               </label>
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm"
               >
                 <option value="">All Priorities</option>
-                <option value="HIGH">High</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="LOW">Low</option>
+                {priorityLevels.map(priority => (
+                  <option key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#111] mb-2">
                 Asset
               </label>
               <select
                 value={assetFilter}
                 onChange={(e) => setAssetFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="w-full glass-input rounded-lg px-3 py-2 text-[#111] text-sm"
               >
                 <option value="">All Assets</option>
                 {assets.map(asset => (
@@ -741,7 +786,7 @@ const MaintenancePage = () => {
             <div className="flex items-end">
               <button
                 onClick={clearFilters}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+                className="w-full px-4 py-2 border border-black/10 rounded-lg text-sm text-[#111] hover:bg-white/60"
               >
                 Clear Filters
               </button>
@@ -751,41 +796,41 @@ const MaintenancePage = () => {
       )}
 
       {/* Maintenance Table */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-black/10">
+            <thead className="bg-white/60">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                   Maintenance
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                   Asset
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                   Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                   Priority
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                   Scheduled
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                   Assignee
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-black/10">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-4 text-center text-[#333]">
                     <div className="flex items-center justify-center">
                       <Wrench className="animate-spin h-5 w-5 mr-2" />
                       Loading maintenance records...
@@ -794,22 +839,22 @@ const MaintenancePage = () => {
                 </tr>
               ) : filteredMaintenance.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-4 text-center text-[#333]">
                     No maintenance records found
                   </td>
                 </tr>
               ) : (
                 filteredMaintenance.map((maintenance) => (
-                  <tr key={maintenance.id} className="hover:bg-gray-50">
+                  <tr key={maintenance.id} className="hover:bg-white/60">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <Wrench className="h-5 w-5 text-blue-500 mr-3" />
+                        <Wrench className="h-5 w-5 text-[#111] mr-3" />
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-[#111]">
                             {maintenance.title}
                           </div>
                           {maintenance.description && (
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-[#333]">
                               {maintenance.description.length > 50 
                                 ? `${maintenance.description.substring(0, 50)}...`
                                 : maintenance.description
@@ -819,14 +864,14 @@ const MaintenancePage = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#111]">
                       {maintenance.asset?.name || 'Unknown Asset'}
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-[#333]">
                         {maintenance.asset?.assetTag}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold bg-purple-100 text-purple-800 rounded-full">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold bg-white/60 text-[#111] rounded-full">
                         {maintenance.type}
                       </span>
                     </td>
@@ -840,41 +885,41 @@ const MaintenancePage = () => {
                         {maintenance.priority}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#111]">
                       <div className="flex items-center">
-                        <Calendar className="h-4 w-4 text-gray-400 mr-1" />
+                        <Calendar className="h-4 w-4 text-[#333] mr-1" />
                         {new Date(maintenance.scheduledDate).toLocaleDateString()}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#111]">
                       {maintenance.assignee ? (
                         <div className="flex items-center">
-                          <User className="h-4 w-4 text-gray-400 mr-1" />
+                          <User className="h-4 w-4 text-[#333] mr-1" />
                           {maintenance.assignee.name}
                         </div>
                       ) : (
-                        <span className="text-gray-500">Not assigned</span>
+                        <span className="text-[#333]">Not assigned</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleView(maintenance)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-[#111] hover:scale-110 transition-transform"
                           title="View Details"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleEdit(maintenance)}
-                          className="text-green-600 hover:text-green-900"
+                          className="text-[#111] hover:scale-110 transition-transform"
                           title="Edit Maintenance"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(maintenance)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-[#111] hover:scale-110 transition-transform"
                           title="Delete Maintenance"
                         >
                           <Trash2 className="h-4 w-4" />

@@ -26,6 +26,9 @@ interface DepartmentState {
   searchTerm: string
   showModal: boolean
   editingDepartment: Department | null
+  currentPage: number
+  pageSize: number
+  totalDepartments: number
   formData: {
     name: string
     code: string
@@ -38,7 +41,8 @@ interface DepartmentState {
 }
 
 interface DepartmentActions {
-  fetchDepartments: () => Promise<void>
+  fetchDepartments: (params?: { page?: number; limit?: number; search?: string }) => Promise<void>
+  fetchDepartmentsByCompany?: (companyId?: string | number) => Promise<void>
   createDepartment: (data: Partial<Department>) => Promise<void>
   updateDepartment: (id: number, data: Partial<Department>) => Promise<void>
   deleteDepartment: (id: number) => Promise<void>
@@ -46,6 +50,8 @@ interface DepartmentActions {
   setShowModal: (show: boolean) => void
   setEditingDepartment: (department: Department | null) => void
   setFormData: (data: Partial<DepartmentState['formData']>) => void
+  setPage: (page: number) => void
+  setPageSize: (size: number) => void
   resetForm: () => void
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
   getFilteredDepartments: () => Department[]
@@ -75,17 +81,54 @@ export const useDepartmentStore = create<DepartmentState & DepartmentActions>((s
   searchTerm: '',
   showModal: false,
   editingDepartment: null,
+  currentPage: 1,
+  pageSize: 20,
+  totalDepartments: 0,
   formData: initialFormData,
 
-  fetchDepartments: async () => {
+  fetchDepartments: async (params) => {
     set({ loading: true, error: null })
     try {
-      const response = await departmentService.getAllDepartments()
-      // Handle the nested response structure
+      const { currentPage, pageSize } = get()
+      const queryParams: Record<string, string> = {
+        page: (params?.page || currentPage).toString(),
+        limit: (params?.limit || pageSize).toString()
+      }
+      
+      if (params?.search) {
+        queryParams.search = params.search
+      }
+      
+      const response = await departmentService.getAllDepartments(queryParams)
+      // Handle the nested response structure with pagination
+      const departments = response.data?.departments || response.departments || response.data || []
+      const pagination = response.data?.pagination || response.pagination || {}
+      
+      set({ 
+        departments: Array.isArray(departments) ? departments : [], 
+        totalDepartments: pagination.total || 0,
+        currentPage: pagination.current || 1,
+        loading: false 
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch departments'
+      set({ error: message, loading: false })
+      toast.error(message)
+    }
+  },
+
+  // Fetch departments scoped to a specific company (used by filters)
+  fetchDepartmentsByCompany: async (companyId?: string | number) => {
+    set({ loading: true, error: null })
+    try {
+      // allow both number and string ids
+      const payload: Record<string, string> = {}
+      if (companyId) payload.companyId = companyId.toString()
+      const response = await departmentService.getAllDepartments(payload)
       const departments = response.data?.departments || response.departments || response.data || []
       set({ departments: Array.isArray(departments) ? departments : [], loading: false })
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to fetch departments'
+      const message = error instanceof Error ? error.message : 'Failed to fetch departments for company'
       set({ error: message, loading: false })
       toast.error(message)
     }
@@ -165,6 +208,8 @@ export const useDepartmentStore = create<DepartmentState & DepartmentActions>((s
 
   setSearchTerm: (term) => set({ searchTerm: term }),
   setShowModal: (show) => set({ showModal: show }),
+  setPage: (page) => set({ currentPage: page }),
+  setPageSize: (size) => set({ pageSize: size }),
   
   setEditingDepartment: (department) => {
     set({ editingDepartment: department })

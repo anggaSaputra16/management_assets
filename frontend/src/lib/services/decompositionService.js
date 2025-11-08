@@ -26,8 +26,8 @@ export const decompositionService = {
   },
 
   // Execute decomposition
-  executeDecomposition: async (id) => {
-    const response = await api.post(`/decomposition/${id}/execute`)
+  executeDecomposition: async (id, payload = {}) => {
+    const response = await api.post(`/decomposition/${id}/execute`, payload)
     return response.data
   },
 

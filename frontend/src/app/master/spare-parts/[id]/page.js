@@ -40,7 +40,7 @@ export default function SparePartDetailPage({ params }) {
   if (error) {
     return (
       <DashboardLayout title="Spare Part Details">
-        <div className="p-6 text-red-600">{error}</div>
+        <div className="p-6 text-[#111]">{error}</div>
         <button onClick={() => router.push('/master/spare-parts')} className="mt-4 underline">Back to list</button>
       </DashboardLayout>
     )
@@ -62,15 +62,15 @@ export default function SparePartDetailPage({ params }) {
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-xl font-semibold">{sparePart.name}</h2>
-              <p className="text-sm text-gray-500">Part Number: {sparePart.partNumber}</p>
+              <p className="text-sm text-[#333]">Part Number: {sparePart.partNumber}</p>
             </div>
             <div className="text-right">
-              <div className="text-sm text-gray-600">Stock: <span className="font-medium">{sparePart.stockLevel}</span></div>
+              <div className="text-sm text-[#333]">Stock: <span className="font-medium">{sparePart.stockLevel}</span></div>
             </div>
           </div>
 
           {sparePart.notes && (
-            <div className="mt-4 text-sm text-gray-700">
+            <div className="mt-4 text-sm text-[#111]">
               <strong>Notes:</strong>
               <div className="whitespace-pre-wrap mt-1">{sparePart.notes}</div>
             </div>
@@ -82,7 +82,7 @@ export default function SparePartDetailPage({ params }) {
           {Array.isArray(sparePart.sourceComponents) && sparePart.sourceComponents.length > 0 ? (
             <table className="w-full text-sm table-auto">
               <thead>
-                <tr className="text-left text-xs text-gray-500">
+                <tr className="text-left text-xs text-[#333]">
                   <th className="pb-2">Component Name</th>
                   <th className="pb-2">Asset</th>
                   <th className="pb-2">Created At</th>
@@ -99,7 +99,7 @@ export default function SparePartDetailPage({ params }) {
               </tbody>
             </table>
           ) : (
-            <p className="text-sm text-gray-600">No decomposed items linked to this spare part.</p>
+            <p className="text-sm text-[#333]">No decomposed items linked to this spare part.</p>
           )}
         </div>
 

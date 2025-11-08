@@ -54,10 +54,10 @@ const menuItems: MenuItem[] = [
   { name: 'Master Data', href: '/master', icon: Settings, roles: ['ADMIN', 'ASSET_ADMIN'], isSection: true },
   { name: 'Companies', href: '/master/companies', icon: Building, roles: ['ADMIN', 'ASSET_ADMIN'], parent: 'Master Data' },
   { name: 'Users', href: '/users', icon: Users, roles: ['ADMIN', 'ASSET_ADMIN'], parent: 'Master Data' },
+  { name: 'Roles', href: '/roles', icon: Shield, roles: ['ADMIN'], parent: 'Master Data' },
   { name: 'Departments', href: '/departments', icon: Building, parent: 'Master Data' },
-  { name: 'Positions', href: '/master/positions', icon: User, roles: ['ADMIN', 'ASSET_ADMIN'], parent: 'Master Data' },
-  { name: 'Categories', href: '/categories', icon: Settings, parent: 'Master Data' },
   { name: 'Locations', href: '/locations', icon: MapPin, parent: 'Master Data' },
+  { name: 'Categories', href: '/categories', icon: Settings, parent: 'Master Data' },
   { name: 'Vendors', href: '/vendors', icon: Truck, parent: 'Master Data' },
   { name: 'Software Assets', href: '/master/software-assets', icon: Package, roles: ['ADMIN', 'ASSET_ADMIN'], parent: 'Master Data' },
   { name: 'Spare Parts', href: '/master/spare-parts', icon: Settings, roles: ['ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'], parent: 'Master Data' }
@@ -174,7 +174,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       <div className="min-h-screen flex items-center justify-center">
         <div className="glass-card p-8">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-600 border-t-transparent mx-auto"></div>
-          <p className="text-gray-700 mt-4 text-center">Loading...</p>
+          <p className="text-[#111] mt-4 text-center">Loading...</p>
         </div>
       </div>
     )
@@ -194,15 +194,15 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       } sidebar-transition`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between h-20 px-6 border-b border-gray-300/30">
+          <div className="flex items-center justify-between h-20 px-6 border-b border-black/10/30">
             <div className="flex items-center space-x-3">
               <div className="p-2 glass-button rounded-xl">
-                <Package className="h-8 w-8 text-gray-700" />
+                <Package className="h-8 w-8 text-[#111]" />
               </div>
               {!sidebarCollapsed && (
                 <div className="sidebar-text">
-                  <span className="text-xl font-bold text-gray-800">Pakuwon</span>
-                  <p className="text-xs text-gray-600">Management System</p>
+                  <span className="text-xl font-bold text-[#111]">Pakuwon</span>
+                  <p className="text-xs text-[#333]">Management System</p>
                 </div>
               )}
             </div>
@@ -210,7 +210,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
             <div className="flex items-center space-x-2 p-2 justify-center">
               <button
                 onClick={toggleSidebar}
-                className="hidden lg:flex text-gray-600 hover:text-gray-800 p-2 glass-button rounded-lg transition-all w-full items-center justify-center"
+                className="hidden lg:flex text-[#333] hover:text-[#111] p-2 glass-button rounded-lg transition-all w-full items-center justify-center"
                 title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 <Menu className="h-5 w-5" />
@@ -218,7 +218,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
               <button
                 // onClick={() => setSidebarOpen(false)}
                 onClick={toggleSidebar}
-                className="lg:hidden text-gray-600 hover:text-gray-800 p-2 glass-button rounded-lg"
+                className="lg:hidden text-[#333] hover:text-[#111] p-2 glass-button rounded-lg"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -226,15 +226,15 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
 
           {/* Search */}
           {!sidebarCollapsed && (
-            <div className="p-4 border-b border-gray-300/20">
+            <div className="p-4 border-b border-black/10/20">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#333]" />
                 <input
                   type="text"
                   placeholder="Search menu..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 glass-input rounded-xl text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-300/50"
+                  className="w-full pl-10 pr-4 py-3 glass-input rounded-xl text-[#111] placeholder-[#666] focus:outline-none focus:ring-2 focus:ring-black/20/50"
                 />
               </div>
             </div>
@@ -248,8 +248,8 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                 return (
                   <div key={item.name} className="space-y-1">
                     {/* Parent label (non-navigable) */}
-                    <div className={`menu-item flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'space-x-3 px-4'} py-3 rounded-xl text-sm font-semibold text-gray-700`}>
-                      <item.icon className="h-5 w-5 text-gray-600" />
+                    <div className={`menu-item flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'space-x-3 px-4'} py-3 rounded-xl text-sm font-semibold text-[#111]`}>
+                      <item.icon className="h-5 w-5 text-[#333]" />
                       {!sidebarCollapsed && <span className="sidebar-text">{item.name}</span>}
                     </div>
 
@@ -263,18 +263,18 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                             href={child.href}
                             className={`menu-item flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'space-x-3 px-4'} py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                               isActiveChild
-                                ? 'active glass-button text-gray-800 shadow-lg'
-                                : 'text-gray-600 hover:text-gray-800'
+                                ? 'active glass-button text-[#111] shadow-lg'
+                                : 'text-[#333] hover:text-[#111]'
                             }`}
                             onClick={() => setSidebarOpen(false)}
                             title={sidebarCollapsed ? child.name : ''}
                           >
-                            <child.icon className={`h-4 w-4 ${isActiveChild ? 'text-gray-800' : 'text-gray-500'}`} />
+                            <child.icon className={`h-4 w-4 ${isActiveChild ? 'text-[#111]' : 'text-[#333]'}`} />
                             {!sidebarCollapsed && (
                               <>
                                 <span className="sidebar-text">{child.name}</span>
                                 {isActiveChild && (
-                                  <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  <div className="ml-auto w-2 h-2 bg-white/600 rounded-full"></div>
                                 )}
                               </>
                             )}
@@ -293,18 +293,18 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                   href={item.href}
                   className={`menu-item flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'space-x-3 px-4'} py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'active glass-button text-gray-800 shadow-lg'
-                      : 'text-gray-600 hover:text-gray-800'
+                      ? 'active glass-button text-[#111] shadow-lg'
+                      : 'text-[#333] hover:text-[#111]'
                   }`}
                   onClick={() => setSidebarOpen(false)}
                   title={sidebarCollapsed ? item.name : ''}
                 >
-                  <item.icon className={`h-5 w-5 ${isActive ? 'text-gray-800' : 'text-gray-500'}`} />
+                  <item.icon className={`h-5 w-5 ${isActive ? 'text-[#111]' : 'text-[#333]'}`} />
                   {!sidebarCollapsed && (
                     <>
                       <span className="sidebar-text">{item.name}</span>
                       {isActive && (
-                        <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div className="ml-auto w-2 h-2 bg-white/600 rounded-full"></div>
                       )}
                     </>
                   )}
@@ -314,18 +314,18 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
           </nav>
 
           {/* User Info */}
-          <div className="p-4 border-t border-gray-300/20">
+          <div className="p-4 border-t border-black/10/20">
             <div className="glass-card p-4 rounded-xl">
               <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} mb-3`}>
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-r from-transparent to-purple-500 rounded-full flex items-center justify-center shadow-lg">
                   <User className="h-6 w-6 text-white" />
                 </div>
                 {!sidebarCollapsed && (
                   <div className="flex-1 min-w-0 sidebar-text">
-                    <p className="text-sm font-semibold text-gray-800 truncate">
+                    <p className="text-sm font-semibold text-[#111] truncate">
                       {user.name}
                     </p>
-                    <p className="text-xs text-gray-600 truncate">
+                    <p className="text-xs text-[#333] truncate">
                       {getRoleDisplayName(user.role)}
                     </p>
                   </div>
@@ -334,7 +334,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
               {!sidebarCollapsed && (
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 glass-button rounded-lg transition-all sidebar-text"
+                  className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-sm text-[#333] hover:text-[#111] glass-button rounded-lg transition-all sidebar-text"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Logout</span>
@@ -343,7 +343,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
               {sidebarCollapsed && (
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center px-3 py-2 text-sm text-gray-600 hover:text-gray-800 glass-button rounded-lg transition-all"
+                  className="w-full flex items-center justify-center px-3 py-2 text-sm text-[#333] hover:text-[#111] glass-button rounded-lg transition-all"
                   title="Logout"
                 >
                   <LogOut className="h-4 w-4" />
@@ -373,20 +373,20 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
       {/* Main content */}
       <div className="flex-1 flex flex-col lg:pl-0">
 
-        <header className="glass-header backdrop-blur-md border-b border-gray-300/20 sticky top-0 z-30">
+        <header className="glass-header backdrop-blur-md border-b border-black/10/20 sticky top-0 z-30">
           <div className="flex items-center justify-between h-20 px-6">
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden text-gray-600 hover:text-gray-800 p-2 glass-button rounded-lg transition-all"
+                className="lg:hidden text-[#333] hover:text-[#111] p-2 glass-button rounded-lg transition-all"
               >
                 <Menu className="h-6 w-6" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">
+                <h1 className="text-2xl font-bold text-[#111]">
                   {title || 'Dashboard'}
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-[#333]">
                   {getGreeting()}, {user.name}!
                 </p>
               </div>
@@ -398,7 +398,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                 {/* Quick Add Asset */}
                 <button 
                   onClick={() => router.push('/assets/add')}
-                  className="glass-button p-3 rounded-xl text-gray-600 hover:text-gray-800 transition-all hover:scale-105" 
+                  className="glass-button p-3 rounded-xl text-[#333] hover:text-[#111] transition-all hover:scale-105" 
                   title="Quick Add Asset"
                 >
                   <Plus className="h-5 w-5" />
@@ -406,7 +406,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                 {/* Search */}
                 <button 
                   onClick={() => router.push('/assets')}
-                  className="glass-button p-3 rounded-xl text-gray-600 hover:text-gray-800 transition-all hover:scale-105" 
+                  className="glass-button p-3 rounded-xl text-[#333] hover:text-[#111] transition-all hover:scale-105" 
                   title="Search"
                 >
                   <Search className="h-5 w-5" />
@@ -415,7 +415,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                 <div className="relative">
                   <button
                     onClick={() => router.push('/actions')}
-                    className="glass-button p-3 rounded-xl text-gray-600 hover:text-gray-800 transition-all hover:scale-105"
+                    className="glass-button p-3 rounded-xl text-[#333] hover:text-[#111] transition-all hover:scale-105"
                     title="Actions"
                   >
                     <FileText className="h-5 w-5" />
@@ -426,16 +426,16 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
               <div className="relative">
                 <button 
                   onClick={() => router.push('/notifications')}
-                  className="relative glass-button p-3 rounded-xl text-gray-600 hover:text-gray-800 transition-all hover:scale-105"
+                  className="relative glass-button p-3 rounded-xl text-[#333] hover:text-[#111] transition-all hover:scale-105"
                   title="Notifications"
                 >
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 ? (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 min-w-[18px] px-1 h-4 bg-white/600 rounded-full text-white text-xs flex items-center justify-center">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   ) : (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full opacity-0" aria-hidden="true"></span>
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-white/600 rounded-full opacity-0" aria-hidden="true"></span>
                   )}
                 </button>
               </div>
@@ -447,26 +447,26 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                   aria-expanded={showProfileMenu}
                   className="flex items-center space-x-2 glass-button p-2 rounded-xl hover:scale-105 transition-all"
                 >
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
+                  <div className="w-10 h-10 bg-gradient-to-r from-transparent to-purple-500 rounded-full flex items-center justify-center shadow-lg">
                     <User className="h-5 w-5 text-white" />
                   </div>
                   <div className="hidden md:block text-left">
-                    <p className="text-sm font-semibold text-gray-800">{user.name}</p>
-                    <p className="text-xs text-gray-600">{getRoleDisplayName(user.role)}</p>
+                    <p className="text-sm font-semibold text-[#111]">{user.name}</p>
+                    <p className="text-xs text-[#333]">{getRoleDisplayName(user.role)}</p>
                   </div>
                 </button>
                 {/* Profile Dropdown */}
                 {showProfileMenu && (
                   <div className="absolute right-0 mt-2 w-64 glass-modal rounded-xl shadow-xl z-50">
-                    <div className="p-4 border-b border-gray-300/20">
+                    <div className="p-4 border-b border-black/10/20">
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
+                        <div className="w-12 h-12 bg-gradient-to-r from-transparent to-purple-500 rounded-full flex items-center justify-center shadow-lg">
                           <User className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-gray-800">{user.name}</p>
-                          <p className="text-xs text-gray-600">{user.email}</p>
-                          <p className="text-xs text-blue-600">{getRoleDisplayName(user.role)}</p>
+                          <p className="text-sm font-semibold text-[#111]">{user.name}</p>
+                          <p className="text-xs text-[#333]">{user.email}</p>
+                          <p className="text-xs text-[#111]">{getRoleDisplayName(user.role)}</p>
                         </div>
                       </div>
                     </div>
@@ -474,22 +474,22 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
                       <button 
                         ref={profileFirstButtonRef}
                         onClick={() => { setShowProfileMenu(false); router.push('/profile') }}
-                        className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 glass-button rounded-lg transition-all"
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-[#333] hover:text-[#111] glass-button rounded-lg transition-all"
                       >
                         <User className="h-4 w-4" />
                         <span>View Profile</span>
                       </button>
                       <button 
                         onClick={() => { setShowProfileMenu(false); router.push('/settings') }}
-                        className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 glass-button rounded-lg transition-all"
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-[#333] hover:text-[#111] glass-button rounded-lg transition-all"
                       >
                         <Settings className="h-4 w-4" />
                         <span>Settings</span>
                       </button>
-                      <hr className="my-2 border-gray-300/20" />
+                      <hr className="my-2 border-black/10/20" />
                       <button
                         onClick={() => { setShowProfileMenu(false); handleLogout() }}
-                        className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-red-600 hover:text-red-800 glass-button rounded-lg transition-all"
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-[#111] hover:text-[#111] glass-button rounded-lg transition-all"
                       >
                         <LogOut className="h-4 w-4" />
                         <span>Logout</span>
