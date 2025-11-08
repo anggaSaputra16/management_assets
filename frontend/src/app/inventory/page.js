@@ -16,6 +16,7 @@ import {
 import { useCompanyStore, useDepartmentStore, useEnumStore } from '../../stores'
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { useInventoryStore } from '../../stores';
+import FilterModal from './_components/filterModal';
 
 export default function InventoryPage() {
   const router = useRouter();
@@ -37,20 +38,30 @@ export default function InventoryPage() {
   const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedCondition, setSelectedCondition] = useState('');
-  const [generated, setGenerated] = useState(false)
+  const [generated, setGenerated] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  const { companies, fetchCompanies } = useCompanyStore()
-  const { departments: departmentOptions, fetchDepartmentsByCompany, fetchDepartments } = useDepartmentStore()
+  const { companies, fetchCompanies } = useCompanyStore();
+  const { departments: departmentOptions, fetchDepartmentsByCompany, fetchDepartments } = useDepartmentStore();
   const {
     assetStatuses,
     assetConditions,
     initializeEnums
-  } = useEnumStore()
+  } = useEnumStore();
 
-  // initial: load companies only. Do NOT auto-load inventory data until user generates
+  const clearAllFilters = () => {
+    setSelectedCompany('');
+    setSelectedDepartment('');
+    setSelectedStatus('');
+    setSelectedCondition('');
+    setSearchTerm('');
+    setInventoryFilters({ search: '', departmentId: '', status: '', condition: '' });
+    setGenerated(false);
+  };
+
   useEffect(() => {
-    fetchCompanies()
-    initializeEnums()
+    fetchCompanies();
+    initializeEnums();
   }, [fetchCompanies, initializeEnums]);
 
   useEffect(() => {
@@ -66,23 +77,25 @@ export default function InventoryPage() {
     return () => clearTimeout(timeoutId);
   }, [searchTerm, selectedDepartment, selectedStatus, selectedCondition, setInventoryFilters]);
 
-  // Generate button: load inventories for chosen company+department
   const handleGenerate = async () => {
+    if (!selectedCompany && !selectedDepartment) {
+      setGenerated(false)
+      setInventoryFilters({
+        search: searchTerm,
+        departmentId: '',
+        status: selectedStatus,
+        condition: selectedCondition
+      })
+      return 
+    }
     if (!selectedCompany || !selectedDepartment) {
       alert('Please select a Company and Department before generating inventory data.')
       return
     }
-
-    // fetch department scoped inventories and stats
     setGenerated(true)
-    // set filters and fetch inventories (fetchInventories expects (page, limit))
     setInventoryFilters({ departmentId: selectedDepartment })
     await fetchInventories(1)
     await fetchStats()
-  }
-
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
   };
 
   const handlePageChange = (page) => {
@@ -140,6 +153,13 @@ export default function InventoryPage() {
               <p className="text-[#333]">Manage inventory items and track loans</p>
             </div>
             <div className="flex space-x-3">
+              <button
+                onClick={() => setModalOpen(true)}
+                className="glass-button px-4 py-2 rounded-lg text-[#111] flex items-center space-x-2 hover:scale-105 transition-transform"
+              >
+                <Search className="h-4 w-4" />
+                <span>Filters</span>
+              </button>
               <button
                 onClick={() => router.push('/inventory/loans')}
                 className="glass-button px-4 py-2 rounded-lg text-[#111] flex items-center space-x-2 hover:scale-105 transition-transform"
@@ -202,83 +222,6 @@ export default function InventoryPage() {
             </div>
           </div>
         )}
-
-        {/* Filters */}
-        <div className="glass-card">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-
-              <select
-                value={selectedCompany}
-                onChange={(e) => {
-                  const companyId = e.target.value
-                  setSelectedCompany(companyId)
-                  if (fetchDepartmentsByCompany && typeof fetchDepartmentsByCompany === 'function') {
-                    fetchDepartmentsByCompany(companyId)
-                  } else if (fetchDepartments && typeof fetchDepartments === 'function') {
-                    fetchDepartments()
-                  }
-                }}
-                className="glass-input px-3 py-2 rounded-lg text-[#111]"
-              >
-                <option value="">Select Company</option>
-                {companies.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-
-              <select
-                value={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
-                className="glass-input px-3 py-2 rounded-lg text-[#111]"
-              >
-                <option value="">Select Department</option>
-                {departmentOptions.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-
-            <div className="flex items-center justify-start">
-              <button onClick={handleGenerate} className="glass-button px-4 py-2 rounded-lg text-[#111] hover:scale-105 transition-transform">Generate</button>
-            </div>
-
-              <div className="relative flex items-center justify-start">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#333] h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Search inventory..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="glass-input pl-10 pr-4 py-2 w-full rounded-lg text-[#111]"
-              />
-            </div>
-
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="glass-input px-3 py-2 rounded-lg text-[#111]"
-            >
-              <option value="">All Status</option>
-              {assetStatuses.map(status => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={selectedCondition}
-              onChange={(e) => setSelectedCondition(e.target.value)}
-              className="glass-input px-3 py-2 rounded-lg text-[#111]"
-            >
-              <option value="">All Conditions</option>
-              {assetConditions.map(condition => (
-                <option key={condition.value} value={condition.value}>
-                  {condition.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
 
         {/* Error Message */}
         {inventoryError && (
@@ -434,7 +377,7 @@ export default function InventoryPage() {
                             Active Loans
                           </div>
                           {inventory.loans && inventory.loans.some(l => l.status === 'ACTIVE') && (() => {
-                            const activeLoan = inventory.loans.find(l => l.status === 'ACTIVE')
+                            const activeLoan = inventory.loans.find(l => l.status === 'ACTIVE');
                             return (
                               <div className="text-left mt-2">
                                 <div className="text-xs text-[#111]">
@@ -447,7 +390,7 @@ export default function InventoryPage() {
                                   <strong>Expected Return:</strong> {activeLoan?.expectedReturnDate ? new Date(activeLoan.expectedReturnDate).toLocaleDateString() : '—'}
                                 </div>
                               </div>
-                            )
+                            );
                           })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -490,7 +433,6 @@ export default function InventoryPage() {
                 </table>
               </div>
 
-              {/* Pagination */}
               {/* Pagination */}
               {inventoryPagination.pages > 1 && (
                 <div className="px-6 py-3 flex items-center justify-between border-t border-black/10">
@@ -542,6 +484,38 @@ export default function InventoryPage() {
           )}
         </div>
       </div>
+      <FilterModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        companies={companies}
+        departments={departmentOptions}
+        assetStatuses={assetStatuses}
+        assetConditions={assetConditions}
+        selectedCompany={selectedCompany}
+        setSelectedCompany={(val) => {
+          setSelectedCompany(val);
+          if (val) {
+            if (fetchDepartmentsByCompany && typeof fetchDepartmentsByCompany === 'function') {
+              fetchDepartmentsByCompany(val);
+            } else if (fetchDepartments && typeof fetchDepartments === 'function') {
+              fetchDepartments();
+            }
+          } else {
+            setSelectedDepartment('');
+          }
+        }}
+        selectedDepartment={selectedDepartment}
+        setSelectedDepartment={setSelectedDepartment}
+        selectedStatus={selectedStatus}
+        setSelectedStatus={setSelectedStatus}
+        selectedCondition={selectedCondition}
+        setSelectedCondition={setSelectedCondition}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        onGenerate={handleGenerate}
+        onClearAll={clearAllFilters}
+        loading={inventoryLoading}
+      />
     </DashboardLayout>
   );
 }
