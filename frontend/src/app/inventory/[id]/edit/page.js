@@ -43,6 +43,14 @@ export default function EditInventoryPage({ params }) {
     <DashboardLayout>
       <div className="glass-card p-6">
         <h2 className="text-xl font-bold mb-4">Edit Inventory</h2>
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={() => router.push('/inventory')}
+            className="glass-button px-3 py-2 rounded-lg text-[#111] hover:scale-105 transition-transform"
+          >
+            Back to Inventory
+          </button>
+        </div>
         <InventoryForm
           initialData={inv}
           onSubmit={handleUpdate}

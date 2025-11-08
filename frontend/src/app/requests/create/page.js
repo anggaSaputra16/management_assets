@@ -129,10 +129,10 @@ export default function CreateRequestPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center space-x-4">
+        <div className="glass-card p-4 sm:p-6 flex items-center space-x-4 rounded-lg">
           <button
             onClick={() => router.push('/requests')}
-            className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+            className="glass-button p-2 rounded-lg text-[#111] hover:scale-105 transition-transform"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -347,14 +347,14 @@ export default function CreateRequestPage() {
                 <button
                   type="button"
                   onClick={() => router.push('/requests')}
-                  className="px-6 py-2 border border-black/10 text-[#111] rounded-lg hover:bg-white/60"
+                  className="glass-button px-6 py-2 rounded-lg text-[#111] hover:scale-105 transition-transform"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-6 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="glass-button px-6 py-2 rounded-lg text-[#111] hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Creating...' : 'Create Request'}
                 </button>
