@@ -30,6 +30,9 @@ interface VendorState {
   searchTerm: string
   showModal: boolean
   editingVendor: Vendor | null
+  currentPage: number
+  pageSize: number
+  totalVendors: number
   formData: {
     name: string
     code: string
@@ -50,7 +53,7 @@ interface VendorState {
 }
 
 interface VendorActions {
-  fetchVendors: () => Promise<void>
+  fetchVendors: (params?: { page?: number; limit?: number; search?: string }) => Promise<void>
   createVendor: (data: Partial<Vendor>) => Promise<void>
   updateVendor: (id: number, data: Partial<Vendor>) => Promise<void>
   deleteVendor: (id: number) => Promise<void>
@@ -58,6 +61,8 @@ interface VendorActions {
   setShowModal: (show: boolean) => void
   setEditingVendor: (vendor: Vendor | null) => void
   setFormData: (data: Partial<VendorState['formData']>) => void
+  setPage: (page: number) => void
+  setPageSize: (size: number) => void
   resetForm: () => void
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
   getFilteredVendors: () => Vendor[]
@@ -95,15 +100,35 @@ export const useVendorStore = create<VendorState & VendorActions>((set, get) => 
   searchTerm: '',
   showModal: false,
   editingVendor: null,
+  currentPage: 1,
+  pageSize: 20,
+  totalVendors: 0,
   formData: initialFormData,
 
-  fetchVendors: async () => {
+  fetchVendors: async (params) => {
     set({ loading: true, error: null })
     try {
-      const response = await vendorService.getAllVendors()
-      // Handle the nested response structure
+      const { currentPage, pageSize } = get()
+      const queryParams: Record<string, string> = {
+        page: (params?.page || currentPage).toString(),
+        limit: (params?.limit || pageSize).toString()
+      }
+      
+      if (params?.search) {
+        queryParams.search = params.search
+      }
+      
+      const response = await vendorService.getAllVendors(queryParams)
+      // Handle the nested response structure with pagination
       const vendors = response.data?.vendors || response.vendors || response.data || []
-      set({ vendors: Array.isArray(vendors) ? vendors : [], loading: false })
+      const pagination = response.data?.pagination || response.pagination || {}
+      
+      set({ 
+        vendors: Array.isArray(vendors) ? vendors : [], 
+        totalVendors: pagination.total || 0,
+        currentPage: pagination.current || 1,
+        loading: false 
+      })
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to fetch vendors', loading: false })
     }
@@ -149,6 +174,8 @@ export const useVendorStore = create<VendorState & VendorActions>((set, get) => 
 
   setSearchTerm: (term) => set({ searchTerm: term }),
   setShowModal: (show) => set({ showModal: show }),
+  setPage: (page) => set({ currentPage: page }),
+  setPageSize: (size) => set({ pageSize: size }),
   
   setEditingVendor: (vendor) => {
     set({ editingVendor: vendor })

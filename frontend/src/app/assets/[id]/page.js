@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import { useAssetStore } from '@/stores'
 import { useAssetComponentStore } from '@/stores/assetComponentStore'
 import { useAssetSpecificationStore } from '@/stores/assetSpecificationStore'
+import { useEnumStore } from '@/stores'
 import { useToast } from '@/contexts/ToastContext'
 import { assetSoftwareService } from '@/lib/services/assetSoftwareService'
 import { softwareAssetsService } from '@/lib/services/softwareAssetsService'
@@ -29,27 +30,27 @@ import {
 } from 'lucide-react'
 
 const statusColors = {
-  AVAILABLE: 'bg-green-100 text-green-800',
-  IN_USE: 'bg-blue-100 text-blue-800',
-  MAINTENANCE: 'bg-yellow-100 text-yellow-800',
-  RETIRED: 'bg-gray-100 text-gray-800',
-  DISPOSED: 'bg-red-100 text-red-800'
+  AVAILABLE: 'bg-white/60 text-[#111]',
+  IN_USE: 'bg-white/60 text-[#111]',
+  MAINTENANCE: 'bg-white/60 text-[#111]',
+  RETIRED: 'bg-gray-100 text-[#111]',
+  DISPOSED: 'bg-white/60 text-[#111]'
 }
 
 const conditionColors = {
-  Excellent: 'bg-green-100 text-green-800',
-  Good: 'bg-blue-100 text-blue-800',
-  Fair: 'bg-yellow-100 text-yellow-800',
-  Poor: 'bg-orange-100 text-orange-800',
-  Damaged: 'bg-red-100 text-red-800'
+  Excellent: 'bg-white/60 text-[#111]',
+  Good: 'bg-white/60 text-[#111]',
+  Fair: 'bg-white/60 text-[#111]',
+  Poor: 'bg-white/60 text-[#111]',
+  Damaged: 'bg-white/60 text-[#111]'
 }
 
 const componentStatusColors = {
-  ACTIVE: 'bg-green-100 text-green-800',
-  INACTIVE: 'bg-gray-100 text-gray-800',
-  TRANSFERRED: 'bg-blue-100 text-blue-800',
-  DAMAGED: 'bg-red-100 text-red-800',
-  REPLACED: 'bg-orange-100 text-orange-800'
+  ACTIVE: 'bg-white/60 text-[#111]',
+  INACTIVE: 'bg-gray-100 text-[#111]',
+  TRANSFERRED: 'bg-white/60 text-[#111]',
+  DAMAGED: 'bg-white/60 text-[#111]',
+  REPLACED: 'bg-white/60 text-[#111]'
 }
 
 export default function AssetDetailPage() {
@@ -62,6 +63,9 @@ export default function AssetDetailPage() {
   const [installedSoftware, setInstalledSoftware] = useState([])
   const [availableSoftware, setAvailableSoftware] = useState([])
   const [softwareLoading, setSoftwareLoading] = useState(false)
+  // All assets list (used for transfer target dropdown when user requests "show all assets")
+  const [allAssets, setAllAssets] = useState([])
+  const [allAssetsLoading, setAllAssetsLoading] = useState(false)
   const [showSoftwareModal, setShowSoftwareModal] = useState(false)
   const [showUninstallModal, setShowUninstallModal] = useState(false)
   const [selectedInstallation, setSelectedInstallation] = useState(null)
@@ -81,8 +85,7 @@ export default function AssetDetailPage() {
   } = useAssetStore()
 
   const {
-    components,
-    compatibleAssets,
+  components,
     loading: componentsLoading,
     showModal: showComponentModal,
     showTransferModal,
@@ -92,13 +95,13 @@ export default function AssetDetailPage() {
     formData: componentForm,
     transferData,
     maintenanceData,
-    fetchComponents,
+  fetchComponents,
     addComponent,
     updateComponent,
     transferComponent,
     deleteComponent,
     addComponentMaintenance,
-    fetchCompatibleAssets,
+    
     setShowModal: setShowComponentModal,
     setShowTransferModal,
     setShowMaintenanceModal,
@@ -128,26 +131,23 @@ export default function AssetDetailPage() {
     handleInputChange: handleSpecInputChange
   } = useAssetSpecificationStore()
 
-  useEffect(() => {
-    if (params.id) {
-      fetchAsset(params.id)
-      fetchComponents(params.id)
-      fetchSpecifications(params.id)
-      fetchAssetSoftware()
-    }
-  }, [params.id, fetchAsset, fetchComponents, fetchSpecifications])
+  const {
+    transferReasons,
+    maintenanceTypes,
+    specificationCategories
+  } = useEnumStore()
 
-  // Software management functions
-  const fetchAssetSoftware = async () => {
+  // Fetch software installed/available for this asset
+  const fetchAssetSoftware = useCallback(async () => {
     if (!params.id) return
-    
+
     setSoftwareLoading(true)
     try {
       const [installedResult, availableResult] = await Promise.all([
         assetSoftwareService.getAssetSoftware(params.id),
         assetSoftwareService.getAvailableSoftware(params.id)
       ])
-      
+
       setInstalledSoftware(installedResult.data || [])
       setAvailableSoftware(availableResult.data || [])
     } catch (error) {
@@ -156,7 +156,18 @@ export default function AssetDetailPage() {
     } finally {
       setSoftwareLoading(false)
     }
-  }
+  }, [params.id, showToast])
+
+  useEffect(() => {
+    if (params.id) {
+      fetchAsset(params.id)
+      fetchComponents(params.id)
+      fetchSpecifications(params.id)
+      fetchAssetSoftware()
+    }
+  }, [params.id, fetchAsset, fetchComponents, fetchSpecifications, fetchAssetSoftware])
+
+  // Software management functions
 
   const handleInstallSoftware = async (e) => {
     e.preventDefault()
@@ -253,12 +264,16 @@ export default function AssetDetailPage() {
   const handleTransferModalOpen = async (component) => {
     setSelectedComponent(component)
     setShowTransferModal(true)
-    // Fetch compatible assets for this component
+    // Fetch ALL assets to populate the target list (show all assets per request)
     try {
-      await fetchCompatibleAssets(component.id)
+      setAllAssetsLoading(true)
+      const res = await (await import('@/lib/services/assetService')).assetService.getAllAssets({ limit: 1000 })
+      setAllAssets(res.data || [])
     } catch (error) {
-      console.error('Failed to load compatible assets:', error)
-      showToast('Failed to load compatible assets', 'error')
+      console.error('Failed to load assets for transfer:', error)
+      showToast('Failed to load assets for transfer', 'error')
+    } finally {
+      setAllAssetsLoading(false)
     }
   }
 
@@ -303,7 +318,7 @@ export default function AssetDetailPage() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-black/10"></div>
         </div>
       </DashboardLayout>
     )
@@ -313,8 +328,8 @@ export default function AssetDetailPage() {
     return (
       <DashboardLayout>
         <div className="text-center py-12">
-          <h2 className="text-2xl font-bold text-gray-900">Asset Not Found</h2>
-          <p className="text-gray-600">The asset you&apos;re looking for doesn&apos;t exist.</p>
+          <h2 className="text-2xl font-bold text-[#111]">Asset Not Found</h2>
+          <p className="text-[#333]">The asset you&apos;re looking for doesn&apos;t exist.</p>
         </div>
       </DashboardLayout>
     )
@@ -328,19 +343,19 @@ export default function AssetDetailPage() {
           <div className="flex items-center space-x-4">
             <button
               onClick={() => router.back()}
-              className="p-2 hover:bg-gray-100 rounded-lg"
+              className="p-2 hover:bg-white/40 rounded-lg"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{currentAsset.name}</h1>
-              <p className="text-gray-600">Asset Tag: {currentAsset.assetTag}</p>
+              <h1 className="text-2xl font-bold text-[#111]">{currentAsset.name}</h1>
+              <p className="text-[#333]">Asset Tag: {currentAsset.assetTag}</p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
             <button
               onClick={() => router.push(`/assets/${currentAsset.id}/qr-code`)}
-              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:bg-purple-700"
             >
               <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <rect x="3" y="3" width="5" height="5" strokeWidth={2} />
@@ -358,14 +373,14 @@ export default function AssetDetailPage() {
             </button>
             <button
               onClick={() => router.push(`/assets/transfer?assetId=${currentAsset.id}`)}
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
             >
               <ArrowRightLeft className="h-4 w-4 mr-2" />
               Transfer
             </button>
             <button
               onClick={() => router.push(`/assets/depreciation?assetId=${currentAsset.id}`)}
-              className="flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+              className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:bg-orange-700"
             >
               <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLineJoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
@@ -374,14 +389,14 @@ export default function AssetDetailPage() {
             </button>
             <button
               onClick={() => router.push(`/assets/${currentAsset.id}/edit`)}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
             >
               <Edit className="h-4 w-4 mr-2" />
               Edit Asset
             </button>
             <button
               onClick={handleDelete}
-              className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
@@ -390,7 +405,7 @@ export default function AssetDetailPage() {
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200">
+        <div className="border-b border-black/10">
           <nav className="-mb-px flex space-x-8">
             {[
               { key: 'overview', label: 'Overview', icon: Info },
@@ -405,8 +420,8 @@ export default function AssetDetailPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === tab.key
-                    ? 'border-purple-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-black/10 text-[#111]'
+                    : 'border-transparent text-[#333] hover:text-[#111] hover:border-black/10'
                 }`}
               >
                 <tab.icon className="h-4 w-4 mr-2" />
@@ -421,50 +436,50 @@ export default function AssetDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Asset Info */}
             <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Asset Information</h3>
+              <h3 className="text-lg font-medium text-[#111] mb-4">Asset Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Asset Tag</label>
-                  <p className="mt-1 text-sm text-gray-900">{currentAsset.assetTag}</p>
+                  <label className="block text-sm font-medium text-[#333]">Asset Tag</label>
+                  <p className="mt-1 text-sm text-[#111]">{currentAsset.assetTag}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Name</label>
-                  <p className="mt-1 text-sm text-gray-900">{currentAsset.name}</p>
+                  <label className="block text-sm font-medium text-[#333]">Name</label>
+                  <p className="mt-1 text-sm text-[#111]">{currentAsset.name}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Category</label>
-                  <p className="mt-1 text-sm text-gray-900">{currentAsset.category?.name}</p>
+                  <label className="block text-sm font-medium text-[#333]">Category</label>
+                  <p className="mt-1 text-sm text-[#111]">{currentAsset.category?.name}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Status</label>
+                  <label className="block text-sm font-medium text-[#333]">Status</label>
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusColors[currentAsset.status]}`}>
                     {currentAsset.status}
                   </span>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Condition</label>
-                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${conditionColors[currentAsset.condition] || 'bg-gray-100 text-gray-800'}`}>
+                  <label className="block text-sm font-medium text-[#333]">Condition</label>
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${conditionColors[currentAsset.condition] || 'bg-gray-100 text-[#111]'}`}>
                     {currentAsset.condition || 'Not specified'}
                   </span>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Serial Number</label>
-                  <p className="mt-1 text-sm text-gray-900">{currentAsset.serialNumber || 'N/A'}</p>
+                  <label className="block text-sm font-medium text-[#333]">Serial Number</label>
+                  <p className="mt-1 text-sm text-[#111]">{currentAsset.serialNumber || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Model</label>
-                  <p className="mt-1 text-sm text-gray-900">{currentAsset.model || 'N/A'}</p>
+                  <label className="block text-sm font-medium text-[#333]">Model</label>
+                  <p className="mt-1 text-sm text-[#111]">{currentAsset.model || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500">Brand</label>
-                  <p className="mt-1 text-sm text-gray-900">{currentAsset.brand || 'N/A'}</p>
+                  <label className="block text-sm font-medium text-[#333]">Brand</label>
+                  <p className="mt-1 text-sm text-[#111]">{currentAsset.brand || 'N/A'}</p>
                 </div>
               </div>
               
               {currentAsset.description && (
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-500">Description</label>
-                  <p className="mt-1 text-sm text-gray-900">{currentAsset.description}</p>
+                  <label className="block text-sm font-medium text-[#333]">Description</label>
+                  <p className="mt-1 text-sm text-[#111]">{currentAsset.description}</p>
                 </div>
               )}
             </div>
@@ -472,30 +487,30 @@ export default function AssetDetailPage() {
             {/* Quick Stats */}
             <div className="space-y-6">
               {/* Purchase Info */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Purchase Information</h3>
+              <div className="glass-card shadow p-6">
+                <h3 className="text-lg font-medium text-[#111] mb-4">Purchase Information</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Purchase Date</label>
-                    <p className="mt-1 text-sm text-gray-900">
+                    <label className="block text-sm font-medium text-[#333]">Purchase Date</label>
+                    <p className="mt-1 text-sm text-[#111]">
                       {currentAsset.purchaseDate ? new Date(currentAsset.purchaseDate).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Purchase Price</label>
-                    <p className="mt-1 text-sm text-gray-900">
+                    <label className="block text-sm font-medium text-[#333]">Purchase Price</label>
+                    <p className="mt-1 text-sm text-[#111]">
                       {currentAsset.purchasePrice ? `$${parseFloat(currentAsset.purchasePrice).toLocaleString()}` : 'N/A'}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Current Value</label>
-                    <p className="mt-1 text-sm text-gray-900">
+                    <label className="block text-sm font-medium text-[#333]">Current Value</label>
+                    <p className="mt-1 text-sm text-[#111]">
                       {currentAsset.currentValue ? `$${parseFloat(currentAsset.currentValue).toLocaleString()}` : 'N/A'}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Warranty Expiry</label>
-                    <p className="mt-1 text-sm text-gray-900">
+                    <label className="block text-sm font-medium text-[#333]">Warranty Expiry</label>
+                    <p className="mt-1 text-sm text-[#111]">
                       {currentAsset.warrantyExpiry ? new Date(currentAsset.warrantyExpiry).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
@@ -503,26 +518,26 @@ export default function AssetDetailPage() {
               </div>
 
               {/* Location Info */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Location & Assignment</h3>
+              <div className="glass-card shadow p-6">
+                <h3 className="text-lg font-medium text-[#111] mb-4">Location & Assignment</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Location</label>
-                    <p className="mt-1 text-sm text-gray-900">{currentAsset.location?.name || 'Not assigned'}</p>
+                    <label className="block text-sm font-medium text-[#333]">Location</label>
+                    <p className="mt-1 text-sm text-[#111]">{currentAsset.location?.name || 'Not assigned'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Department</label>
-                    <p className="mt-1 text-sm text-gray-900">{currentAsset.department?.name || 'Not assigned'}</p>
+                    <label className="block text-sm font-medium text-[#333]">Department</label>
+                    <p className="mt-1 text-sm text-[#111]">{currentAsset.department?.name || 'Not assigned'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Assigned To</label>
-                    <p className="mt-1 text-sm text-gray-900">
+                    <label className="block text-sm font-medium text-[#333]">Assigned To</label>
+                    <p className="mt-1 text-sm text-[#111]">
                       {currentAsset.assignedTo ? `${currentAsset.assignedTo.firstName} ${currentAsset.assignedTo.lastName}` : 'Not assigned'}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Vendor</label>
-                    <p className="mt-1 text-sm text-gray-900">{currentAsset.vendor?.name || 'Not specified'}</p>
+                    <label className="block text-sm font-medium text-[#333]">Vendor</label>
+                    <p className="mt-1 text-sm text-[#111]">{currentAsset.vendor?.name || 'Not specified'}</p>
                   </div>
                 </div>
               </div>
@@ -531,16 +546,16 @@ export default function AssetDetailPage() {
         )}
 
         {activeTab === 'components' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="glass-card shadow">
+            <div className="px-6 py-4 border-b border-black/10">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">Asset Components</h3>
+                <h3 className="text-lg font-medium text-[#111]">Asset Components</h3>
                 <button
                   onClick={() => {
                     resetComponentForm()
                     setShowComponentModal(true)
                   }}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Component
@@ -551,27 +566,27 @@ export default function AssetDetailPage() {
             <div className="p-6">
               {componentsLoading ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black/10 mx-auto"></div>
                 </div>
               ) : components.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {components.map((component) => (
-                    <div key={component.id} className="border border-gray-200 rounded-lg p-4">
+                    <div key={component.id} className="border border-black/10 rounded-lg p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{component.name}</h4>
+                          <h4 className="font-medium text-[#111]">{component.name}</h4>
                           {component.description && (
-                            <p className="text-sm text-gray-600 mt-1">{component.description}</p>
+                            <p className="text-sm text-[#333] mt-1">{component.description}</p>
                           )}
                           <div className="mt-2 space-y-1">
                             {component.partNumber && (
-                              <p className="text-xs text-gray-500">Part #: {component.partNumber}</p>
+                              <p className="text-xs text-[#333]">Part #: {component.partNumber}</p>
                             )}
                             {component.serialNumber && (
-                              <p className="text-xs text-gray-500">Serial: {component.serialNumber}</p>
+                              <p className="text-xs text-[#333]">Serial: {component.serialNumber}</p>
                             )}
                             {component.brand && (
-                              <p className="text-xs text-gray-500">Brand: {component.brand}</p>
+                              <p className="text-xs text-[#333]">Brand: {component.brand}</p>
                             )}
                             <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${componentStatusColors[component.status]}`}>
                               {component.status}
@@ -580,7 +595,7 @@ export default function AssetDetailPage() {
                               <div className="mt-2">
                                 <button
                                   onClick={() => router.push(`/master/spare-parts/${component.sourcePart.id}`)}
-                                  className="text-sm text-purple-600 hover:underline"
+                                  className="text-sm text-[#111] hover:underline"
                                 >
                                   View Source Part: {component.sourcePart.partNumber || component.sourcePart.name}
                                 </button>
@@ -591,14 +606,14 @@ export default function AssetDetailPage() {
                         <div className="flex items-center space-x-1 ml-2">
                           <button
                             onClick={() => setEditingComponent(component)}
-                            className="p-1 text-gray-400 hover:text-blue-600"
+                            className="p-1 text-[#333] hover:scale-110 transition-transform"
                           >
                             <Edit className="h-4 w-4" />
                           </button>
                           {component.isTransferable && (
                             <button
                               onClick={() => handleTransferModalOpen(component)}
-                              className="p-1 text-gray-400 hover:text-blue-600"
+                              className="p-1 text-[#333] hover:scale-110 transition-transform"
                             >
                               <ArrowRightLeft className="h-4 w-4" />
                             </button>
@@ -608,13 +623,13 @@ export default function AssetDetailPage() {
                               setSelectedComponent(component)
                               setShowMaintenanceModal(true)
                             }}
-                            className="p-1 text-gray-400 hover:text-green-600"
+                            className="p-1 text-[#333] hover:scale-110 transition-transform"
                           >
                             <Wrench className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleComponentDelete(component)}
-                            className="p-1 text-gray-400 hover:text-red-600"
+                            className="p-1 text-[#333] hover:scale-110 transition-transform"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -625,9 +640,9 @@ export default function AssetDetailPage() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <Package className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No components</h3>
-                  <p className="mt-1 text-sm text-gray-500">Get started by adding a component to this asset.</p>
+                  <Package className="mx-auto h-12 w-12 text-[#333]" />
+                  <h3 className="mt-2 text-sm font-medium text-[#111]">No components</h3>
+                  <p className="mt-1 text-sm text-[#333]">Get started by adding a component to this asset.</p>
                 </div>
               )}
             </div>
@@ -635,10 +650,10 @@ export default function AssetDetailPage() {
         )}
 
         {activeTab === 'software' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="glass-card shadow">
+            <div className="px-6 py-4 border-b border-black/10">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">Installed Software</h3>
+                <h3 className="text-lg font-medium text-[#111]">Installed Software</h3>
                 <button
                   onClick={() => {
                     setInstallationForm({
@@ -650,7 +665,7 @@ export default function AssetDetailPage() {
                     })
                     setShowSoftwareModal(true)
                   }}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Install Software
@@ -661,45 +676,45 @@ export default function AssetDetailPage() {
             <div className="p-6">
               {softwareLoading ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black/10 mx-auto"></div>
                 </div>
               ) : installedSoftware.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {installedSoftware.map((installation) => (
-                    <div key={installation.id} className="border border-gray-200 rounded-lg p-4">
+                    <div key={installation.id} className="border border-black/10 rounded-lg p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{installation.softwareAsset.name}</h4>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <h4 className="font-medium text-[#111]">{installation.softwareAsset.name}</h4>
+                          <p className="text-sm text-[#333] mt-1">
                             Version: {installation.version || installation.softwareAsset.version || 'Not specified'}
                           </p>
                           <div className="mt-2 space-y-1">
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-[#333]">
                               Type: {installation.softwareAsset.softwareType || 'Not specified'}
                             </p>
                             {installation.softwareAsset.publisher && (
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-[#333]">
                                 Publisher: {installation.softwareAsset.publisher}
                               </p>
                             )}
                             {installation.installationPath && (
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-[#333]">
                                 Path: {installation.installationPath}
                               </p>
                             )}
                             {installation.license && (
                               <div className="flex items-center space-x-1">
-                                <span className="inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                <span className="inline-flex px-2 py-1 text-xs font-medium bg-white/60 text-[#111] rounded-full">
                                   Licensed
                                 </span>
                                 {installation.license.expiryDate && (
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-[#333]">
                                     Expires: {new Date(installation.license.expiryDate).toLocaleDateString()}
                                   </span>
                                 )}
                               </div>
                             )}
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-[#333]">
                               Installed: {new Date(installation.installationDate).toLocaleDateString()}
                             </p>
                           </div>
@@ -717,7 +732,7 @@ export default function AssetDetailPage() {
                               })
                               setShowUninstallModal(true)
                             }}
-                            className="p-1 text-gray-400 hover:text-red-600"
+                            className="p-1 text-[#333] hover:scale-110 transition-transform"
                             title="Uninstall Software"
                           >
                             <X className="h-4 w-4" />
@@ -729,9 +744,9 @@ export default function AssetDetailPage() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <Monitor className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No software installed</h3>
-                  <p className="mt-1 text-sm text-gray-500">Get started by installing software on this asset.</p>
+                  <Monitor className="mx-auto h-12 w-12 text-[#333]" />
+                  <h3 className="mt-2 text-sm font-medium text-[#111]">No software installed</h3>
+                  <p className="mt-1 text-sm text-[#333]">Get started by installing software on this asset.</p>
                 </div>
               )}
             </div>
@@ -739,16 +754,16 @@ export default function AssetDetailPage() {
         )}
 
         {activeTab === 'specifications' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="glass-card shadow">
+            <div className="px-6 py-4 border-b border-black/10">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">Asset Specifications</h3>
+                <h3 className="text-lg font-medium text-[#111]">Asset Specifications</h3>
                 <button
                   onClick={() => {
                     resetSpecForm()
                     setShowSpecModal(true)
                   }}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Specification
@@ -759,40 +774,40 @@ export default function AssetDetailPage() {
             <div className="p-6">
               {specsLoading ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black/10 mx-auto"></div>
                 </div>
               ) : Object.keys(groupedSpecs).length > 0 ? (
                 <div className="space-y-6">
                   {Object.entries(groupedSpecs).map(([category, specs]) => (
                     <div key={category}>
-                      <h4 className="font-medium text-gray-900 mb-3">{category}</h4>
+                      <h4 className="font-medium text-[#111] mb-3">{category}</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {specs.map((spec) => (
-                          <div key={spec.id} className="border border-gray-200 rounded-lg p-4">
+                          <div key={spec.id} className="border border-black/10 rounded-lg p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center">
-                                  <h5 className="font-medium text-gray-900">{spec.name}</h5>
+                                  <h5 className="font-medium text-[#111]">{spec.name}</h5>
                                   {spec.isCore && (
-                                    <span className="ml-2 inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                    <span className="ml-2 inline-flex px-2 py-1 text-xs font-medium bg-white/60 text-[#111] rounded-full">
                                       Core
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-sm text-gray-600 mt-1">
-                                  {spec.value} {spec.unit && <span className="text-gray-400">{spec.unit}</span>}
+                                <p className="text-sm text-[#333] mt-1">
+                                  {spec.value} {spec.unit && <span className="text-[#333]">{spec.unit}</span>}
                                 </p>
                               </div>
                               <div className="flex items-center space-x-1 ml-2">
                                 <button
                                   onClick={() => setEditingSpecification(spec)}
-                                  className="p-1 text-gray-400 hover:text-blue-600"
+                                  className="p-1 text-[#333] hover:scale-110 transition-transform"
                                 >
                                   <Edit className="h-4 w-4" />
                                 </button>
                                 <button
                                   onClick={() => handleSpecDelete(spec)}
-                                  className="p-1 text-gray-400 hover:text-red-600"
+                                  className="p-1 text-[#333] hover:scale-110 transition-transform"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </button>
@@ -806,9 +821,9 @@ export default function AssetDetailPage() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <Settings className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No specifications</h3>
-                  <p className="mt-1 text-sm text-gray-500">Get started by adding specifications to this asset.</p>
+                  <Settings className="mx-auto h-12 w-12 text-[#333]" />
+                  <h3 className="mt-2 text-sm font-medium text-[#111]">No specifications</h3>
+                  <p className="mt-1 text-sm text-[#333]">Get started by adding specifications to this asset.</p>
                 </div>
               )}
             </div>
@@ -816,16 +831,16 @@ export default function AssetDetailPage() {
         )}
 
         {activeTab === 'maintenance' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="glass-card shadow">
+            <div className="px-6 py-4 border-b border-black/10">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">Asset Maintenance Records</h3>
+                <h3 className="text-lg font-medium text-[#111]">Asset Maintenance Records</h3>
                 <button
                   onClick={() => {
                     setSelectedComponent({ id: 'asset', name: currentAsset.name })
                     setShowMaintenanceModal(true)
                   }}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Maintenance
@@ -836,18 +851,18 @@ export default function AssetDetailPage() {
             <div className="p-6">
               {/* Mock maintenance records for now */}
               <div className="space-y-4">
-                <div className="border border-gray-200 rounded-lg p-4">
+                <div className="border border-black/10 rounded-lg p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center">
-                        <Wrench className="h-5 w-5 text-green-600 mr-2" />
-                        <h4 className="font-medium text-gray-900">Preventive Maintenance</h4>
-                        <span className="ml-2 inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                        <Wrench className="h-5 w-5 text-[#111] mr-2" />
+                        <h4 className="font-medium text-[#111]">Preventive Maintenance</h4>
+                        <span className="ml-2 inline-flex px-2 py-1 text-xs font-medium bg-white/60 text-[#111] rounded-full">
                           Completed
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 mt-1">Regular system cleaning and component inspection</p>
-                      <div className="mt-2 text-xs text-gray-500">
+                      <p className="text-sm text-[#333] mt-1">Regular system cleaning and component inspection</p>
+                      <div className="mt-2 text-xs text-[#333]">
                         <span>Performed by: John Technician</span> • 
                         <span className="ml-1">Date: {new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span> • 
                         <span className="ml-1">Cost: $150.00</span>
@@ -856,18 +871,18 @@ export default function AssetDetailPage() {
                   </div>
                 </div>
 
-                <div className="border border-gray-200 rounded-lg p-4">
+                <div className="border border-black/10 rounded-lg p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center">
-                        <Wrench className="h-5 w-5 text-yellow-600 mr-2" />
-                        <h4 className="font-medium text-gray-900">Hardware Upgrade</h4>
-                        <span className="ml-2 inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                        <Wrench className="h-5 w-5 text-[#111] mr-2" />
+                        <h4 className="font-medium text-[#111]">Hardware Upgrade</h4>
+                        <span className="ml-2 inline-flex px-2 py-1 text-xs font-medium bg-white/60 text-[#111] rounded-full">
                           Scheduled
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 mt-1">RAM upgrade from 16GB to 32GB</p>
-                      <div className="mt-2 text-xs text-gray-500">
+                      <p className="text-sm text-[#333] mt-1">RAM upgrade from 16GB to 32GB</p>
+                      <div className="mt-2 text-xs text-[#333]">
                         <span>Assigned to: Jane Smith</span> • 
                         <span className="ml-1">Scheduled: {new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span> • 
                         <span className="ml-1">Est. Cost: $280.00</span>
@@ -879,18 +894,18 @@ export default function AssetDetailPage() {
 
               {/* Empty state if no maintenance records */}
               <div className="text-center py-8 hidden">
-                <Wrench className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No maintenance records</h3>
-                <p className="mt-1 text-sm text-gray-500">Get started by adding a maintenance record for this asset.</p>
+                <Wrench className="mx-auto h-12 w-12 text-[#333]" />
+                <h3 className="mt-2 text-sm font-medium text-[#111]">No maintenance records</h3>
+                <p className="mt-1 text-sm text-[#333]">Get started by adding a maintenance record for this asset.</p>
               </div>
             </div>
           </div>
         )}
 
         {activeTab === 'history' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Asset History & Audit Trail</h3>
+          <div className="glass-card shadow">
+            <div className="px-6 py-4 border-b border-black/10">
+              <h3 className="text-lg font-medium text-[#111]">Asset History & Audit Trail</h3>
             </div>
 
             <div className="p-6">
@@ -903,18 +918,18 @@ export default function AssetDetailPage() {
                         <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
                         <div className="relative flex space-x-3">
                           <div>
-                            <span className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center ring-8 ring-white">
+                            <span className="h-8 w-8 rounded-full glass-button flex items-center justify-center ring-8 ring-white">
                               <CheckCircle2 className="h-5 w-5 text-white" />
                             </span>
                           </div>
                           <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
                             <div>
-                              <p className="text-sm text-gray-500">
-                                Component <span className="font-medium text-gray-900">RAM Module DDR4-3200</span> added to asset
+                              <p className="text-sm text-[#333]">
+                                Component <span className="font-medium text-[#111]">RAM Module DDR4-3200</span> added to asset
                               </p>
-                              <p className="text-xs text-gray-400 mt-1">Added by System Admin</p>
+                              <p className="text-xs text-[#333] mt-1">Added by System Admin</p>
                             </div>
-                            <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                            <div className="text-right text-sm whitespace-nowrap text-[#333]">
                               <time>{new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString()}</time>
                             </div>
                           </div>
@@ -927,18 +942,18 @@ export default function AssetDetailPage() {
                         <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
                         <div className="relative flex space-x-3">
                           <div>
-                            <span className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center ring-8 ring-white">
+                            <span className="h-8 w-8 rounded-full glass-button flex items-center justify-center ring-8 ring-white">
                               <ArrowRightLeft className="h-4 w-4 text-white" />
                             </span>
                           </div>
                           <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
                             <div>
-                              <p className="text-sm text-gray-500">
-                                Asset transferred from <span className="font-medium text-gray-900">IT Department</span> to <span className="font-medium text-gray-900">Finance Department</span>
+                              <p className="text-sm text-[#333]">
+                                Asset transferred from <span className="font-medium text-[#111]">IT Department</span> to <span className="font-medium text-[#111]">Finance Department</span>
                               </p>
-                              <p className="text-xs text-gray-400 mt-1">Transferred by John Manager</p>
+                              <p className="text-xs text-[#333] mt-1">Transferred by John Manager</p>
                             </div>
-                            <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                            <div className="text-right text-sm whitespace-nowrap text-[#333]">
                               <time>{new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</time>
                             </div>
                           </div>
@@ -951,18 +966,18 @@ export default function AssetDetailPage() {
                         <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
                         <div className="relative flex space-x-3">
                           <div>
-                            <span className="h-8 w-8 rounded-full bg-yellow-500 flex items-center justify-center ring-8 ring-white">
+                            <span className="h-8 w-8 rounded-full glass-button flex items-center justify-center ring-8 ring-white">
                               <Wrench className="h-4 w-4 text-white" />
                             </span>
                           </div>
                           <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
                             <div>
-                              <p className="text-sm text-gray-500">
-                                Maintenance completed: <span className="font-medium text-gray-900">System optimization and cleaning</span>
+                              <p className="text-sm text-[#333]">
+                                Maintenance completed: <span className="font-medium text-[#111]">System optimization and cleaning</span>
                               </p>
-                              <p className="text-xs text-gray-400 mt-1">Performed by Technical Team</p>
+                              <p className="text-xs text-[#333] mt-1">Performed by Technical Team</p>
                             </div>
-                            <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                            <div className="text-right text-sm whitespace-nowrap text-[#333]">
                               <time>{new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</time>
                             </div>
                           </div>
@@ -975,18 +990,18 @@ export default function AssetDetailPage() {
                         <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
                         <div className="relative flex space-x-3">
                           <div>
-                            <span className="h-8 w-8 rounded-full bg-purple-500 flex items-center justify-center ring-8 ring-white">
+                            <span className="h-8 w-8 rounded-full glass-button flex items-center justify-center ring-8 ring-white">
                               <User className="h-4 w-4 text-white" />
                             </span>
                           </div>
                           <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
                             <div>
-                              <p className="text-sm text-gray-500">
-                                Asset assigned to <span className="font-medium text-gray-900">Sarah Johnson</span>
+                              <p className="text-sm text-[#333]">
+                                Asset assigned to <span className="font-medium text-[#111]">Sarah Johnson</span>
                               </p>
-                              <p className="text-xs text-gray-400 mt-1">Assigned by Asset Administrator</p>
+                              <p className="text-xs text-[#333] mt-1">Assigned by Asset Administrator</p>
                             </div>
-                            <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                            <div className="text-right text-sm whitespace-nowrap text-[#333]">
                               <time>{new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toLocaleDateString()}</time>
                             </div>
                           </div>
@@ -1004,12 +1019,12 @@ export default function AssetDetailPage() {
                           </div>
                           <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
                             <div>
-                              <p className="text-sm text-gray-500">
-                                Asset <span className="font-medium text-gray-900">{currentAsset.name}</span> created in the system
+                              <p className="text-sm text-[#333]">
+                                Asset <span className="font-medium text-[#111]">{currentAsset.name}</span> created in the system
                               </p>
-                              <p className="text-xs text-gray-400 mt-1">Created by System Administrator</p>
+                              <p className="text-xs text-[#333] mt-1">Created by System Administrator</p>
                             </div>
-                            <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                            <div className="text-right text-sm whitespace-nowrap text-[#333]">
                               <time>{currentAsset.createdAt ? new Date(currentAsset.createdAt).toLocaleDateString() : 'N/A'}</time>
                             </div>
                           </div>
@@ -1022,9 +1037,9 @@ export default function AssetDetailPage() {
 
               {/* Empty state if no history */}
               <div className="text-center py-8 hidden">
-                <History className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No history available</h3>
-                <p className="mt-1 text-sm text-gray-500">Asset history will appear here as actions are performed.</p>
+                <History className="mx-auto h-12 w-12 text-[#333]" />
+                <h3 className="mt-2 text-sm font-medium text-[#111]">No history available</h3>
+                <p className="mt-1 text-sm text-[#333]">Asset history will appear here as actions are performed.</p>
               </div>
             </div>
           </div>
@@ -1032,10 +1047,10 @@ export default function AssetDetailPage() {
 
         {/* Component Modal */}
         {showComponentModal && (
-          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-card shadow-2xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">
                   {editingComponent ? 'Edit Component' : 'Add New Component'}
                 </h3>
               </div>
@@ -1043,7 +1058,7 @@ export default function AssetDetailPage() {
               <form onSubmit={handleComponentSubmit} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Component Name *
                     </label>
                     <input
@@ -1052,13 +1067,13 @@ export default function AssetDetailPage() {
                       value={componentForm.name}
                       onChange={handleComponentInputChange}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="e.g., RAM Module, CPU, Hard Drive"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Part Number
                     </label>
                     <input
@@ -1066,13 +1081,13 @@ export default function AssetDetailPage() {
                       name="partNumber"
                       value={componentForm.partNumber}
                       onChange={handleComponentInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="Manufacturer part number"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Serial Number
                     </label>
                     <input
@@ -1080,13 +1095,13 @@ export default function AssetDetailPage() {
                       name="serialNumber"
                       value={componentForm.serialNumber}
                       onChange={handleComponentInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="Component serial number"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Brand
                     </label>
                     <input
@@ -1094,13 +1109,13 @@ export default function AssetDetailPage() {
                       name="brand"
                       value={componentForm.brand}
                       onChange={handleComponentInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="Component brand"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Model
                     </label>
                     <input
@@ -1108,13 +1123,13 @@ export default function AssetDetailPage() {
                       name="model"
                       value={componentForm.model}
                       onChange={handleComponentInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="Component model"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Purchase Date
                     </label>
                     <input
@@ -1122,12 +1137,12 @@ export default function AssetDetailPage() {
                       name="purchaseDate"
                       value={componentForm.purchaseDate}
                       onChange={handleComponentInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Purchase Price
                     </label>
                     <input
@@ -1136,13 +1151,13 @@ export default function AssetDetailPage() {
                       name="purchasePrice"
                       value={componentForm.purchasePrice}
                       onChange={handleComponentInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="0.00"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Warranty Expiry
                     </label>
                     <input
@@ -1150,13 +1165,13 @@ export default function AssetDetailPage() {
                       name="warrantyExpiry"
                       value={componentForm.warrantyExpiry}
                       onChange={handleComponentInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Description
                   </label>
                   <textarea
@@ -1164,7 +1179,7 @@ export default function AssetDetailPage() {
                     value={componentForm.description}
                     onChange={handleComponentInputChange}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     placeholder="Optional description"
                   />
                 </div>
@@ -1177,9 +1192,9 @@ export default function AssetDetailPage() {
                       name="isReplaceable"
                       checked={componentForm.isReplaceable}
                       onChange={handleComponentInputChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-[#111] focus:ring-black/20 border-black/10 rounded"
                     />
-                    <label htmlFor="isReplaceable" className="ml-2 block text-sm text-gray-900">
+                    <label htmlFor="isReplaceable" className="ml-2 block text-sm text-[#111]">
                       Component is replaceable
                     </label>
                   </div>
@@ -1191,16 +1206,16 @@ export default function AssetDetailPage() {
                       name="isTransferable"
                       checked={componentForm.isTransferable}
                       onChange={handleComponentInputChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-[#111] focus:ring-black/20 border-black/10 rounded"
                     />
-                    <label htmlFor="isTransferable" className="ml-2 block text-sm text-gray-900">
+                    <label htmlFor="isTransferable" className="ml-2 block text-sm text-[#111]">
                       Component is transferable
                     </label>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Notes
                   </label>
                   <textarea
@@ -1208,25 +1223,25 @@ export default function AssetDetailPage() {
                     value={componentForm.notes}
                     onChange={handleComponentInputChange}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     placeholder="Additional notes"
                   />
                 </div>
 
-                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-black/10">
                   <button
                     type="button"
                     onClick={() => {
                       resetComponentForm()
                       setShowComponentModal(false)
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 text-[#111] bg-gray-100 rounded-lg hover:bg-gray-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                   >
                     {editingComponent ? 'Update Component' : 'Add Component'}
                   </button>
@@ -1238,17 +1253,17 @@ export default function AssetDetailPage() {
 
         {/* Specification Modal */}
         {showSpecModal && (
-          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-card shadow-2xl max-w-lg w-full mx-4">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">
                   {editingSpecification ? 'Edit Specification' : 'Add New Specification'}
                 </h3>
               </div>
               
               <form onSubmit={handleSpecSubmit} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Specification Name *
                   </label>
                   <input
@@ -1257,13 +1272,13 @@ export default function AssetDetailPage() {
                     value={specForm.name}
                     onChange={handleSpecInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     placeholder="e.g., CPU, RAM, Storage"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Value *
                   </label>
                   <input
@@ -1272,14 +1287,14 @@ export default function AssetDetailPage() {
                     value={specForm.value}
                     onChange={handleSpecInputChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     placeholder="e.g., Intel i7-10700K, 16GB, 1TB SSD"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Unit
                     </label>
                     <input
@@ -1287,29 +1302,27 @@ export default function AssetDetailPage() {
                       name="unit"
                       value={specForm.unit}
                       onChange={handleSpecInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="e.g., GB, MHz, inches"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Category
                     </label>
                     <select
                       name="category"
                       value={specForm.category}
                       onChange={handleSpecInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     >
-                      <option value="Hardware">Hardware</option>
-                      <option value="Software">Software</option>
-                      <option value="Performance">Performance</option>
-                      <option value="Display">Display</option>
-                      <option value="Network">Network</option>
-                      <option value="Storage">Storage</option>
-                      <option value="Memory">Memory</option>
-                      <option value="General">General</option>
+                      <option value="">Select category</option>
+                      {specificationCategories.map((category) => (
+                        <option key={category.value} value={category.value}>
+                          {category.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -1321,27 +1334,27 @@ export default function AssetDetailPage() {
                     name="isCore"
                     checked={specForm.isCore}
                     onChange={handleSpecInputChange}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-[#111] focus:ring-black/20 border-black/10 rounded"
                   />
-                  <label htmlFor="isCore" className="ml-2 block text-sm text-gray-900">
+                  <label htmlFor="isCore" className="ml-2 block text-sm text-[#111]">
                     Core specification
                   </label>
                 </div>
 
-                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-black/10">
                   <button
                     type="button"
                     onClick={() => {
                       resetSpecForm()
                       setShowSpecModal(false)
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 text-[#111] bg-gray-100 rounded-lg hover:bg-gray-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                   >
                     {editingSpecification ? 'Update Specification' : 'Add Specification'}
                   </button>
@@ -1353,17 +1366,17 @@ export default function AssetDetailPage() {
 
         {/* Component Transfer Modal */}
         {showTransferModal && selectedComponent && (
-          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-card shadow-2xl max-w-lg w-full mx-4">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">
                   Transfer Component: {selectedComponent.name}
                 </h3>
               </div>
               
               <form onSubmit={handleComponentTransfer} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Target Asset *
                   </label>
                   <select
@@ -1371,32 +1384,32 @@ export default function AssetDetailPage() {
                     value={transferData.toAssetId}
                     onChange={(e) => setTransferData({...transferData, toAssetId: e.target.value})}
                     required
-                    disabled={componentsLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                    disabled={allAssetsLoading}
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30 disabled:opacity-50"
                   >
                     <option value="">
-                      {componentsLoading ? 'Loading compatible assets...' : 'Select target asset'}
+                      {allAssetsLoading ? 'Loading assets...' : 'Select target asset'}
                     </option>
-                    {compatibleAssets.map((asset) => (
+                    {allAssets.map((asset) => (
                       <option key={asset.id} value={asset.id}>
                         {asset.name} ({asset.assetTag})
                         {asset.category?.name && ` - ${asset.category.name}`}
                         {asset.location?.name && ` | ${asset.location.name}`}
                       </option>
                     ))}
-                    {compatibleAssets.length === 0 && !componentsLoading && (
-                      <option value="" disabled>No compatible assets found</option>
+                    {allAssets.length === 0 && !allAssetsLoading && (
+                      <option value="" disabled>No assets found</option>
                     )}
                   </select>
-                  {!componentsLoading && compatibleAssets.length === 0 && (
-                    <p className="mt-1 text-sm text-gray-500">
-                      No compatible assets found. Assets must be in the same category and have available status.
+                  {!allAssetsLoading && allAssets.length === 0 && (
+                    <p className="mt-1 text-sm text-[#333]">
+                      No assets found to transfer to.
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Transfer Reason *
                   </label>
                   <select
@@ -1404,19 +1417,19 @@ export default function AssetDetailPage() {
                     value={transferData.reason}
                     onChange={(e) => setTransferData({...transferData, reason: e.target.value})}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                   >
                     <option value="">Select reason</option>
-                    <option value="Upgrade">Upgrade</option>
-                    <option value="Replacement">Replacement</option>
-                    <option value="Repair">Repair</option>
-                    <option value="Reallocation">Reallocation</option>
-                    <option value="Maintenance">Maintenance</option>
+                    {transferReasons.map((reason) => (
+                      <option key={reason.value} value={reason.value}>
+                        {reason.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Transfer Notes
                   </label>
                   <textarea
@@ -1424,26 +1437,26 @@ export default function AssetDetailPage() {
                     value={transferData.notes}
                     onChange={(e) => setTransferData({...transferData, notes: e.target.value})}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     placeholder="Additional notes for the transfer"
                   />
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="bg-white/60 border border-black/10 rounded-lg p-3">
                   <div className="flex">
-                    <AlertTriangle className="h-5 w-5 text-yellow-400 mt-0.5" />
+                    <AlertTriangle className="h-5 w-5 text-[#111] mt-0.5" />
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-yellow-800">
+                      <h3 className="text-sm font-medium text-[#111]">
                         Transfer Warning
                       </h3>
-                      <div className="mt-2 text-sm text-yellow-700">
+                      <div className="mt-2 text-sm text-[#111]">
                         <p>This component will be removed from the current asset and added to the target asset. This action cannot be undone.</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-black/10">
                   <button
                     type="button"
                     onClick={() => {
@@ -1451,13 +1464,13 @@ export default function AssetDetailPage() {
                       setShowTransferModal(false)
                       setSelectedComponent(null)
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 text-[#111] bg-gray-100 rounded-lg hover:bg-gray-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                   >
                     Transfer Component
                   </button>
@@ -1469,17 +1482,17 @@ export default function AssetDetailPage() {
 
         {/* Component Maintenance Modal */}
         {showMaintenanceModal && selectedComponent && (
-          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-card shadow-2xl max-w-lg w-full mx-4">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">
                   Add Maintenance Record: {selectedComponent.name}
                 </h3>
               </div>
               
               <form onSubmit={handleComponentMaintenance} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Maintenance Type *
                   </label>
                   <select
@@ -1487,19 +1500,19 @@ export default function AssetDetailPage() {
                     value={maintenanceData.maintenanceType}
                     onChange={(e) => setMaintenanceData({...maintenanceData, maintenanceType: e.target.value})}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                   >
                     <option value="">Select maintenance type</option>
-                    <option value="PREVENTIVE">Preventive Maintenance</option>
-                    <option value="CORRECTIVE">Corrective Maintenance</option>
-                    <option value="EMERGENCY">Emergency Repair</option>
-                    <option value="UPGRADE">Upgrade</option>
-                    <option value="INSPECTION">Inspection</option>
+                    {maintenanceTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Description *
                   </label>
                   <textarea
@@ -1508,14 +1521,14 @@ export default function AssetDetailPage() {
                     onChange={(e) => setMaintenanceData({...maintenanceData, description: e.target.value})}
                     required
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     placeholder="Describe the maintenance performed"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Maintenance Date
                     </label>
                     <input
@@ -1523,12 +1536,12 @@ export default function AssetDetailPage() {
                       name="maintenanceDate"
                       value={maintenanceData.maintenanceDate}
                       onChange={(e) => setMaintenanceData({...maintenanceData, maintenanceDate: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Cost
                     </label>
                     <input
@@ -1537,14 +1550,14 @@ export default function AssetDetailPage() {
                       name="cost"
                       value={maintenanceData.cost}
                       onChange={(e) => setMaintenanceData({...maintenanceData, cost: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="0.00"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Additional Notes
                   </label>
                   <textarea
@@ -1552,26 +1565,26 @@ export default function AssetDetailPage() {
                     value={maintenanceData.notes}
                     onChange={(e) => setMaintenanceData({...maintenanceData, notes: e.target.value})}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     placeholder="Additional maintenance notes"
                   />
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="bg-white/60 border border-black/10 rounded-lg p-3">
                   <div className="flex">
-                    <Info className="h-5 w-5 text-blue-400 mt-0.5" />
+                    <Info className="h-5 w-5 text-[#111] mt-0.5" />
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-blue-800">
+                      <h3 className="text-sm font-medium text-[#111]">
                         Maintenance Record
                       </h3>
-                      <div className="mt-2 text-sm text-blue-700">
+                      <div className="mt-2 text-sm text-[#111]">
                         <p>This maintenance record will be added to the component&apos;s history for tracking and warranty purposes.</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-black/10">
                   <button
                     type="button"
                     onClick={() => {
@@ -1579,13 +1592,13 @@ export default function AssetDetailPage() {
                       setShowMaintenanceModal(false)
                       setSelectedComponent(null)
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 text-[#111] bg-gray-100 rounded-lg hover:bg-gray-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                   >
                     Add Maintenance Record
                   </button>
@@ -1597,15 +1610,15 @@ export default function AssetDetailPage() {
 
         {/* Software Installation Modal */}
         {showSoftwareModal && (
-          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Install Software</h3>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-card shadow-2xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">Install Software</h3>
               </div>
               
               <form onSubmit={handleInstallSoftware} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Software *
                   </label>
                   <select
@@ -1613,7 +1626,7 @@ export default function AssetDetailPage() {
                     value={installationForm.softwareAssetId}
                     onChange={(e) => setInstallationForm({...installationForm, softwareAssetId: e.target.value})}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                   >
                     <option value="">Select software to install</option>
                     {availableSoftware.map((software) => (
@@ -1623,7 +1636,7 @@ export default function AssetDetailPage() {
                     ))}
                   </select>
                   {availableSoftware.length === 0 && (
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-[#333]">
                       No software with available licenses found.
                     </p>
                   )}
@@ -1631,7 +1644,7 @@ export default function AssetDetailPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Version
                     </label>
                     <input
@@ -1639,13 +1652,13 @@ export default function AssetDetailPage() {
                       name="version"
                       value={installationForm.version}
                       onChange={(e) => setInstallationForm({...installationForm, version: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="Version (optional)"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Installation Path
                     </label>
                     <input
@@ -1653,14 +1666,14 @@ export default function AssetDetailPage() {
                       name="installationPath"
                       value={installationForm.installationPath}
                       onChange={(e) => setInstallationForm({...installationForm, installationPath: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="Installation path (optional)"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Installation Notes
                   </label>
                   <textarea
@@ -1668,26 +1681,26 @@ export default function AssetDetailPage() {
                     value={installationForm.notes}
                     onChange={(e) => setInstallationForm({...installationForm, notes: e.target.value})}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     placeholder="Optional installation notes"
                   />
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="bg-white/60 border border-black/10 rounded-lg p-3">
                   <div className="flex">
-                    <Info className="h-5 w-5 text-blue-400 mt-0.5" />
+                    <Info className="h-5 w-5 text-[#111] mt-0.5" />
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-blue-800">
+                      <h3 className="text-sm font-medium text-[#111]">
                         License Usage
                       </h3>
-                      <div className="mt-2 text-sm text-blue-700">
+                      <div className="mt-2 text-sm text-[#111]">
                         <p>Installing this software will consume one license. Make sure you have available licenses before proceeding.</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-black/10">
                   <button
                     type="button"
                     onClick={() => {
@@ -1700,14 +1713,14 @@ export default function AssetDetailPage() {
                       })
                       setShowSoftwareModal(false)
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 text-[#111] bg-gray-100 rounded-lg hover:bg-gray-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={!installationForm.softwareAssetId || availableSoftware.length === 0}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Install Software
                   </button>
@@ -1719,17 +1732,17 @@ export default function AssetDetailPage() {
 
         {/* Software Uninstall Modal */}
         {showUninstallModal && selectedInstallation && (
-          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-card shadow-2xl max-w-lg w-full mx-4">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">
                   Uninstall Software: {selectedInstallation.softwareAsset.name}
                 </h3>
               </div>
               
               <form onSubmit={handleUninstallSoftware} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Uninstall Reason/Notes
                   </label>
                   <textarea
@@ -1737,26 +1750,26 @@ export default function AssetDetailPage() {
                     value={installationForm.notes}
                     onChange={(e) => setInstallationForm({...installationForm, notes: e.target.value})}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     placeholder="Optional reason for uninstalling this software"
                   />
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="bg-white/60 border border-black/10 rounded-lg p-3">
                   <div className="flex">
-                    <AlertTriangle className="h-5 w-5 text-yellow-400 mt-0.5" />
+                    <AlertTriangle className="h-5 w-5 text-[#111] mt-0.5" />
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-yellow-800">
+                      <h3 className="text-sm font-medium text-[#111]">
                         Uninstall Warning
                       </h3>
-                      <div className="mt-2 text-sm text-yellow-700">
+                      <div className="mt-2 text-sm text-[#111]">
                         <p>This will remove the software from this asset and free up the license for other installations. This action cannot be undone.</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-black/10">
                   <button
                     type="button"
                     onClick={() => {
@@ -1770,13 +1783,13 @@ export default function AssetDetailPage() {
                         notes: ''
                       })
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 text-[#111] bg-gray-100 rounded-lg hover:bg-gray-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                   >
                     Uninstall Software
                   </button>

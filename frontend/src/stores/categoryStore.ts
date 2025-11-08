@@ -23,6 +23,10 @@ interface CategoryState {
   searchTerm: string
   showModal: boolean
   editingCategory: Category | null
+  // Pagination state
+  currentPage: number
+  pageSize: number
+  totalCategories: number
   formData: {
     name: string
     code: string
@@ -33,7 +37,7 @@ interface CategoryState {
 }
 
 interface CategoryActions {
-  fetchCategories: () => Promise<void>
+  fetchCategories: (params?: { page?: number; limit?: number; search?: string; status?: string }) => Promise<void>
   createCategory: (data: Partial<Category>) => Promise<void>
   updateCategory: (id: string, data: Partial<Category>) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
@@ -43,6 +47,8 @@ interface CategoryActions {
   setFormData: (data: Partial<CategoryState['formData']>) => void
   resetForm: () => void
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
+  setPage: (page: number) => void
+  setPageSize: (size: number) => void
   getFilteredCategories: () => Category[]
   getCategoryStats: () => Array<{
     title: string
@@ -69,13 +75,35 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
   searchTerm: '',
   showModal: false,
   editingCategory: null,
+  currentPage: 1,
+  pageSize: 20,
+  totalCategories: 0,
   formData: initialFormData,
 
-  fetchCategories: async () => {
+  fetchCategories: async (params) => {
     set({ loading: true, error: null })
     try {
-      const response = await categoryService.getAllCategories()
+      const { currentPage, pageSize, searchTerm } = get()
+      
+      // Build query params with pagination
+      const queryParams: Record<string, string> = {
+        page: (params?.page || currentPage).toString(),
+        limit: (params?.limit || pageSize).toString()
+      }
+      
+      // Add search filter if provided
+      if (params?.search || searchTerm) {
+        queryParams.search = params?.search || searchTerm
+      }
+      
+      // Add status filter if provided  
+      if (params?.status) {
+        queryParams.status = params.status
+      }
+      
+      const response = await categoryService.getAllCategories(queryParams)
       const categories = response.data?.categories || []
+      const pagination = response.data?.pagination || {}
       
       // Memastikan data kategori lengkap dengan parent dan children
       const processedCategories = categories.map((category: Partial<Category>) => ({
@@ -93,7 +121,12 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
         updatedAt: category.updatedAt || ''
       })) as Category[]
       
-      set({ categories: processedCategories, loading: false })
+      set({ 
+        categories: processedCategories,
+        totalCategories: pagination.total || 0,
+        currentPage: pagination.current || 1,
+        loading: false 
+      })
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to fetch categories', loading: false })
     }
@@ -161,6 +194,8 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
 
   setSearchTerm: (term) => set({ searchTerm: term }),
   setShowModal: (show) => set({ showModal: show }),
+  setPage: (page) => set({ currentPage: page }),
+  setPageSize: (size) => set({ pageSize: size }),
   
   setEditingCategory: (category) => {
     set({ editingCategory: category })

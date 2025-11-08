@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRequestStore, useAssetStore, useCategoryStore, useUserStore } from '@/stores'
+import { useRequestStore, useAssetStore, useCategoryStore, useUserStore, useEnumStore } from '@/stores'
 import { useToast } from '@/contexts/ToastContext'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import {
@@ -52,6 +52,13 @@ const RequestsPage = () => {
   const { assets, fetchAssets } = useAssetStore()
   const { categories, fetchCategories } = useCategoryStore()
   const { users, fetchUsers } = useUserStore()
+  const {
+    requestTypes,
+    requestStatuses,
+    priorityLevels,
+    loading: enumLoading,
+    initializeEnums
+  } = useEnumStore()
 
   const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -76,7 +83,8 @@ const RequestsPage = () => {
           fetchRequests(),
           fetchAssets(),
           fetchCategories(),
-          fetchUsers()
+          fetchUsers(),
+          initializeEnums()
         ])
       } catch (error) {
         console.error('Failed to load data:', error)
@@ -85,7 +93,7 @@ const RequestsPage = () => {
     }
     
     loadData()
-  }, [fetchRequests, fetchAssets, fetchCategories, fetchUsers, showError])
+  }, [fetchRequests, fetchAssets, fetchCategories, fetchUsers, initializeEnums, showError])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -166,30 +174,30 @@ const RequestsPage = () => {
   const getStatusBadgeColor = (status) => {
     switch (status) {
       case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800'
+        return 'bg-white/60 text-[#111]'
       case 'APPROVED':
-        return 'bg-green-100 text-green-800'
+        return 'bg-white/60 text-[#111]'
       case 'REJECTED':
-        return 'bg-red-100 text-red-800'
+        return 'bg-white/60 text-[#111]'
       case 'ALLOCATED':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-white/60 text-[#111]'
       case 'COMPLETED':
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-gray-100 text-[#111]'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-gray-100 text-[#111]'
     }
   }
 
   const getPriorityBadgeColor = (priority) => {
     switch (priority) {
       case 'HIGH':
-        return 'bg-red-100 text-red-800'
+        return 'bg-white/60 text-[#111]'
       case 'MEDIUM':
-        return 'bg-yellow-100 text-yellow-800'
+        return 'bg-white/60 text-[#111]'
       case 'LOW':
-        return 'bg-green-100 text-green-800'
+        return 'bg-white/60 text-[#111]'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-gray-100 text-[#111]'
     }
   }
 
@@ -198,10 +206,10 @@ const RequestsPage = () => {
 
     return (
       <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6 border-b border-gray-200">
+        <div className="glass-card max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b border-black/10">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-[#111]">
                 {editingRequest ? 'Edit Request' : 'New Request'}
               </h3>
               <button
@@ -209,7 +217,7 @@ const RequestsPage = () => {
                   setShowModal(false)
                   resetForm()
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-[#333] hover:text-[#333]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -219,7 +227,7 @@ const RequestsPage = () => {
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#111] mb-2">
                   Title *
                 </label>
                 <input
@@ -228,11 +236,11 @@ const RequestsPage = () => {
                   value={formData.title}
                   onChange={handleInputChange}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#111] mb-2">
                   Type *
                 </label>
                 <select
@@ -240,20 +248,20 @@ const RequestsPage = () => {
                   value={formData.type}
                   onChange={handleInputChange}
                   required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 >
                   <option value="">Select Type</option>
-                  <option value="ASSET_REQUEST">Asset Request</option>
-                  <option value="MAINTENANCE">Maintenance</option>
-                  <option value="REPAIR">Repair</option>
-                  <option value="REPLACEMENT">Replacement</option>
-                  <option value="UPGRADE">Upgrade</option>
+                  {requestTypes.map(type => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#111] mb-2">
                 Description
               </label>
               <textarea
@@ -261,35 +269,38 @@ const RequestsPage = () => {
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#111] mb-2">
                   Priority
                 </label>
                 <select
                   name="priority"
                   value={formData.priority}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
+                  <option value="">Select Priority</option>
+                  {priorityLevels.map(priority => (
+                    <option key={priority.value} value={priority.value}>
+                      {priority.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#111] mb-2">
                   Asset (if applicable)
                 </label>
                 <select
                   name="assetId"
                   value={formData.assetId}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 >
                   <option value="">Select Asset</option>
                   {Array.isArray(assets) && assets.map(asset => (
@@ -303,14 +314,14 @@ const RequestsPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#111] mb-2">
                   Category (if applicable)
                 </label>
                 <select
                   name="categoryId"
                   value={formData.categoryId}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 >
                   <option value="">Select Category</option>
                   {Array.isArray(categories) && categories.map(category => (
@@ -321,14 +332,14 @@ const RequestsPage = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#111] mb-2">
                   Assignee
                 </label>
                 <select
                   name="assigneeId"
                   value={formData.assigneeId}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 >
                   <option value="">Select Assignee</option>
                   {Array.isArray(users) && users.map(user => (
@@ -342,7 +353,7 @@ const RequestsPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#111] mb-2">
                   Due Date
                 </label>
                 <input
@@ -350,11 +361,11 @@ const RequestsPage = () => {
                   name="dueDate"
                   value={formData.dueDate}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#111] mb-2">
                   Estimated Cost
                 </label>
                 <input
@@ -363,13 +374,13 @@ const RequestsPage = () => {
                   value={formData.estimatedCost}
                   onChange={handleInputChange}
                   step="0.01"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#111] mb-2">
                 Notes
               </label>
               <textarea
@@ -377,7 +388,7 @@ const RequestsPage = () => {
                 value={formData.notes}
                 onChange={handleInputChange}
                 rows={2}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
               />
             </div>
 
@@ -388,14 +399,14 @@ const RequestsPage = () => {
                   setShowModal(false)
                   resetForm()
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-black/10 rounded-lg text-[#111] hover:bg-white/60"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50"
               >
                 {loading ? 'Saving...' : editingRequest ? 'Update Request' : 'Create Request'}
               </button>
@@ -411,25 +422,25 @@ const RequestsPage = () => {
 
     return (
       <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-md w-full">
+        <div className="glass-card max-w-md w-full">
           <div className="p-6">
             <div className="flex items-center mb-4">
-              <AlertTriangle className="h-6 w-6 text-red-600 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900">Delete Request</h3>
+              <AlertTriangle className="h-6 w-6 text-[#111] mr-3" />
+              <h3 className="text-lg font-semibold text-[#111]">Delete Request</h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-[#333] mb-6">
               Are you sure you want to delete &quot;{requestToDelete?.title}&quot;? This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-black/10 rounded-lg text-[#111] hover:bg-white/60"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
               >
                 Delete
               </button>
@@ -445,13 +456,13 @@ const RequestsPage = () => {
 
     return (
       <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6 border-b border-gray-200">
+        <div className="glass-card max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b border-black/10">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Request Details</h3>
+              <h3 className="text-lg font-semibold text-[#111]">Request Details</h3>
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-[#333] hover:text-[#333]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -461,12 +472,12 @@ const RequestsPage = () => {
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Title</label>
-                <p className="text-sm text-gray-900">{selectedRequest.title}</p>
+                <label className="block text-sm font-medium text-[#111]">Title</label>
+                <p className="text-sm text-[#111]">{selectedRequest.title}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Type</label>
-                <span className="inline-flex px-2 py-1 text-xs font-semibold bg-purple-100 text-purple-800 rounded-full">
+                <label className="block text-sm font-medium text-[#111]">Type</label>
+                <span className="inline-flex px-2 py-1 text-xs font-semibold bg-white/60 text-[#111] rounded-full">
                   {selectedRequest.type}
                 </span>
               </div>
@@ -474,20 +485,20 @@ const RequestsPage = () => {
 
             {selectedRequest.description && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <p className="text-sm text-gray-900">{selectedRequest.description}</p>
+                <label className="block text-sm font-medium text-[#111] mb-2">Description</label>
+                <p className="text-sm text-[#111]">{selectedRequest.description}</p>
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <label className="block text-sm font-medium text-[#111]">Status</label>
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(selectedRequest.status)}`}>
                   {selectedRequest.status}
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Priority</label>
+                <label className="block text-sm font-medium text-[#111]">Priority</label>
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityBadgeColor(selectedRequest.priority)}`}>
                   {selectedRequest.priority}
                 </span>
@@ -496,19 +507,19 @@ const RequestsPage = () => {
 
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Requester</label>
-                <p className="text-sm text-gray-900">{selectedRequest.requester?.name || 'Unknown'}</p>
+                <label className="block text-sm font-medium text-[#111]">Requester</label>
+                <p className="text-sm text-[#111]">{selectedRequest.requester?.name || 'Unknown'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Assignee</label>
-                <p className="text-sm text-gray-900">{selectedRequest.assignee?.name || 'Not assigned'}</p>
+                <label className="block text-sm font-medium text-[#111]">Assignee</label>
+                <p className="text-sm text-[#111]">{selectedRequest.assignee?.name || 'Not assigned'}</p>
               </div>
             </div>
 
             {selectedRequest.asset && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Related Asset</label>
-                <p className="text-sm text-gray-900">
+                <label className="block text-sm font-medium text-[#111]">Related Asset</label>
+                <p className="text-sm text-[#111]">
                   {selectedRequest.asset.name} ({selectedRequest.asset.assetTag})
                 </p>
               </div>
@@ -516,15 +527,15 @@ const RequestsPage = () => {
 
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Request Date</label>
-                <p className="text-sm text-gray-900">
+                <label className="block text-sm font-medium text-[#111]">Request Date</label>
+                <p className="text-sm text-[#111]">
                   {new Date(selectedRequest.requestDate).toLocaleDateString()}
                 </p>
               </div>
               {selectedRequest.dueDate && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Due Date</label>
-                  <p className="text-sm text-gray-900">
+                  <label className="block text-sm font-medium text-[#111]">Due Date</label>
+                  <p className="text-sm text-[#111]">
                     {new Date(selectedRequest.dueDate).toLocaleDateString()}
                   </p>
                 </div>
@@ -533,8 +544,8 @@ const RequestsPage = () => {
 
             {selectedRequest.estimatedCost && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Estimated Cost</label>
-                <p className="text-sm text-gray-900">
+                <label className="block text-sm font-medium text-[#111]">Estimated Cost</label>
+                <p className="text-sm text-[#111]">
                   ${selectedRequest.estimatedCost.toLocaleString()}
                 </p>
               </div>
@@ -542,8 +553,8 @@ const RequestsPage = () => {
 
             {selectedRequest.notes && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                <p className="text-sm text-gray-900">{selectedRequest.notes}</p>
+                <label className="block text-sm font-medium text-[#111] mb-2">Notes</label>
+                <p className="text-sm text-[#111]">{selectedRequest.notes}</p>
               </div>
             )}
 
@@ -554,7 +565,7 @@ const RequestsPage = () => {
                     handleApprove(selectedRequest.id)
                     setShowDetailModal(false)
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <CheckCircle className="h-4 w-4 mr-2 inline" />
                   Approve
@@ -564,7 +575,7 @@ const RequestsPage = () => {
                     handleReject(selectedRequest.id, 'Rejected from detail view')
                     setShowDetailModal(false)
                   }}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <XCircle className="h-4 w-4 mr-2 inline" />
                   Reject
@@ -583,8 +594,8 @@ const RequestsPage = () => {
       {/* Header */}
       <div className="glass-header p-6 rounded-lg flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Asset Requests</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-[#111]">Asset Requests</h1>
+          <p className="text-[#333]">
             Manage asset requests and allocations
           </p>
         </div>
@@ -621,14 +632,14 @@ const RequestsPage = () => {
           }[stat.icon] || FileText
 
           return (
-            <div key={index} className="glass-card p-6 hover:scale-105 transition-transform">
+            <div key={index} className="glass-card hover:scale-105 transition-transform">
               <div className="flex items-center">
-                <div className="gradient-overlay rounded-lg p-3">
-                  <IconComponent className="h-6 w-6 text-white" />
+                <div className="glass-button rounded-lg p-3">
+                  <IconComponent className="h-6 w-6 text-[#111]" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-800">
+                  <p className="text-sm font-medium text-[#333]">{stat.title}</p>
+                  <p className="text-2xl font-bold text-[#111]">
                     {stat.value.toLocaleString()}
                   </p>
                 </div>
@@ -642,73 +653,75 @@ const RequestsPage = () => {
 
       {/* Filters */}
       {showFilters && (
-        <div className="glass-card p-6">
+        <div className="glass-card">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#111] mb-2">
                 Search
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#333]" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search requests..."
-                  className="glass-input pl-10 w-full rounded-lg px-3 py-2 text-sm"
+                  className="glass-input pl-10 w-full rounded-lg px-3 py-2 text-sm text-[#111]"
                 />
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#111] mb-2">
                 Type
               </label>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="glass-input w-full rounded-lg px-3 py-2 text-sm"
+                className="glass-input w-full rounded-lg px-3 py-2 text-sm text-[#111]"
               >
                 <option value="">All Types</option>
-                <option value="ASSET_REQUEST">Asset Request</option>
-                <option value="MAINTENANCE">Maintenance</option>
-                <option value="REPAIR">Repair</option>
-                <option value="REPLACEMENT">Replacement</option>
-                <option value="UPGRADE">Upgrade</option>
+                {requestTypes.map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#111] mb-2">
                 Status
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="glass-input w-full rounded-lg px-3 py-2 text-sm text-[#111]"
               >
                 <option value="">All Status</option>
-                <option value="PENDING">Pending</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
-                <option value="ALLOCATED">Allocated</option>
-                <option value="COMPLETED">Completed</option>
+                {requestStatuses.map(status => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[#111] mb-2">
                 Priority
               </label>
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="glass-input w-full rounded-lg px-3 py-2 text-sm text-[#111]"
               >
                 <option value="">All Priorities</option>
-                <option value="HIGH">High</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="LOW">Low</option>
+                {priorityLevels.map(priority => (
+                  <option key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -716,38 +729,38 @@ const RequestsPage = () => {
       )}
 
       {/* Requests Table */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+      <div className="glass-card overflow-hidden">
+        <div className="glass-table overflow-x-auto rounded-xl">
+          <table className="min-w-full">
+            <thead className="bg-white/60">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
                   Request
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
                   Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
                   Requester
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
                   Priority
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-black/10">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-4 text-center text-[#111]">
                     <div className="flex items-center justify-center">
                       <FileText className="animate-spin h-5 w-5 mr-2" />
                       Loading requests...
@@ -756,27 +769,27 @@ const RequestsPage = () => {
                 </tr>
               ) : paginatedRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-4 text-center text-[#333]">
                     No requests found
                   </td>
                 </tr>
               ) : (
                 paginatedRequests.map((request) => (
-                  <tr key={request.id} className="hover:bg-gray-50">
+                  <tr key={request.id} className="hover:bg-white/40">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{request.title}</div>
-                        <div className="text-sm text-gray-500">{request.description?.substring(0, 50)}...</div>
+                        <div className="text-sm font-medium text-[#111]">{request.title}</div>
+                        <div className="text-sm text-[#333]">{request.description?.substring(0, 50)}...</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold bg-purple-100 text-purple-800 rounded-full">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold bg-white/60 text-[#111] rounded-full">
                         {request.type}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-900">
-                        <User className="h-4 w-4 mr-1 text-gray-400" />
+                      <div className="flex items-center text-sm text-[#111]">
+                        <User className="h-4 w-4 mr-1 text-[#333]" />
                         {request.requester?.name || 'Unknown'}
                       </div>
                     </td>
@@ -790,21 +803,21 @@ const RequestsPage = () => {
                         {request.priority}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#111]">
                       {new Date(request.requestDate).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleView(request)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-[#111] hover:scale-110 transition-transform"
                           title="View Details"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleEdit(request)}
-                          className="text-green-600 hover:text-green-900"
+                          className="text-[#111] hover:scale-110 transition-transform"
                           title="Edit Request"
                         >
                           <Edit className="h-4 w-4" />
@@ -813,14 +826,14 @@ const RequestsPage = () => {
                           <>
                             <button
                               onClick={() => handleApprove(request.id)}
-                              className="text-green-600 hover:text-green-900"
+                              className="text-[#111] hover:scale-110 transition-transform"
                               title="Approve Request"
                             >
                               <CheckCircle className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => handleReject(request.id)}
-                              className="text-red-600 hover:text-red-900"
+                              className="text-[#111] hover:scale-110 transition-transform"
                               title="Reject Request"
                             >
                               <XCircle className="h-4 w-4" />
@@ -829,7 +842,7 @@ const RequestsPage = () => {
                         )}
                         <button
                           onClick={() => handleDelete(request)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-[#111] hover:scale-110 transition-transform"
                           title="Delete Request"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -846,9 +859,9 @@ const RequestsPage = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 border border-gray-200 rounded-lg">
+        <div className="flex items-center justify-between bg-white px-4 py-3 border border-black/10 rounded-lg">
           <div className="flex items-center">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-[#111]">
               Showing{' '}
               <span className="font-medium">
                 {(currentPage - 1) * itemsPerPage + 1}
@@ -866,17 +879,17 @@ const RequestsPage = () => {
             <button
               onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-3 py-2 border border-black/10 rounded-lg text-sm font-medium text-[#111] bg-white hover:bg-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-[#111]">
               Page {currentPage} of {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-3 py-2 border border-black/10 rounded-lg text-sm font-medium text-[#111] bg-white hover:bg-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

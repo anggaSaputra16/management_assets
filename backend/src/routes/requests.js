@@ -208,6 +208,14 @@ router.get('/:id', authenticate, async (req, res, next) => {
             lastName: true,
             email: true
           }
+        },
+        editedByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
         }
       }
     });
@@ -372,6 +380,10 @@ router.put('/:id', authenticate, async (req, res, next) => {
       });
     }
 
+    // Add audit fields
+    value.editedBy = req.user.userId;
+    value.lastEditedAt = new Date();
+    
     // Update request
     const updatedRequest = await prisma.assetRequest.update({
       where: { id },

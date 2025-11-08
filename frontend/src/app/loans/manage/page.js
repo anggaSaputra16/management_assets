@@ -2,21 +2,22 @@
 
 import { useEffect, useState } from 'react'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
-import { useInventoryStore, useUserStore } from '@/stores'
+import { useInventoryStore, useEmployeeStore } from '@/stores'
 import { toast } from '@/hooks/useToast'
 
 export default function ManageLoansPage() {
   const { loans, loansLoading, fetchLoans, createLoan, returnLoan } = useInventoryStore()
   const { inventories, fetchInventories } = useInventoryStore()
-  const { users, fetchUsers } = useUserStore()
+  const { employees, fetchEmployees } = useEmployeeStore()
+  const [filterTerm, setFilterTerm] = useState('')
 
   const [showCreate, setShowCreate] = useState(false)
-  const [form, setForm] = useState({ inventoryId: '', borrowerId: '', responsibleId: '', purpose: '', quantity: 1, expectedReturnDate: '' })
+  const [form, setForm] = useState({ inventoryId: '', borrowerEmployeeId: '', responsibleEmployeeId: '', purpose: '', quantity: 1, expectedReturnDate: '' })
 
   useEffect(() => {
     fetchLoans()
     fetchInventories()
-    fetchUsers()
+    fetchEmployees()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -30,14 +31,14 @@ export default function ManageLoansPage() {
     try {
       await createLoan({
         inventoryId: form.inventoryId,
-        borrowerId: form.borrowerId,
-        responsibleId: form.responsibleId,
+        borrowerEmployeeId: form.borrowerEmployeeId,
+        responsibleEmployeeId: form.responsibleEmployeeId,
         purpose: form.purpose,
         quantity: Number(form.quantity || 1),
         expectedReturnDate: form.expectedReturnDate
       })
       toast.success('Loan created')
-      setForm({ inventoryId: '', borrowerId: '', responsibleId: '', purpose: '', quantity: 1, expectedReturnDate: '' })
+      setForm({ inventoryId: '', borrowerEmployeeId: '', responsibleEmployeeId: '', purpose: '', quantity: 1, expectedReturnDate: '' })
       setShowCreate(false)
     } catch (err) {
       console.error(err)
@@ -59,91 +60,134 @@ export default function ManageLoansPage() {
   return (
     <DashboardLayout title="Manage Loans">
       <div className="space-y-6">
-        <div className="glass-card p-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Manage Loans</h2>
-            <button onClick={() => setShowCreate((s) => !s)} className="bg-blue-600 text-white px-3 py-1 rounded">{showCreate ? 'Close' : 'Create Loan'}</button>
+        <div className="glass-card">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-[#111]">Manage Loans</h2>
+            <button onClick={() => setShowCreate((s) => !s)} className="glass-button px-4 py-2 rounded-lg text-[#111] hover:scale-105 transition-transform">
+              {showCreate ? 'Close' : 'Create Loan'}
+            </button>
           </div>
 
           {showCreate && (
-            <form onSubmit={handleCreate} className="mt-4 space-y-3">
+            <form onSubmit={handleCreate} className="mt-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium">Inventory</label>
-                <select name="inventoryId" value={form.inventoryId} onChange={handleChange} className="mt-1 block w-full border rounded p-2" required>
+                <label className="block text-sm font-medium text-[#111] mb-1">Inventory</label>
+                <select name="inventoryId" value={form.inventoryId} onChange={handleChange} className="glass-input w-full px-3 py-2 rounded-lg text-[#111]" required>
                   <option value="">Select inventory</option>
-                  {inventories.map((i) => (
-                    <option key={i.id} value={i.id}>{i.inventoryTag} — {i.asset?.name}</option>
+                  {inventories
+                    .filter((i) => !(i.loans && i.loans.some((l) => l.status === 'ACTIVE')))
+                    .map((i) => (
+                      <option key={i.id} value={i.id}>{i.inventoryTag} — {i.asset?.name}</option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#111] mb-1">Borrower (Employee)</label>
+                <select name="borrowerEmployeeId" value={form.borrowerEmployeeId} onChange={handleChange} className="glass-input w-full px-3 py-2 rounded-lg text-[#111]" required>
+                  <option value="">Select borrower employee</option>
+                  {employees.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.npk} - {e.firstName} {e.lastName} {e.position ? `(${e.position})` : ''}
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium">Borrower</label>
-                <select name="borrowerId" value={form.borrowerId} onChange={handleChange} className="mt-1 block w-full border rounded p-2" required>
-                  <option value="">Select borrower</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
+                <label className="block text-sm font-medium text-[#111] mb-1">Responsible (Employee)</label>
+                <select name="responsibleEmployeeId" value={form.responsibleEmployeeId} onChange={handleChange} className="glass-input w-full px-3 py-2 rounded-lg text-[#111]" required>
+                  <option value="">Select responsible employee</option>
+                  {employees.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.npk} - {e.firstName} {e.lastName} {e.position ? `(${e.position})` : ''}
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium">Responsible</label>
-                <select name="responsibleId" value={form.responsibleId} onChange={handleChange} className="mt-1 block w-full border rounded p-2" required>
-                  <option value="">Select responsible</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Purpose</label>
-                <input name="purpose" value={form.purpose} onChange={handleChange} className="mt-1 block w-full border rounded p-2" required />
+                <label className="block text-sm font-medium text-[#111] mb-1">Purpose</label>
+                <input name="purpose" value={form.purpose} onChange={handleChange} className="glass-input w-full px-3 py-2 rounded-lg text-[#111]" required />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium">Quantity</label>
-                  <input name="quantity" type="number" min="1" value={form.quantity} onChange={handleChange} className="mt-1 block w-full border rounded p-2" />
+                  <label className="block text-sm font-medium text-[#111] mb-1">Quantity</label>
+                  <input name="quantity" type="number" min="1" value={form.quantity} onChange={handleChange} className="glass-input w-full px-3 py-2 rounded-lg text-[#111]" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium">Expected Return</label>
-                  <input name="expectedReturnDate" type="date" value={form.expectedReturnDate} onChange={handleChange} className="mt-1 block w-full border rounded p-2" />
+                  <label className="block text-sm font-medium text-[#111] mb-1">Expected Return</label>
+                  <input name="expectedReturnDate" type="date" value={form.expectedReturnDate} onChange={handleChange} className="glass-input w-full px-3 py-2 rounded-lg text-[#111]" />
                 </div>
               </div>
               <div>
-                <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">Create Loan</button>
+                <button type="submit" className="glass-button px-6 py-2 rounded-lg text-[#111] hover:scale-105 transition-transform">Create Loan</button>
               </div>
             </form>
           )}
-
         </div>
 
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-semibold mb-3">Loans</h3>
+        <div className="glass-card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-[#111]">Loans</h3>
+            <div className="w-1/3">
+              <input
+                type="text"
+                placeholder="Search loans (loan#, inventory, borrower, requester, status...)"
+                value={filterTerm}
+                onChange={(e) => setFilterTerm(e.target.value)}
+                className="glass-input w-full px-3 py-2 rounded-lg text-[#111]"
+              />
+            </div>
+          </div>
           {loansLoading ? (
-            <div>Loading...</div>
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#111]"></div>
+            </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="glass-table overflow-x-auto rounded-xl">
               <table className="min-w-full">
-                <thead>
+                <thead className="bg-white/60">
                   <tr>
-                    <th>Loan#</th>
-                    <th>Inventory</th>
-                    <th>Borrower</th>
-                    <th>Quantity</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th className="px-4 py-3 text-left text-[#111] font-semibold">Loan#</th>
+                    <th className="px-4 py-3 text-left text-[#111] font-semibold">Inventory</th>
+                    <th className="px-4 py-3 text-left text-[#111] font-semibold">Borrower</th>
+                    <th className="px-4 py-3 text-left text-[#111] font-semibold">Requested By</th>
+                    <th className="px-4 py-3 text-left text-[#111] font-semibold">Expected Return</th>
+                    <th className="px-4 py-3 text-left text-[#111] font-semibold">Quantity</th>
+                    <th className="px-4 py-3 text-left text-[#111] font-semibold">Status</th>
+                    <th className="px-4 py-3 text-left text-[#111] font-semibold">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {loans.map((l) => (
-                    <tr key={l.id} className="hover:bg-gray-50">
-                      <td className="px-2 py-1">{l.loanNumber}</td>
-                      <td className="px-2 py-1">{l.inventory?.inventoryTag} — {l.inventory?.asset?.name}</td>
-                      <td className="px-2 py-1">{l.borrower?.firstName} {l.borrower?.lastName}</td>
-                      <td className="px-2 py-1">{l.quantity}</td>
-                      <td className="px-2 py-1">{l.status}</td>
-                      <td className="px-2 py-1">
+                <tbody className="divide-y divide-black/10">
+                  {(filterTerm ? loans.filter((l) => {
+                    const ft = filterTerm.toLowerCase()
+                    return (
+                      (l.loanNumber || '').toLowerCase().includes(ft) ||
+                      (l.inventory?.inventoryTag || '').toLowerCase().includes(ft) ||
+                      (l.inventory?.asset?.name || '').toLowerCase().includes(ft) ||
+                      (l.borrowerEmployee?.npk || '').toLowerCase().includes(ft) ||
+                      (l.borrowerEmployee?.firstName || '').toLowerCase().includes(ft) ||
+                      (l.borrowerEmployee?.lastName || '').toLowerCase().includes(ft) ||
+                      (l.requestedBy?.firstName || '').toLowerCase().includes(ft) ||
+                      (l.requestedBy?.lastName || '').toLowerCase().includes(ft) ||
+                      (l.requestedBy?.email || '').toLowerCase().includes(ft) ||
+                      (l.status || '').toLowerCase().includes(ft) ||
+                      (l.expectedReturnDate ? new Date(l.expectedReturnDate).toLocaleDateString().toLowerCase().includes(ft) : false)
+                    )
+                  }) : loans).map((l) => (
+                    <tr key={l.id} className="hover:bg-white/40">
+                      <td className="px-4 py-3 text-[#111]">{l.loanNumber}</td>
+                      <td className="px-4 py-3 text-[#111]">{l.inventory?.inventoryTag} — {l.inventory?.asset?.name}</td>
+                      <td className="px-4 py-3 text-[#111]">
+                        {l.borrowerEmployee ? `${l.borrowerEmployee.npk} - ${l.borrowerEmployee.firstName} ${l.borrowerEmployee.lastName}` : 'N/A'}
+                      </td>
+                      <td className="px-4 py-3 text-[#111]">
+                        {l.requestedBy ? `${l.requestedBy.firstName} ${l.requestedBy.lastName} ${l.requestedBy.email ? `(${l.requestedBy.email})` : ''}` : 'N/A'}
+                      </td>
+                      <td className="px-4 py-3 text-[#111]">{l.expectedReturnDate ? new Date(l.expectedReturnDate).toLocaleDateString() : '—'}</td>
+                      <td className="px-4 py-3 text-[#111]">{l.quantity}</td>
+                      <td className="px-4 py-3 text-[#111]">{l.status}</td>
+                      <td className="px-4 py-3">
                         {l.status === 'ACTIVE' && (
-                          <button onClick={() => handleReturn(l.id)} className="text-sm text-blue-600">Return</button>
+                          <button onClick={() => handleReturn(l.id)} className="glass-button px-3 py-1 rounded-lg text-[#111] hover:scale-105 transition-transform">Return</button>
                         )}
                       </td>
                     </tr>

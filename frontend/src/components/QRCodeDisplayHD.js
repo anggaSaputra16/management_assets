@@ -40,10 +40,10 @@ const QRCodeDisplayHD = ({ data, size = 300, showLabel = false, className = "" }
   if (!data) {
     return (
       <div 
-        className={`flex items-center justify-center bg-gray-100 border-2 border-dashed border-gray-300 ${className}`}
+        className={`flex items-center justify-center bg-white/60 border-2 border-dashed border-black/10 ${className}`}
         style={{ width: size, height: size }}
       >
-        <span className="text-gray-500 text-sm">No QR Data</span>
+        <span className="text-[#333] text-sm">No QR Data</span>
       </div>
     )
   }
@@ -52,7 +52,7 @@ const QRCodeDisplayHD = ({ data, size = 300, showLabel = false, className = "" }
     <div className={`inline-block ${className}`}>
       <canvas
         ref={canvasRef}
-        className="border border-gray-200 rounded-lg shadow-sm"
+        className="glass-input rounded-lg shadow-sm"
         style={{
           width: size,
           height: size,
@@ -64,7 +64,7 @@ const QRCodeDisplayHD = ({ data, size = 300, showLabel = false, className = "" }
       />
       {showLabel && data && (
         <div className="mt-2 text-center">
-          <div className="text-xs text-gray-600 font-mono break-all max-w-[300px]">
+          <div className="text-xs text-[#333] font-mono break-all max-w-[300px]">
             {typeof data === 'string' ? data : JSON.stringify(data, null, 2)}
           </div>
         </div>

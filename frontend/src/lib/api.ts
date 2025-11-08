@@ -8,7 +8,7 @@ export { API_BASE_URL }
 // Create axios instance
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Increased to 30s for heavy operations like decomposition
   headers: {
     'Content-Type': 'application/json',
   },
@@ -106,6 +106,10 @@ api.interceptors.response.use(
     // Handle server errors
     else if (error.response?.status >= 500) {
       toast.error('Server error. Please try again later.')
+    }
+    // Handle timeout errors
+    else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      toast.error('Request timeout. The operation took too long. Please try again.')
     }
     // Handle network errors
     else if (error.code === 'NETWORK_ERROR' || !error.response) {

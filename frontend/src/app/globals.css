@@ -4,10 +4,17 @@
   --background: #f4f6fb;
   /* stronger text color for better contrast */
   --foreground: #0f1724;
-  /* slightly more opaque glass to improve legibility on busy backgrounds */
-  --glass-bg: rgba(255, 255, 255, 0.6);
-  /* darker, subtle border to separate panels from background */
-  --glass-border: rgba(15, 23, 36, 0.06);
+  
+  /* Glass tokens - standardized */
+  --glass-bg: rgba(255, 255, 255, 0.45);
+  --glass-bg-strong: rgba(255, 255, 255, 0.65);
+  --glass-bg-muted: rgba(255, 255, 255, 0.30);
+  --glass-border: rgba(0, 0, 0, 0.10);
+  
+  /* Ink colors (default black text) */
+  --ink: #111111;
+  --ink-muted: #333333;
+  
   --primary: #3b82f6;
   --primary-light: #60a5fa;
   --accent: #8b5cf6;
@@ -23,28 +30,37 @@ body {
     radial-gradient(circle at 40% 40%, rgba(120, 219, 226, 0.15) 0%, transparent 50%),
     linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
   background-attachment: fixed;
-  color: var(--foreground);
+  color: var(--ink);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height: 100vh;
 }
 
-/* Glassmorphism utilities */
+/* Utility classes - standardized glassmorphism */
 .glass {
-  position: relative;
-  z-index: 10;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.15) 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 6px 30px rgba(0,0,0,0.12);
+  border-radius: 1rem;
 }
 
-.glass-dark {
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.2) 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+.glass-strong {
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 36px rgba(0,0,0,0.14);
+  border-radius: 1rem;
+}
+
+.glass-muted {
+  background: var(--glass-bg-muted);
+  backdrop-filter: blur(6px) saturate(1.2);
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+  border-radius: 1rem;
 }
 
 .glass-card {
@@ -57,6 +73,8 @@ body {
   border: 1px solid var(--glass-border);
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   border-radius: 16px;
+  /* Consistent inner spacing for card content */
+  padding: 1rem; /* 16px */
 }
 
 .glass-sidebar {

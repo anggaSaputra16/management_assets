@@ -182,12 +182,12 @@ const DepreciationPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <TrendingDown className="h-6 w-6 text-green-600" />
+            <div className="p-2 bg-white/60 rounded-lg">
+              <TrendingDown className="h-6 w-6 text-[#111]" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Asset Depreciation</h1>
-              <p className="text-gray-600">Manage asset depreciation schedules and calculations</p>
+              <h1 className="text-2xl font-bold text-[#111]">Asset Depreciation</h1>
+              <p className="text-[#333]">Manage asset depreciation schedules and calculations</p>
             </div>
           </div>
           <button
@@ -195,7 +195,7 @@ const DepreciationPage = () => {
               resetForm()
               setShowModal(true)
             }}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
           >
             <Plus className="h-4 w-4 mr-2" />
             New Depreciation
@@ -203,23 +203,23 @@ const DepreciationPage = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="glass-card shadow p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#333]" />
                 <input
                   type="text"
                   placeholder="Search depreciations..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pl-10 pr-4 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 />
               </div>
               <select
                 value={isActiveFilter}
                 onChange={(e) => setIsActiveFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
               >
                 <option value="">All Status</option>
                 <option value="true">Active</option>
@@ -228,7 +228,7 @@ const DepreciationPage = () => {
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center px-3 py-2 text-[#333] hover:text-[#111]"
             >
               <Filter className="h-4 w-4 mr-2" />
               Filters
@@ -237,47 +237,47 @@ const DepreciationPage = () => {
         </div>
 
         {/* Depreciations List */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="glass-card shadow">
           {loading ? (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-black/10"></div>
             </div>
           ) : depreciations.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-black/10">
+                <thead className="bg-white/60">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                       Asset
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                       Method
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                       Values
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                       Progress
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-[#333] uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-black/10">
                   {depreciations.map((depreciation) => (
-                    <tr key={depreciation.id} className="hover:bg-gray-50">
+                    <tr key={depreciation.id} className="hover:bg-white/60">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <Package className="h-4 w-4 text-gray-400 mr-2" />
+                          <Package className="h-4 w-4 text-[#333] mr-2" />
                           <div>
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-[#111]">
                               {depreciation.asset?.name}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-[#333]">
                               {depreciation.asset?.assetTag}
                             </div>
                           </div>
@@ -285,10 +285,10 @@ const DepreciationPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-[#111]">
                             {getMethodDisplay(depreciation.depreciationMethod)}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-[#333]">
                             {depreciation.usefulLife} years
                           </div>
                         </div>
@@ -296,14 +296,14 @@ const DepreciationPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="space-y-1">
                           <div className="flex items-center text-sm">
-                            <DollarSign className="h-3 w-3 text-gray-400 mr-1" />
-                            <span className="text-gray-500">Book:</span>
+                            <DollarSign className="h-3 w-3 text-[#333] mr-1" />
+                            <span className="text-[#333]">Book:</span>
                             <span className="ml-1 font-medium">
                               {formatCurrency(depreciation.currentBookValue)}
                             </span>
                           </div>
                           <div className="flex items-center text-sm">
-                            <span className="text-gray-500">Accumulated:</span>
+                            <span className="text-[#333]">Accumulated:</span>
                             <span className="ml-1 font-medium">
                               {formatCurrency(depreciation.accumulatedDepreciation)}
                             </span>
@@ -312,7 +312,7 @@ const DepreciationPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="space-y-1">
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-[#111]">
                             {depreciation.lastCalculatedDate ? 
                               new Date(depreciation.lastCalculatedDate).toLocaleDateString() : 
                               'Not calculated'
@@ -320,7 +320,7 @@ const DepreciationPage = () => {
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
-                              className="bg-green-600 h-2 rounded-full" 
+                              className="glass-button h-2 rounded-full" 
                               style={{
                                 width: `${Math.min(
                                   ((parseFloat(depreciation.accumulatedDepreciation) || 0) / 
@@ -334,7 +334,7 @@ const DepreciationPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          depreciation.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          depreciation.isActive ? 'bg-white/60 text-[#111]' : 'bg-gray-100 text-[#111]'
                         }`}>
                           {depreciation.isActive ? 'Active' : 'Inactive'}
                         </span>
@@ -343,25 +343,25 @@ const DepreciationPage = () => {
                         <div className="flex items-center justify-end space-x-2">
                           <button
                             onClick={() => setSelectedDepreciation(depreciation)}
-                            className="text-gray-400 hover:text-blue-600"
+                            className="text-[#333] hover:scale-110 transition-transform"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handlePreview(depreciation.id)}
-                            className="text-gray-400 hover:text-purple-600"
+                            className="text-[#333] hover:scale-110 transition-transform"
                           >
                             <BarChart3 className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleEdit(depreciation)}
-                            className="text-gray-400 hover:text-blue-600"
+                            className="text-[#333] hover:scale-110 transition-transform"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleCalculate(depreciation.id)}
-                            className="text-gray-400 hover:text-green-600"
+                            className="text-[#333] hover:scale-110 transition-transform"
                           >
                             <Calculator className="h-4 w-4" />
                           </button>
@@ -374,30 +374,30 @@ const DepreciationPage = () => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <TrendingDown className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No depreciations</h3>
-              <p className="mt-1 text-sm text-gray-500">Get started by creating a new asset depreciation.</p>
+              <TrendingDown className="mx-auto h-12 w-12 text-[#333]" />
+              <h3 className="mt-2 text-sm font-medium text-[#111]">No depreciations</h3>
+              <p className="mt-1 text-sm text-[#333]">Get started by creating a new asset depreciation.</p>
             </div>
           )}
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-black/10">
               <div className="flex-1 flex justify-between">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-4 py-2 border border-black/10 text-sm font-medium rounded-md text-[#111] bg-white hover:bg-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-[#111]">
                   Page {currentPage} of {totalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-4 py-2 border border-black/10 text-sm font-medium rounded-md text-[#111] bg-white hover:bg-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
@@ -408,10 +408,10 @@ const DepreciationPage = () => {
 
         {/* Depreciation Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-card shadow-2xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">
                   {editingDepreciation ? 'Edit Depreciation' : 'Create New Depreciation'}
                 </h3>
               </div>
@@ -419,14 +419,14 @@ const DepreciationPage = () => {
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Asset *
                     </label>
                     <select
                       value={formData.assetId}
                       onChange={(e) => setFormData({...formData, assetId: e.target.value})}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     >
                       <option value="">Select Asset</option>
                       {assets.map(asset => (
@@ -438,14 +438,14 @@ const DepreciationPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Depreciation Method *
                     </label>
                     <select
                       value={formData.depreciationMethod}
                       onChange={(e) => setFormData({...formData, depreciationMethod: e.target.value})}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     >
                       <option value="STRAIGHT_LINE">Straight Line</option>
                       <option value="DECLINING_BALANCE">Declining Balance</option>
@@ -454,7 +454,7 @@ const DepreciationPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Useful Life (Years) *
                     </label>
                     <input
@@ -463,12 +463,12 @@ const DepreciationPage = () => {
                       value={formData.usefulLife}
                       onChange={(e) => setFormData({...formData, usefulLife: parseInt(e.target.value)})}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Salvage Value (IDR)
                     </label>
                     <input
@@ -477,13 +477,13 @@ const DepreciationPage = () => {
                       step="0.01"
                       value={formData.salvageValue}
                       onChange={(e) => setFormData({...formData, salvageValue: parseFloat(e.target.value)})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     />
                   </div>
 
                   {formData.depreciationMethod === 'DECLINING_BALANCE' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-[#111] mb-1">
                         Depreciation Rate (0-1)
                       </label>
                       <input
@@ -493,40 +493,40 @@ const DepreciationPage = () => {
                         step="0.01"
                         value={formData.depreciationRate}
                         onChange={(e) => setFormData({...formData, depreciationRate: parseFloat(e.target.value)})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       />
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Notes
                   </label>
                   <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({...formData, notes: e.target.value})}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     placeholder="Additional notes about the depreciation schedule"
                   />
                 </div>
 
-                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-black/10">
                   <button
                     type="button"
                     onClick={() => {
                       resetForm()
                       setShowModal(false)
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 text-[#111] bg-gray-100 rounded-lg hover:bg-gray-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50"
                   >
                     {loading ? 'Saving...' : editingDepreciation ? 'Update Depreciation' : 'Create Depreciation'}
                   </button>
@@ -538,10 +538,10 @@ const DepreciationPage = () => {
 
         {/* Preview Modal */}
         {showPreview && previewData && (
-          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-card shadow-2xl max-w-lg w-full mx-4">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">
                   Depreciation Preview
                 </h3>
               </div>
@@ -549,47 +549,47 @@ const DepreciationPage = () => {
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Annual Depreciation</label>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <label className="block text-sm font-medium text-[#333]">Annual Depreciation</label>
+                    <p className="text-lg font-semibold text-[#111]">
                       {formatCurrency(previewData.annualDepreciation)}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Monthly Depreciation</label>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <label className="block text-sm font-medium text-[#333]">Monthly Depreciation</label>
+                    <p className="text-lg font-semibold text-[#111]">
                       {formatCurrency(previewData.monthlyDepreciation)}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Current Book Value</label>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <label className="block text-sm font-medium text-[#333]">Current Book Value</label>
+                    <p className="text-lg font-semibold text-[#111]">
                       {formatCurrency(previewData.currentBookValue)}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Remaining Book Value</label>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <label className="block text-sm font-medium text-[#333]">Remaining Book Value</label>
+                    <p className="text-lg font-semibold text-[#111]">
                       {formatCurrency(previewData.remainingBookValue)}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Accumulated Depreciation</label>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <label className="block text-sm font-medium text-[#333]">Accumulated Depreciation</label>
+                    <p className="text-lg font-semibold text-[#111]">
                       {formatCurrency(previewData.accumulatedDepreciation)}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Total Depreciable</label>
-                    <p className="text-lg font-semibold text-gray-900">
+                    <label className="block text-sm font-medium text-[#333]">Total Depreciable</label>
+                    <p className="text-lg font-semibold text-[#111]">
                       {formatCurrency(previewData.totalDepreciableAmount)}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-black/10">
                   <button
                     onClick={() => setShowPreview(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 text-[#111] bg-gray-100 rounded-lg hover:bg-gray-200"
                   >
                     Close
                   </button>

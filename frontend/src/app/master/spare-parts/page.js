@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSparePartsStore } from '@/stores/sparePartsStore'
 import { useVendorStore } from '@/stores/vendorStore'
+import useEnumStore from '@/stores/enumStore'
 import { Plus, Edit, Trash2, Package } from 'lucide-react'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import DataTable from '@/components/ui/DataTable'
@@ -22,6 +23,7 @@ export default function SparePartsPage() {
   } = useSparePartsStore()
 
   const { vendors, fetchVendors } = useVendorStore()
+  const { sparePartCategories, sparePartTypes } = useEnumStore()
   const router = useRouter()
 
   const [showModal, setShowModal] = useState(false)
@@ -31,7 +33,7 @@ export default function SparePartsPage() {
   const [sparePartToDelete, setSparePartToDelete] = useState(null)
   const [selectedSparePart, setSelectedSparePart] = useState(null)
   const [stockData, setStockData] = useState({ stockLevel: '', notes: '' })
-  const [formData, setFormData] = useState({
+  const initialFormState = {
     partNumber: '',
     name: '',
     description: '',
@@ -45,7 +47,14 @@ export default function SparePartsPage() {
     specifications: [],
     vendorId: '',
     notes: ''
-  })
+  }
+
+  const [formData, setFormData] = useState(initialFormState)
+
+  const resetForm = () => {
+    setEditingSparePart(null)
+    setFormData(initialFormState)
+  }
 
   useEffect(() => {
     fetchSpareParts()
@@ -181,10 +190,10 @@ export default function SparePartsPage() {
 
   const getStockStatus = (sparePart) => {
     const { stockLevel, minStockLevel } = sparePart
-    if (!minStockLevel) return { status: 'Unknown', color: 'bg-gray-100 text-gray-800' }
-    if (stockLevel <= minStockLevel) return { status: 'Low Stock', color: 'bg-red-100 text-red-800' }
-    if (stockLevel <= minStockLevel * 1.2) return { status: 'Warning', color: 'bg-yellow-100 text-yellow-800' }
-    return { status: 'In Stock', color: 'bg-green-100 text-green-800' }
+    if (!minStockLevel) return { status: 'Unknown', color: 'bg-gray-100 text-[#111]' }
+    if (stockLevel <= minStockLevel) return { status: 'Low Stock', color: 'bg-white/60 text-[#111]' }
+    if (stockLevel <= minStockLevel * 1.2) return { status: 'Warning', color: 'bg-white/60 text-[#111]' }
+    return { status: 'In Stock', color: 'bg-white/60 text-[#111]' }
   }
 
   const formatCellValue = (item, key) => {
@@ -213,7 +222,7 @@ export default function SparePartsPage() {
     <div className="flex space-x-2">
       <button
         onClick={() => router.push(`/master/spare-parts/${item.id}`)}
-        className="text-indigo-600 hover:text-indigo-900"
+        className="text-[#111] hover:text-[#111]"
         title="View"
       >
         View
@@ -223,14 +232,14 @@ export default function SparePartsPage() {
           setSelectedSparePart(item)
           setShowStockModal(true)
         }}
-        className="text-green-600 hover:text-green-900"
+        className="text-[#111] hover:scale-110 transition-transform"
         title="Update Stock"
       >
         <Package className="w-4 h-4" />
       </button>
       <button
         onClick={() => handleEdit(item)}
-        className="text-blue-600 hover:text-blue-900"
+        className="text-[#111] hover:scale-110 transition-transform"
         title="Edit"
       >
         <Edit className="w-4 h-4" />
@@ -240,7 +249,7 @@ export default function SparePartsPage() {
           setSparePartToDelete(item)
           setShowDeleteModal(true)
         }}
-        className="text-red-600 hover:text-red-900"
+        className="text-[#111] hover:scale-110 transition-transform"
         title="Delete"
       >
         <Trash2 className="w-4 h-4" />
@@ -252,13 +261,13 @@ export default function SparePartsPage() {
     <DashboardLayout title="Spare Parts">
       {/** Show a visible error banner if store reports an error */}
       {loading === false && typeof error !== 'undefined' && error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded">
+        <div className="mb-4 p-3 bg-white/60 border border-black/10 text-[#111] rounded">
           <strong>Error:</strong> {String(error)}
         </div>
       )}
       {/* Debug panel: show raw spareParts payload for troubleshooting */}
       <details className="mb-4">
-        <summary className="cursor-pointer text-sm text-gray-600">Debug: Show raw spareParts payload</summary>
+        <summary className="cursor-pointer text-sm text-[#333]">Debug: Show raw spareParts payload</summary>
         <pre className="mt-2 p-3 bg-gray-50 rounded text-xs overflow-auto max-h-48">
 {JSON.stringify(spareParts, null, 2)}
 </pre>
@@ -267,7 +276,7 @@ export default function SparePartsPage() {
         <h1 className="text-2xl font-bold">Spare Parts</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2"
+          className="glass-button text-white px-4 py-2 rounded hover:scale-105 transition-transform flex items-center space-x-2"
         >
           <Plus className="w-4 h-4" />
           <span>Add Spare Part</span>
@@ -294,13 +303,13 @@ export default function SparePartsPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Part Number
                 </label>
                 <select
                   value={formData.partNumber}
                   onChange={(e) => setFormData({ ...formData, partNumber: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 >
                   <option value="">Auto-generate</option>
                   {editingSparePart && editingSparePart.partNumber && (
@@ -316,69 +325,70 @@ export default function SparePartsPage() {
                       </option>
                     ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-[#333] mt-1">
                   Leave empty to auto-generate a unique part number
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Name *
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Category *
                 </label>
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                   required
                 >
                   <option value="">Select Category</option>
-                  <option value="HARDWARE">Hardware</option>
-                  <option value="SOFTWARE">Software</option>
-                  <option value="ACCESSORY">Accessory</option>
-                  <option value="CONSUMABLE">Consumable</option>
+                  {sparePartCategories && sparePartCategories.map((category) => (
+                    <option key={category.value} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Part Type *
                 </label>
                 <select
                   value={formData.partType}
                   onChange={(e) => setFormData({ ...formData, partType: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                   required
                 >
                   <option value="">Select Type</option>
-                  <option value="COMPONENT">Component</option>
-                  <option value="ACCESSORY">Accessory</option>
-                  <option value="CONSUMABLE">Consumable</option>
-                  <option value="TOOL">Tool</option>
-                  <option value="SOFTWARE">Software</option>
+                  {sparePartTypes && sparePartTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Vendor
                 </label>
                 <select
                   value={formData.vendorId}
                   onChange={(e) => setFormData({ ...formData, vendorId: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 >
                   <option value="">Select Vendor</option>
                   {vendors && vendors.map((vendor) => (
@@ -392,87 +402,87 @@ export default function SparePartsPage() {
               {/* Unit Price removed per product request - pricing is not needed in this module */}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Stock Level
                 </label>
                 <input
                   type="number"
                   value={formData.stockLevel}
                   onChange={(e) => setFormData({ ...formData, stockLevel: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Min Stock Level
                 </label>
                 <input
                   type="number"
                   value={formData.minStockLevel}
                   onChange={(e) => setFormData({ ...formData, minStockLevel: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Max Stock Level
                 </label>
                 <input
                   type="number"
                   value={formData.maxStockLevel}
                   onChange={(e) => setFormData({ ...formData, maxStockLevel: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Reorder Point
                 </label>
                 <input
                   type="number"
                   value={formData.reorderPoint}
                   onChange={(e) => setFormData({ ...formData, reorderPoint: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Storage Location
                 </label>
                 <input
                   type="text"
                   value={formData.storageLocation}
                   onChange={(e) => setFormData({ ...formData, storageLocation: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#111] mb-1">
                 Description
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full p-2 border rounded focus:outline-none focus:border-blue-500 h-20"
+                className="w-full p-2 border rounded focus:outline-none focus:border-black/30 h-20"
                 rows={2}
               />
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-[#111]">
                   Specifications
                 </label>
                 <button
                   type="button"
                   onClick={addSpecification}
-                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center space-x-1"
+                  className="text-[#111] hover:scale-110 transition-transform text-sm flex items-center space-x-1"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Spec</span>
@@ -486,19 +496,19 @@ export default function SparePartsPage() {
                       placeholder="Key (e.g., Voltage)"
                       value={spec.key}
                       onChange={(e) => updateSpecification(index, 'key', e.target.value)}
-                      className="flex-1 p-2 border rounded focus:outline-none focus:border-blue-500 text-sm"
+                      className="flex-1 p-2 border rounded focus:outline-none focus:border-black/30 text-sm"
                     />
                     <input
                       type="text"
                       placeholder="Value (e.g., 12V)"
                       value={spec.value}
                       onChange={(e) => updateSpecification(index, 'value', e.target.value)}
-                      className="flex-1 p-2 border rounded focus:outline-none focus:border-blue-500 text-sm"
+                      className="flex-1 p-2 border rounded focus:outline-none focus:border-black/30 text-sm"
                     />
                     <button
                       type="button"
                       onClick={() => removeSpecification(index)}
-                      className="text-red-600 hover:text-red-800 p-1"
+                      className="text-[#111] hover:scale-110 transition-transform p-1"
                       title="Remove specification"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -506,7 +516,7 @@ export default function SparePartsPage() {
                   </div>
                 ))}
                 {formData.specifications.length === 0 && (
-                  <p className="text-sm text-gray-500 italic">
+                  <p className="text-sm text-[#333] italic">
                     No specifications added. Click &quot;Add Spec&quot; to add technical details.
                   </p>
                 )}
@@ -514,13 +524,13 @@ export default function SparePartsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#111] mb-1">
                 Notes
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full p-2 border rounded focus:outline-none focus:border-blue-500 h-20"
+                className="w-full p-2 border rounded focus:outline-none focus:border-black/30 h-20"
                 rows={2}
               />
             </div>
@@ -532,14 +542,14 @@ export default function SparePartsPage() {
                   setShowModal(false)
                   resetForm()
                 }}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200"
+                className="px-4 py-2 text-[#333] bg-gray-100 rounded hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 glass-button text-white rounded hover:scale-105 transition-transform disabled:opacity-50"
               >
                 {loading ? 'Saving...' : editingSparePart ? 'Update' : 'Create'}
               </button>
@@ -559,33 +569,33 @@ export default function SparePartsPage() {
         >
           <form onSubmit={handleStockUpdate} className="space-y-4">
             <div className="bg-gray-50 p-3 rounded">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-[#333]">
                 Current Stock: <span className="font-medium">{selectedSparePart.stockLevel}</span>
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#111] mb-1">
                 New Stock Level *
               </label>
               <input
                 type="number"
                 value={stockData.stockLevel}
                 onChange={(e) => setStockData({ ...stockData, stockLevel: e.target.value })}
-                className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 min="0"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#111] mb-1">
                 Notes
               </label>
               <textarea
                 value={stockData.notes}
                 onChange={(e) => setStockData({ ...stockData, notes: e.target.value })}
-                className="w-full p-2 border rounded focus:outline-none focus:border-blue-500 h-20"
+                className="w-full p-2 border rounded focus:outline-none focus:border-black/30 h-20"
                 rows={2}
               />
             </div>
@@ -597,13 +607,13 @@ export default function SparePartsPage() {
                   setShowStockModal(false)
                   setStockData({ stockLevel: '', notes: '' })
                 }}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200"
+                className="px-4 py-2 text-[#333] bg-gray-100 rounded hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 glass-button text-white rounded hover:scale-105 transition-transform"
               >
                 Update Stock
               </button>
@@ -631,13 +641,13 @@ export default function SparePartsPage() {
                 setShowDeleteModal(false)
                 setSparePartToDelete(null)
               }}
-              className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200"
+              className="px-4 py-2 text-[#333] bg-gray-100 rounded hover:bg-gray-200"
             >
               Cancel
             </button>
             <button
               onClick={handleDelete}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              className="px-4 py-2 glass-button text-white rounded hover:scale-105 transition-transform"
             >
               Delete
             </button>

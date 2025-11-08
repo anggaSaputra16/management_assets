@@ -77,7 +77,7 @@ const createAssetSchema = Joi.object({
   name: Joi.string().required(),
   categoryId: Joi.string().required(),
   locationId: Joi.string().required(),
-  companyId: Joi.string().optional(),
+  companyId: Joi.string().required(),
   
   // Optional fields
   description: Joi.string().optional().allow('', null),
@@ -110,7 +110,7 @@ const createAssetSchema = Joi.object({
   notes: Joi.string().optional().allow('', null),
   vendorId: Joi.string().optional().allow(null, ''),
   departmentId: Joi.string().optional().allow(null, ''),
-  assignedToId: Joi.string().optional().allow(null, ''),
+  assignedEmployeeId: Joi.string().optional().allow(null, ''),
   specifications: Joi.object().optional(),
   imageUrl: Joi.string().optional().allow('', null),
   
@@ -161,7 +161,7 @@ const updateAssetSchema = Joi.object({
   vendorId: Joi.string().optional().allow(null, ''),
   locationId: Joi.string().optional(),
   departmentId: Joi.string().optional().allow(null, ''),
-  assignedToId: Joi.string().optional().allow(null, ''),
+  assignedEmployeeId: Joi.string().optional().allow(null, ''),
   isActive: Joi.boolean().optional(),
   specifications: Joi.object().optional(),
   imageUrl: Joi.string().optional().allow('', null),
@@ -169,25 +169,38 @@ const updateAssetSchema = Joi.object({
 }).unknown(true); // Allow unknown fields to be more flexible
 
 // Get all assets
+// NOTE: This endpoint is a primary cause of heavy payloads when the frontend
+// requests a full object list. To avoid freezing the system, return a
+// minimal projection by default and enforce pagination limits. Consumers can
+// request the full include set by passing `full=true` and can request the
+// total count by passing `total=true` (both are opt-in).
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      search, 
-      status, 
-      category, 
-      department, 
-      location,
-      assignedTo 
+    const {
+      page = '1',
+      limit = '10',
+      search,
+      status,
+      condition
     } = req.query;
-    
-    const skip = (page - 1) * limit;
+
+    // Backwards/forward compatibility for query param names
+    const category = req.query.category || req.query.categoryId || null;
+    const department = req.query.department || req.query.departmentId || null;
+    const location = req.query.location || req.query.locationId || null;
+    const assignedTo = req.query.assignedTo || req.query.assignedToId || null;
+
+    // Parse pagination and enforce limits
+    const pageInt = Math.max(1, parseInt(page, 10) || 1);
+    const requestedLimit = Math.max(1, parseInt(limit, 10) || 10);
+    const MAX_LIMIT = 100; // hard cap to avoid huge responses
+    const limitInt = Math.min(requestedLimit, MAX_LIMIT);
+    const skip = (pageInt - 1) * limitInt;
+
     const companyId = req.user.companyId;
     const where = { companyId };
 
-    // BUSINESS RULE: By default, only show active assets in the list
-    // Unless explicitly requesting inactive assets via status filter
+    // Default: only show active assets unless specific retired/disposed filter
     if (!status || (status !== 'RETIRED' && status !== 'DISPOSED')) {
       where.isActive = true;
     }
@@ -209,42 +222,90 @@ router.get('/', authenticate, async (req, res, next) => {
     }
 
     if (status) where.status = status;
+    if (condition) where.condition = condition;
     if (category) where.categoryId = category;
     if (department) where.departmentId = department;
     if (location) where.locationId = location;
-    if (assignedTo) where.assignedToId = assignedTo;
+    if (assignedTo) where.assignedEmployeeId = assignedTo;
 
-    const [assets, total] = await Promise.all([
-      prisma.asset.findMany({
+    // Decide whether to return full includes (opt-in), and whether to compute total
+    const wantFull = req.query.full === 'true' || req.query.full === '1';
+    const wantTotal = req.query.total === 'true' || req.query.total === '1';
+
+    // Minimal projection to keep responses small by default
+    const minimalSelect = {
+      id: true,
+      name: true,
+      assetTag: true,
+      categoryId: true,
+      locationId: true,
+      departmentId: true,
+      assignedEmployeeId: true,
+      status: true,
+      condition: true,
+      imageUrl: true,
+      createdAt: true,
+      // Include relations for display
+      category: { select: { id: true, name: true, code: true } },
+      company: { select: { id: true, name: true, code: true } },
+      location: { select: { id: true, name: true, building: true, room: true } },
+      department: { select: { id: true, name: true, code: true } },
+      assignedEmployee: { select: { id: true, npk: true, firstName: true, lastName: true, position: true } }
+    };
+
+    // Full include set (kept identical to previous behaviour) - opt-in only
+    const fullInclude = {
+      category: { select: { id: true, name: true, code: true } },
+      company: { select: { id: true, name: true, code: true } },
+      vendor: { select: { id: true, name: true, code: true } },
+      location: { select: { id: true, name: true, building: true, room: true } },
+      department: { select: { id: true, name: true, code: true } },
+      assignedEmployee: { select: { id: true, npk: true, firstName: true, lastName: true, position: true, email: true } }
+    };
+
+    const start = Date.now();
+    let assets;
+    let total;
+
+    if (wantTotal) {
+      // Compute both assets and the total count in parallel only when requested
+      [assets, total] = await Promise.all([
+        prisma.asset.findMany({
+          where,
+          ...(wantFull ? { include: fullInclude } : { select: minimalSelect }),
+          skip,
+          take: limitInt,
+          orderBy: { createdAt: 'desc' }
+        }),
+        prisma.asset.count({ where })
+      ]);
+    } else {
+      assets = await prisma.asset.findMany({
         where,
-        include: {
-          category: {
-            select: { id: true, name: true, code: true }
-          },
-          vendor: {
-            select: { id: true, name: true, code: true }
-          },
-          location: {
-            select: { id: true, name: true, building: true, room: true }
-          },
-          department: {
-            select: { id: true, name: true, code: true }
-          },
-          assignedTo: {
-            select: { id: true, firstName: true, lastName: true, email: true }
-          }
-        },
-        skip: parseInt(skip),
-        take: parseInt(limit),
+        ...(wantFull ? { include: fullInclude } : { select: minimalSelect }),
+        skip,
+        take: limitInt,
         orderBy: { createdAt: 'desc' }
-      }),
-      prisma.asset.count({ where })
-    ]);
+      });
+    }
 
-    res.json({
+    const elapsed = Date.now() - start;
+    if (elapsed > 500) {
+      console.warn(`[assets] Slow query detected: ${elapsed}ms; where=${JSON.stringify(where)}; page=${pageInt}; limit=${limitInt}; full=${wantFull}; totalRequested=${wantTotal}`);
+    }
+
+    const response = {
       success: true,
-      data: assets
-    });
+      data: assets,
+      meta: {
+        page: pageInt,
+        limit: limitInt
+      }
+    };
+
+    if (wantTotal) response.meta.total = total;
+
+    res.json(response);
   } catch (error) {
     next(error);
   }
@@ -261,6 +322,9 @@ router.get('/:id', authenticate, async (req, res, next) => {
         category: {
           select: { id: true, name: true, code: true }
         },
+        company: {
+          select: { id: true, name: true, code: true }
+        },
         vendor: {
           select: { id: true, name: true, code: true, contactPerson: true, phone: true }
         },
@@ -270,8 +334,11 @@ router.get('/:id', authenticate, async (req, res, next) => {
         department: {
           select: { id: true, name: true, code: true }
         },
-        assignedTo: {
-          select: { id: true, firstName: true, lastName: true, email: true, phone: true }
+        assignedEmployee: {
+          select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
+        },
+        editedByUser: {
+          select: { id: true, firstName: true, lastName: true, email: true }
         },
         maintenanceRecords: {
           select: {
@@ -406,12 +473,12 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple
     }
 
     // Validate foreign keys
-    const [category, vendor, location, department, assignedUser] = await Promise.all([
+    const [category, vendor, location, department, assignedEmployee] = await Promise.all([
       prisma.category.findUnique({ where: { id: value.categoryId } }),
       value.vendorId ? prisma.vendor.findUnique({ where: { id: value.vendorId } }) : null,
       value.locationId ? prisma.location.findUnique({ where: { id: value.locationId } }) : null,
       value.departmentId ? prisma.department.findUnique({ where: { id: value.departmentId } }) : null,
-      value.assignedToId ? prisma.user.findUnique({ where: { id: value.assignedToId } }) : null
+      value.assignedEmployeeId ? prisma.employee.findUnique({ where: { id: value.assignedEmployeeId } }) : null
     ]);
 
     if (!category) {
@@ -442,10 +509,10 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple
       });
     }
 
-    if (value.assignedToId && !assignedUser) {
+    if (value.assignedEmployeeId && !assignedEmployee) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid assigned user'
+        message: 'Invalid assigned employee'
       });
     }
 
@@ -516,7 +583,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple
       // Convert empty strings to null for optional fields
       vendorId: value.vendorId === '' ? null : value.vendorId,
       departmentId: value.departmentId === '' ? null : value.departmentId,
-      assignedToId: value.assignedToId === '' ? null : value.assignedToId,
+      assignedEmployeeId: value.assignedEmployeeId === '' ? null : value.assignedEmployeeId,
       // Parse dates properly
       purchaseDate: value.purchaseDate && value.purchaseDate !== '' ? new Date(value.purchaseDate) : null,
       warrantyExpiry: value.warrantyExpiry && value.warrantyExpiry !== '' ? new Date(value.warrantyExpiry) : null,
@@ -558,13 +625,16 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple
           vendorId: processedData.vendorId || undefined,
           locationId: processedData.locationId || undefined,
           departmentId: processedData.departmentId || undefined,
-          assignedToId: processedData.assignedToId || undefined
+          assignedEmployeeId: processedData.assignedEmployeeId || undefined
         };
 
         const asset = await tx.asset.create({
           data: createData,
         include: {
           category: {
+            select: { id: true, name: true, code: true }
+          },
+          company: {
             select: { id: true, name: true, code: true }
           },
           vendor: {
@@ -576,8 +646,8 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple
           department: {
             select: { id: true, name: true, code: true }
           },
-          assignedTo: {
-            select: { id: true, firstName: true, lastName: true, email: true }
+          assignedEmployee: {
+            select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
           }
         }
       });
@@ -780,7 +850,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple
           vendor: { select: { id: true, name: true, code: true } },
           location: { select: { id: true, name: true, building: true, room: true } },
           department: { select: { id: true, name: true, code: true } },
-          assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } },
+          assignedEmployee: { select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true } },
           attachments: {
             select: {
               id: true,
@@ -905,14 +975,14 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultip
       }
     }
 
-    if (value.assignedToId) {
-      const user = await prisma.user.findUnique({ 
-        where: { id: value.assignedToId } 
+    if (value.assignedEmployeeId) {
+      const employee = await prisma.employee.findUnique({ 
+        where: { id: value.assignedEmployeeId } 
       });
-      if (!user) {
+      if (!employee) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid assigned user'
+          message: 'Invalid assigned employee'
         });
       }
     }
@@ -926,7 +996,7 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultip
       // Convert empty strings to null for optional fields
       vendorId: value.vendorId === '' ? null : value.vendorId,
       departmentId: value.departmentId === '' ? null : value.departmentId,
-      assignedToId: value.assignedToId === '' ? null : value.assignedToId,
+      assignedEmployeeId: value.assignedEmployeeId === '' ? null : value.assignedEmployeeId,
       // Parse dates properly
       purchaseDate: value.purchaseDate && value.purchaseDate !== '' ? new Date(value.purchaseDate) : undefined,
       warrantyExpiry: value.warrantyExpiry && value.warrantyExpiry !== '' ? new Date(value.warrantyExpiry) : undefined,
@@ -941,6 +1011,10 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultip
       }
     });
 
+    // Add audit fields
+    processedData.editedBy = req.user.userId;
+    processedData.lastEditedAt = new Date();
+    
     // Update asset
     // Update asset with attachments in a transaction
     const updatedAsset = await prisma.$transaction(async (tx) => {
@@ -961,8 +1035,8 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultip
           department: {
             select: { id: true, name: true, code: true }
           },
-          assignedTo: {
-            select: { id: true, firstName: true, lastName: true, email: true }
+          assignedEmployee: {
+            select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
           },
           attachments: {
             select: {
@@ -1032,8 +1106,8 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultip
             department: {
               select: { id: true, name: true, code: true }
             },
-            assignedTo: {
-              select: { id: true, firstName: true, lastName: true, email: true }
+            assignedEmployee: {
+              select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
             },
             attachments: {
               select: {
@@ -1216,7 +1290,7 @@ router.post('/:id/retire', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), asyn
         vendor: { select: { id: true, name: true, code: true } },
         location: { select: { id: true, name: true } },
         department: { select: { id: true, name: true } },
-        assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } }
+        assignedEmployee: { select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true } }
       }
     })
 
@@ -1231,9 +1305,10 @@ router.post('/:id/assign', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), asyn
   try {
     const { id } = req.params;
     const assignSchema = Joi.object({
-      userId: Joi.string().required(),
+      employeeId: Joi.string().optional(),
+      userId: Joi.string().optional(),
       notes: Joi.string().optional()
-    });
+    }).or('employeeId', 'userId');
 
     const { error, value } = assignSchema.validate(req.body);
     if (error) {
@@ -1263,29 +1338,40 @@ router.post('/:id/assign', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), asyn
       });
     }
 
-    // Check if user exists
-    const user = await prisma.user.findUnique({
-      where: { id: value.userId }
-    });
+    // Resolve employee id from provided payload. Backwards compatible with userId.
+    let targetEmployeeId = value.employeeId || null;
+    if (!targetEmployeeId && value.userId) {
+      // Try to resolve employee linked to the user account
+      const possibleUser = await prisma.user.findUnique({ where: { id: value.userId }, include: { employee: true } });
+      if (possibleUser && possibleUser.employee) {
+        targetEmployeeId = possibleUser.employee.id;
+      } else {
+        // Maybe the provided id was actually an employee id (legacy clients)
+        const maybeEmp = await prisma.employee.findUnique({ where: { id: value.userId } });
+        if (maybeEmp) targetEmployeeId = maybeEmp.id;
+      }
+    }
 
-    if (!user || !user.isActive) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid user or user not active'
-      });
+    if (!targetEmployeeId) {
+      return res.status(400).json({ success: false, message: 'Invalid employee/user provided for assignment' });
+    }
+
+    const employee = await prisma.employee.findUnique({ where: { id: targetEmployeeId } });
+    if (!employee || !employee.isActive) {
+      return res.status(400).json({ success: false, message: 'Invalid employee or employee not active' });
     }
 
     // Update asset
     const updatedAsset = await prisma.asset.update({
       where: { id },
       data: {
-        assignedToId: value.userId,
+        assignedEmployeeId: targetEmployeeId,
         status: 'IN_USE',
-        notes: value.notes
+        notes: value.notes || undefined
       },
       include: {
-        assignedTo: {
-          select: { id: true, firstName: true, lastName: true, email: true }
+        assignedEmployee: {
+          select: { id: true, npk: true, firstName: true, lastName: true, position: true }
         },
         category: {
           select: { id: true, name: true, code: true }
@@ -1320,7 +1406,7 @@ router.post('/:id/unassign', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), as
       });
     }
 
-    if (!asset.assignedToId) {
+    if (!asset.assignedEmployeeId) {
       return res.status(400).json({
         success: false,
         message: 'Asset is not currently assigned'
@@ -1331,7 +1417,7 @@ router.post('/:id/unassign', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), as
     const updatedAsset = await prisma.asset.update({
       where: { id },
       data: {
-        assignedToId: null,
+        assignedEmployeeId: null,
         status: 'AVAILABLE'
       },
       include: {
@@ -1666,7 +1752,7 @@ router.post('/:id/generate-qr', authenticate, async (req, res, next) => {
         location: true,
         department: true,
         vendor: true,
-        assignedTo: true
+        assignedEmployee: true
       }
     });
 

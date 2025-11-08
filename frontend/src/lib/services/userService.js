@@ -2,10 +2,22 @@ import { api } from '../api'
 
 export const userService = {
   // Get all users - companyId auto-injected by api interceptor
-  getAllUsers: async () => {
+  getAllUsers: async (params = {}) => {
     try {
-      const response = await api.get('/users')
-      return response.data
+      const queryString = new URLSearchParams(params).toString()
+      const url = queryString ? `/users?${queryString}` : '/users'
+      const response = await api.get(url)
+      const payload = response.data || {}
+
+      // Normalize payload so callers can reliably use payload.users and payload.pagination
+      const usersList = payload?.data?.users || payload?.users || payload?.data || []
+      const pagination = payload?.data?.pagination || payload?.pagination || {}
+
+      // Mutate payload to include normalized fields but still return original structure for compatibility
+      if (!payload.users) payload.users = Array.isArray(usersList) ? usersList : []
+      if (!payload.pagination) payload.pagination = pagination
+
+      return payload
     } catch (error) {
       console.error('Failed to fetch users:', error)
       throw error

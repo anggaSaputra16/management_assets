@@ -98,7 +98,7 @@ export default function NotificationsPage() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-black/10"></div>
         </div>
       </DashboardLayout>
     )
@@ -114,8 +114,8 @@ export default function NotificationsPage() {
               <Bell className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">Notifications</h1>
-              <p className="text-gray-600">
+              <h1 className="text-2xl font-bold text-[#111]">Notifications</h1>
+              <p className="text-[#333]">
                 {unreadCount > 0 ? `${unreadCount} unread notifications` : 'All caught up!'}
               </p>
             </div>
@@ -147,8 +147,8 @@ export default function NotificationsPage() {
                   onClick={() => setFilter(tab.key)}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
                     filter === tab.key
-                      ? 'bg-white/30 text-gray-800 backdrop-blur-sm shadow-sm scale-105'
-                      : 'text-gray-600 hover:text-gray-800 hover:bg-white/10'
+                      ? 'bg-white/30 text-[#111] backdrop-blur-sm shadow-sm scale-105'
+                      : 'text-[#333] hover:text-[#111] hover:bg-white/10'
                   }`}
                 >
                   {tab.label} ({tab.count})
@@ -158,7 +158,7 @@ export default function NotificationsPage() {
 
             {/* Search */}
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#333]" />
               <input
                 type="text"
                 value={searchTerm}
@@ -174,9 +174,9 @@ export default function NotificationsPage() {
         <div className="space-y-2">
           {filteredNotifications.length === 0 ? (
             <div className="glass-card p-8 text-center">
-              <Bell className="h-12 w-12 text-gray-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-800 mb-2">No notifications</h3>
-              <p className="text-gray-600">
+              <Bell className="h-12 w-12 text-[#333] mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-[#111] mb-2">No notifications</h3>
+              <p className="text-[#333]">
                 {filter === 'all' 
                   ? "You don't have any notifications yet."
                   : `No ${filter} notifications found.`}
@@ -186,7 +186,7 @@ export default function NotificationsPage() {
             filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`bg-white rounded-lg shadow border border-gray-200 p-4 hover:shadow-md transition-shadow ${
+                className={`bg-white rounded-lg shadow border border-black/10 p-4 hover:shadow-md transition-shadow ${
                   !notification.isRead ? 'border-l-4 border-l-purple-500' : ''
                 }`}
               >
@@ -199,28 +199,28 @@ export default function NotificationsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <h3 className={`text-sm font-medium ${
-                          !notification.isRead ? 'text-gray-900' : 'text-gray-700'
+                          !notification.isRead ? 'text-[#111]' : 'text-[#111]'
                         }`}>
                           {notification.title}
                         </h3>
-                        <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                        <span className="text-xs text-[#333] ml-2 flex-shrink-0">
                           {formatDate(notification.createdAt)}
                         </span>
                       </div>
                       
                       <p className={`text-sm ${
-                        !notification.isRead ? 'text-gray-800' : 'text-gray-600'
+                        !notification.isRead ? 'text-[#111]' : 'text-[#333]'
                       } line-clamp-2`}>
                         {notification.message}
                       </p>
                       
                       <div className="flex items-center justify-between mt-2">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          notification.type === 'REQUEST_APPROVAL' ? 'bg-blue-100 text-blue-800' :
-                          notification.type === 'ASSET_ALLOCATION' ? 'bg-green-100 text-green-800' :
-                          notification.type === 'MAINTENANCE_DUE' ? 'bg-yellow-100 text-yellow-800' :
-                          notification.type === 'AUDIT_SCHEDULED' ? 'bg-purple-100 text-purple-800' :
-                          'bg-gray-100 text-gray-800'
+                          notification.type === 'REQUEST_APPROVAL' ? 'bg-white/60 text-[#111]' :
+                          notification.type === 'ASSET_ALLOCATION' ? 'bg-white/60 text-[#111]' :
+                          notification.type === 'MAINTENANCE_DUE' ? 'bg-white/60 text-[#111]' :
+                          notification.type === 'AUDIT_SCHEDULED' ? 'bg-white/60 text-[#111]' :
+                          'bg-gray-100 text-[#111]'
                         }`}>
                           {notification.type.replace('_', ' ').toLowerCase()}
                         </span>
@@ -232,7 +232,7 @@ export default function NotificationsPage() {
                     {!notification.isRead && (
                       <button
                         onClick={() => handleMarkAsRead(notification.id)}
-                        className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                        className="p-1 text-[#333] hover:scale-110 transition-transform transition-colors"
                         title="Mark as read"
                       >
                         <Check className="h-4 w-4" />
@@ -241,7 +241,7 @@ export default function NotificationsPage() {
                     
                     <button
                       onClick={() => handleDelete(notification.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                      className="p-1 text-[#333] hover:scale-110 transition-transform transition-colors"
                       title="Delete notification"
                     >
                       <Trash2 className="h-4 w-4" />

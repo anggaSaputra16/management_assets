@@ -109,9 +109,19 @@ router.get('/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const vendor = await prisma.vendor.findUnique({
-      where: { id },
+    const vendor = await prisma.vendor.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId
+      },
       include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
         assets: {
           select: {
             id: true,
@@ -318,8 +328,11 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res, next) =
     const { id } = req.params;
 
     // Check if vendor exists
-    const vendor = await prisma.vendor.findUnique({
-      where: { id },
+    const vendor = await prisma.vendor.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId
+      },
       include: {
         _count: {
           select: {
@@ -366,8 +379,11 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
     const { id } = req.params;
 
     // Check if vendor exists
-    const vendor = await prisma.vendor.findUnique({
-      where: { id }
+    const vendor = await prisma.vendor.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId
+      }
     });
 
     if (!vendor) {
@@ -376,6 +392,8 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
         message: 'Vendor not found'
       });
     }
+
+    const companyFilter = { companyId: req.user.companyId };
 
     const [
       totalAssets,
@@ -389,6 +407,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
     ] = await Promise.all([
       prisma.asset.count({
         where: { 
+          ...companyFilter,
           vendorId: id,
           isActive: true 
         }
@@ -396,6 +415,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       prisma.asset.groupBy({
         by: ['status'],
         where: { 
+          ...companyFilter,
           vendorId: id,
           isActive: true 
         },
@@ -403,6 +423,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       }),
       prisma.asset.aggregate({
         where: { 
+          ...companyFilter,
           vendorId: id,
           isActive: true 
         },
@@ -410,6 +431,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       }),
       prisma.asset.aggregate({
         where: { 
+          ...companyFilter,
           vendorId: id,
           isActive: true 
         },
@@ -438,6 +460,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       Promise.all([
         prisma.asset.count({
           where: { 
+            ...companyFilter,
             vendorId: id,
             isActive: true,
             warrantyExpiry: { gte: new Date() }
@@ -445,6 +468,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
         }),
         prisma.asset.count({
           where: { 
+            ...companyFilter,
             vendorId: id,
             isActive: true,
             warrantyExpiry: { 

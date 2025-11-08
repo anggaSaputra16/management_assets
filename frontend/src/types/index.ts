@@ -50,13 +50,13 @@ export interface Asset {
   locationId: string
   departmentId?: string
   vendorId?: string
-  assignedToId?: string
+  assignedEmployeeId?: string
   
   // Relations - object fields
   category?: Category
   location?: Location
   vendor?: Vendor
-  assignedUser?: User
+  assignedEmployee?: Employee
   department?: Department
   
   // Additional fields
@@ -85,6 +85,21 @@ export interface Category {
   isActive: boolean
   createdAt: string
   updatedAt: string
+}
+
+export interface Employee {
+  id: string
+  npk?: string
+  firstName: string
+  lastName?: string
+  position?: string
+  email?: string
+  phone?: string
+  departmentId?: string
+  companyId?: string
+  isActive?: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface Location {

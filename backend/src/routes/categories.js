@@ -157,8 +157,11 @@ router.get('/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const category = await prisma.category.findUnique({
-      where: { id },
+    const category = await prisma.category.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId
+      },
       include: {
         parent: {
           select: {
@@ -438,8 +441,11 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res, next) =
     const { id } = req.params;
 
     // Check if category exists
-    const category = await prisma.category.findUnique({
-      where: { id },
+    const category = await prisma.category.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId
+      },
       include: {
         _count: {
           select: {
@@ -486,8 +492,11 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
     const { id } = req.params;
 
     // Check if category exists
-    const category = await prisma.category.findUnique({
-      where: { id }
+    const category = await prisma.category.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId
+      }
     });
 
     if (!category) {
@@ -499,11 +508,15 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
 
     // Get category and its children IDs for comprehensive stats
     const childCategories = await prisma.category.findMany({
-      where: { parentId: id },
+      where: { 
+        parentId: id,
+        companyId: req.user.companyId
+      },
       select: { id: true }
     });
 
     const categoryIds = [id, ...childCategories.map(child => child.id)];
+    const companyFilter = { companyId: req.user.companyId };
 
     const [
       totalAssets,
@@ -515,6 +528,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
     ] = await Promise.all([
       prisma.asset.count({
         where: { 
+          ...companyFilter,
           categoryId: { in: categoryIds },
           isActive: true 
         }
@@ -522,6 +536,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       prisma.asset.groupBy({
         by: ['status'],
         where: { 
+          ...companyFilter,
           categoryId: { in: categoryIds },
           isActive: true 
         },
@@ -529,6 +544,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       }),
       prisma.asset.aggregate({
         where: { 
+          ...companyFilter,
           categoryId: { in: categoryIds },
           isActive: true 
         },
@@ -536,6 +552,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       }),
       prisma.asset.aggregate({
         where: { 
+          ...companyFilter,
           categoryId: { in: categoryIds },
           isActive: true,
           currentValue: { not: null }
@@ -544,6 +561,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       }),
       prisma.asset.findFirst({
         where: { 
+          ...companyFilter,
           categoryId: { in: categoryIds },
           isActive: true 
         },
@@ -557,6 +575,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       }),
       prisma.asset.findFirst({
         where: { 
+          ...companyFilter,
           categoryId: { in: categoryIds },
           isActive: true 
         },

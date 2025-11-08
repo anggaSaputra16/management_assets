@@ -56,20 +56,13 @@ const validateCompany = async (req, res, next) => {
     const userCompanyId = req.user.companyId;
 
     // If company_id is provided in request, validate it matches user's company
-    // Allow users with ADMIN or TOP_MANAGEMENT role to set a different companyId (group-level admin)
+    // Currently NO ONE can access cross-company data (strict company isolation)
+    // Future: Add SUPER_ADMIN role for multi-company access
     if (requestCompanyId && requestCompanyId !== userCompanyId) {
-      const allowedOverrideRoles = ['ADMIN', 'TOP_MANAGEMENT'];
-      if (!allowedOverrideRoles.includes(req.user.role)) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied. Company mismatch.'
-        });
-      }
-      // If allowed override, ensure the target company exists and is active
-      const targetCompany = await prisma.company.findUnique({ where: { id: requestCompanyId } });
-      if (!targetCompany || !targetCompany.isActive) {
-        return res.status(400).json({ success: false, message: 'Target company not found or inactive.' });
-      }
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Cannot access other company data.'
+      });
     }
 
     // Auto-inject company_id if not provided (or leave provided companyId when override allowed)

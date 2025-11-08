@@ -22,10 +22,10 @@ export default function Home() {
 
   // Show loading spinner while checking auth
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-white/60">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading Asset Management System...</p>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-black/10 mx-auto"></div>
+        <p className="mt-4 text-[#333]">Loading Asset Management System...</p>
       </div>
     </div>
   )

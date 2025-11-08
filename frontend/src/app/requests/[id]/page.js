@@ -97,23 +97,23 @@ export default function RequestDetailPage() {
 
   const getStatusColor = (status) => {
     const colors = {
-      'PENDING': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'APPROVED': 'bg-green-100 text-green-800 border-green-200',
-      'REJECTED': 'bg-red-100 text-red-800 border-red-200',
-      'ALLOCATED': 'bg-blue-100 text-blue-800 border-blue-200',
-      'COMPLETED': 'bg-gray-100 text-gray-800 border-gray-200'
+      'PENDING': 'bg-white/60 text-[#111] border-black/10',
+      'APPROVED': 'bg-white/60 text-[#111] border-black/10',
+      'REJECTED': 'bg-white/60 text-[#111] border-black/10',
+      'ALLOCATED': 'bg-white/60 text-[#111] border-black/10',
+      'COMPLETED': 'bg-gray-100 text-[#111] border-black/10'
     }
-    return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200'
+    return colors[status] || 'bg-gray-100 text-[#111] border-black/10'
   }
 
   const getPriorityColor = (priority) => {
     const colors = {
-      'LOW': 'bg-gray-100 text-gray-800 border-gray-200',
-      'MEDIUM': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'HIGH': 'bg-orange-100 text-orange-800 border-orange-200',
-      'URGENT': 'bg-red-100 text-red-800 border-red-200'
+      'LOW': 'bg-gray-100 text-[#111] border-black/10',
+      'MEDIUM': 'bg-white/60 text-[#111] border-black/10',
+      'HIGH': 'bg-white/60 text-[#111] border-black/10',
+      'URGENT': 'bg-white/60 text-[#111] border-black/10'
     }
-    return colors[priority] || 'bg-gray-100 text-gray-800 border-gray-200'
+    return colors[priority] || 'bg-gray-100 text-[#111] border-black/10'
   }
 
   const getStatusIcon = (status) => {
@@ -145,13 +145,13 @@ export default function RequestDetailPage() {
     return (
       <DashboardLayout>
         <div className="text-center py-12">
-          <AlertCircle className="mx-auto h-12 w-12 text-red-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Request not found</h3>
-          <p className="mt-1 text-sm text-gray-500">The request you&apos;re looking for doesn&apos;t exist.</p>
+          <AlertCircle className="mx-auto h-12 w-12 text-[#111]" />
+          <h3 className="mt-2 text-sm font-medium text-[#111]">Request not found</h3>
+          <p className="mt-1 text-sm text-[#333]">The request you&apos;re looking for doesn&apos;t exist.</p>
           <div className="mt-6">
             <button
               onClick={() => router.push('/requests')}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white glass-button hover:scale-105 transition-transform"
             >
               Back to Requests
             </button>
@@ -176,8 +176,8 @@ export default function RequestDetailPage() {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Request Details</h1>
-              <p className="text-gray-600">Request #{request.id}</p>
+              <h1 className="text-2xl font-bold text-[#111]">Request Details</h1>
+              <p className="text-[#333]">Request #{request.id}</p>
             </div>
           </div>
 
@@ -187,14 +187,14 @@ export default function RequestDetailPage() {
               <>
                 <button
                   onClick={handleApproveRequest}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Approve
                 </button>
                 <button
                   onClick={handleRejectRequest}
-                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Reject
@@ -206,7 +206,7 @@ export default function RequestDetailPage() {
              request.status === 'PENDING' && (
               <button
                 onClick={() => router.push(`/requests/${request.id}/edit`)}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
               >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
@@ -219,29 +219,29 @@ export default function RequestDetailPage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Request Overview */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Request Information</h3>
+            <div className="glass-card shadow">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">Request Information</h3>
               </div>
               <div className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Title</label>
-                    <p className="mt-1 text-lg font-semibold text-gray-900">{request.title}</p>
+                    <label className="text-sm font-medium text-[#111]">Title</label>
+                    <p className="mt-1 text-lg font-semibold text-[#111]">{request.title}</p>
                   </div>
                   
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Description</label>
-                    <p className="mt-1 text-gray-900">{request.description}</p>
+                    <label className="text-sm font-medium text-[#111]">Description</label>
+                    <p className="mt-1 text-[#111]">{request.description}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Type</label>
-                      <p className="mt-1 text-gray-900">{request.type}</p>
+                      <label className="text-sm font-medium text-[#111]">Type</label>
+                      <p className="mt-1 text-[#111]">{request.type}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Priority</label>
+                      <label className="text-sm font-medium text-[#111]">Priority</label>
                       <span className={`inline-flex mt-1 px-3 py-1 text-sm font-medium rounded-full border ${getPriorityColor(request.priority)}`}>
                         {request.priority}
                       </span>
@@ -250,15 +250,15 @@ export default function RequestDetailPage() {
 
                   {request.justification && (
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Justification</label>
-                      <p className="mt-1 text-gray-900">{request.justification}</p>
+                      <label className="text-sm font-medium text-[#111]">Justification</label>
+                      <p className="mt-1 text-[#111]">{request.justification}</p>
                     </div>
                   )}
 
                   {request.estimatedCost && (
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Estimated Cost</label>
-                      <p className="mt-1 text-gray-900">
+                      <label className="text-sm font-medium text-[#111]">Estimated Cost</label>
+                      <p className="mt-1 text-[#111]">
                         {new Intl.NumberFormat('id-ID', {
                           style: 'currency',
                           currency: 'IDR'
@@ -269,8 +269,8 @@ export default function RequestDetailPage() {
 
                   {request.rejectedReason && (
                     <div>
-                      <label className="text-sm font-medium text-red-700">Rejection Reason</label>
-                      <p className="mt-1 text-red-900 bg-red-50 p-3 rounded-lg border border-red-200">
+                      <label className="text-sm font-medium text-[#111]">Rejection Reason</label>
+                      <p className="mt-1 text-[#111] bg-white/60 p-3 rounded-lg border border-black/10">
                         {request.rejectedReason}
                       </p>
                     </div>
@@ -281,34 +281,34 @@ export default function RequestDetailPage() {
 
             {/* Related Asset */}
             {request.asset && (
-              <div className="bg-white rounded-lg shadow">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">Related Asset</h3>
+              <div className="glass-card shadow">
+                <div className="px-6 py-4 border-b border-black/10">
+                  <h3 className="text-lg font-medium text-[#111]">Related Asset</h3>
                 </div>
                 <div className="p-6">
                   <div className="flex items-start space-x-4">
-                    <div className="p-3 bg-blue-100 rounded-lg">
-                      <Package className="h-6 w-6 text-blue-600" />
+                    <div className="p-3 bg-white/60 rounded-lg">
+                      <Package className="h-6 w-6 text-[#111]" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-lg font-medium text-gray-900">{request.asset.name}</h4>
-                      <p className="text-gray-600">{request.asset.description}</p>
+                      <h4 className="text-lg font-medium text-[#111]">{request.asset.name}</h4>
+                      <p className="text-[#333]">{request.asset.description}</p>
                       <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="font-medium text-gray-700">Category:</span>
-                          <span className="ml-2 text-gray-900">{request.asset.category?.name || '-'}</span>
+                          <span className="font-medium text-[#111]">Category:</span>
+                          <span className="ml-2 text-[#111]">{request.asset.category?.name || '-'}</span>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-700">Code:</span>
-                          <span className="ml-2 text-gray-900">{request.asset.code}</span>
+                          <span className="font-medium text-[#111]">Code:</span>
+                          <span className="ml-2 text-[#111]">{request.asset.code}</span>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-700">Status:</span>
-                          <span className="ml-2 text-gray-900">{request.asset.status}</span>
+                          <span className="font-medium text-[#111]">Status:</span>
+                          <span className="ml-2 text-[#111]">{request.asset.status}</span>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-700">Location:</span>
-                          <span className="ml-2 text-gray-900">{request.asset.location?.name || '-'}</span>
+                          <span className="font-medium text-[#111]">Location:</span>
+                          <span className="ml-2 text-[#111]">{request.asset.location?.name || '-'}</span>
                         </div>
                       </div>
                     </div>
@@ -318,9 +318,9 @@ export default function RequestDetailPage() {
             )}
 
             {/* Comments/Activity */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Comments & Activity</h3>
+            <div className="glass-card shadow">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">Comments & Activity</h3>
               </div>
               <div className="p-6">
                 {/* Add Comment Form */}
@@ -328,7 +328,7 @@ export default function RequestDetailPage() {
                   <div className="flex space-x-3">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                        <User className="h-5 w-5 text-gray-600" />
+                        <User className="h-5 w-5 text-[#333]" />
                       </div>
                     </div>
                     <div className="flex-1">
@@ -337,13 +337,13 @@ export default function RequestDetailPage() {
                         onChange={(e) => setComment(e.target.value)}
                         placeholder="Add a comment..."
                         rows={3}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       />
                       <div className="mt-2 flex justify-end">
                         <button
                           type="submit"
                           disabled={!comment.trim() || submittingComment}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {submittingComment ? 'Adding...' : 'Add Comment'}
                         </button>
@@ -357,16 +357,16 @@ export default function RequestDetailPage() {
                   {/* System Activities */}
                   <div className="flex space-x-3">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Activity className="h-4 w-4 text-blue-600" />
+                      <div className="w-8 h-8 bg-white/60 rounded-full flex items-center justify-center">
+                        <Activity className="h-4 w-4 text-[#111]" />
                       </div>
                     </div>
                     <div className="flex-1">
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-sm text-gray-900">
+                        <p className="text-sm text-[#111]">
                           Request created by <span className="font-medium">{request.requester?.firstName} {request.requester?.lastName}</span>
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-[#333] mt-1">
                           {new Date(request.createdAt).toLocaleString('id-ID')}
                         </p>
                       </div>
@@ -377,16 +377,16 @@ export default function RequestDetailPage() {
                   {request.approvedAt && (
                     <div className="flex space-x-3">
                       <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        <div className="w-8 h-8 bg-white/60 rounded-full flex items-center justify-center">
+                          <CheckCircle className="h-4 w-4 text-[#111]" />
                         </div>
                       </div>
                       <div className="flex-1">
-                        <div className="bg-green-50 rounded-lg p-3">
-                          <p className="text-sm text-gray-900">
+                        <div className="bg-white/60 rounded-lg p-3">
+                          <p className="text-sm text-[#111]">
                             Request approved by <span className="font-medium">{request.approver?.firstName} {request.approver?.lastName}</span>
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-[#333] mt-1">
                             {new Date(request.approvedAt).toLocaleString('id-ID')}
                           </p>
                         </div>
@@ -397,19 +397,19 @@ export default function RequestDetailPage() {
                   {request.rejectedAt && (
                     <div className="flex space-x-3">
                       <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                          <XCircle className="h-4 w-4 text-red-600" />
+                        <div className="w-8 h-8 bg-white/60 rounded-full flex items-center justify-center">
+                          <XCircle className="h-4 w-4 text-[#111]" />
                         </div>
                       </div>
                       <div className="flex-1">
-                        <div className="bg-red-50 rounded-lg p-3">
-                          <p className="text-sm text-gray-900">
+                        <div className="bg-white/60 rounded-lg p-3">
+                          <p className="text-sm text-[#111]">
                             Request rejected by <span className="font-medium">{request.approver?.firstName} {request.approver?.lastName}</span>
                           </p>
                           {request.rejectedReason && (
-                            <p className="text-sm text-red-700 mt-1">Reason: {request.rejectedReason}</p>
+                            <p className="text-sm text-[#111] mt-1">Reason: {request.rejectedReason}</p>
                           )}
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-[#333] mt-1">
                             {new Date(request.rejectedAt).toLocaleString('id-ID')}
                           </p>
                         </div>
@@ -422,13 +422,13 @@ export default function RequestDetailPage() {
                     <div key={index} className="flex space-x-3">
                       <div className="flex-shrink-0">
                         <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                          <MessageSquare className="h-4 w-4 text-gray-600" />
+                          <MessageSquare className="h-4 w-4 text-[#333]" />
                         </div>
                       </div>
                       <div className="flex-1">
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-sm text-gray-900">{comment.content}</p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-sm text-[#111]">{comment.content}</p>
+                          <p className="text-xs text-[#333] mt-1">
                             by {comment.user?.firstName} {comment.user?.lastName} • {new Date(comment.createdAt).toLocaleString('id-ID')}
                           </p>
                         </div>
@@ -443,13 +443,13 @@ export default function RequestDetailPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Status Card */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Status</h3>
+            <div className="glass-card shadow">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">Status</h3>
               </div>
               <div className="p-6">
                 <div className="flex items-center space-x-3 mb-4">
-                  <StatusIcon className="h-6 w-6 text-gray-600" />
+                  <StatusIcon className="h-6 w-6 text-[#333]" />
                   <span className={`px-3 py-1 text-sm font-medium rounded-full border ${getStatusColor(request.status)}`}>
                     {request.status}
                   </span>
@@ -457,49 +457,49 @@ export default function RequestDetailPage() {
                 
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Created:</span>
-                    <span className="text-gray-900">{new Date(request.createdAt).toLocaleDateString('id-ID')}</span>
+                    <span className="text-[#333]">Created:</span>
+                    <span className="text-[#111]">{new Date(request.createdAt).toLocaleDateString('id-ID')}</span>
                   </div>
                   
                   {request.approvedAt && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Approved:</span>
-                      <span className="text-gray-900">{new Date(request.approvedAt).toLocaleDateString('id-ID')}</span>
+                      <span className="text-[#333]">Approved:</span>
+                      <span className="text-[#111]">{new Date(request.approvedAt).toLocaleDateString('id-ID')}</span>
                     </div>
                   )}
                   
                   {request.rejectedAt && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Rejected:</span>
-                      <span className="text-gray-900">{new Date(request.rejectedAt).toLocaleDateString('id-ID')}</span>
+                      <span className="text-[#333]">Rejected:</span>
+                      <span className="text-[#111]">{new Date(request.rejectedAt).toLocaleDateString('id-ID')}</span>
                     </div>
                   )}
                   
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Last Updated:</span>
-                    <span className="text-gray-900">{new Date(request.updatedAt).toLocaleDateString('id-ID')}</span>
+                    <span className="text-[#333]">Last Updated:</span>
+                    <span className="text-[#111]">{new Date(request.updatedAt).toLocaleDateString('id-ID')}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Requester Info */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Requester</h3>
+            <div className="glass-card shadow">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">Requester</h3>
               </div>
               <div className="p-6">
                 <div className="flex items-start space-x-3">
                   <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                    <User className="h-6 w-6 text-gray-600" />
+                    <User className="h-6 w-6 text-[#333]" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-sm font-medium text-gray-900">
+                    <h4 className="text-sm font-medium text-[#111]">
                       {request.requester?.firstName} {request.requester?.lastName}
                     </h4>
-                    <p className="text-sm text-gray-600">{request.requester?.email}</p>
-                    <p className="text-sm text-gray-600">{request.requester?.department?.name}</p>
-                    <p className="text-xs text-gray-500 mt-1">Role: {request.requester?.role}</p>
+                    <p className="text-sm text-[#333]">{request.requester?.email}</p>
+                    <p className="text-sm text-[#333]">{request.requester?.department?.name}</p>
+                    <p className="text-xs text-[#333] mt-1">Role: {request.requester?.role}</p>
                   </div>
                 </div>
               </div>
@@ -507,24 +507,24 @@ export default function RequestDetailPage() {
 
             {/* Approver Info */}
             {request.approver && (
-              <div className="bg-white rounded-lg shadow">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">
+              <div className="glass-card shadow">
+                <div className="px-6 py-4 border-b border-black/10">
+                  <h3 className="text-lg font-medium text-[#111]">
                     {request.status === 'APPROVED' ? 'Approved By' : 'Rejected By'}
                   </h3>
                 </div>
                 <div className="p-6">
                   <div className="flex items-start space-x-3">
                     <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                      <User className="h-6 w-6 text-gray-600" />
+                      <User className="h-6 w-6 text-[#333]" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-sm font-medium text-gray-900">
+                      <h4 className="text-sm font-medium text-[#111]">
                         {request.approver.firstName} {request.approver.lastName}
                       </h4>
-                      <p className="text-sm text-gray-600">{request.approver.email}</p>
-                      <p className="text-sm text-gray-600">{request.approver.department?.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">Role: {request.approver.role}</p>
+                      <p className="text-sm text-[#333]">{request.approver.email}</p>
+                      <p className="text-sm text-[#333]">{request.approver.department?.name}</p>
+                      <p className="text-xs text-[#333] mt-1">Role: {request.approver.role}</p>
                     </div>
                   </div>
                 </div>
