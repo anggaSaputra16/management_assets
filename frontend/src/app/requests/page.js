@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRequestStore, useAssetStore, useCategoryStore, useUserStore, useEnumStore } from '@/stores'
 import { useToast } from '@/contexts/ToastContext'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
+import FilterModal from './_components/filterModal'
 import {
   FileText,
   Plus,
-  Search,
   Filter,
   Edit,
   Trash2,
@@ -56,16 +56,15 @@ const RequestsPage = () => {
     requestTypes,
     requestStatuses,
     priorityLevels,
-    loading: enumLoading,
     initializeEnums
   } = useEnumStore()
 
-  const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [requestToDelete, setRequestToDelete] = useState(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const itemsPerPage = 10
 
   const filteredRequests = getFilteredRequests()
@@ -601,7 +600,7 @@ const RequestsPage = () => {
         </div>
         <div className="flex space-x-3">
           <button
-            onClick={() => setShowFilters(!showFilters)}
+            onClick={() => setFiltersOpen(true)}
             className="glass-button inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium hover:scale-105 transition-transform"
           >
             <Filter className="h-4 w-4 mr-2" />
@@ -648,85 +647,6 @@ const RequestsPage = () => {
           )
         })}
       </div>
-
-      {/* Continue with filters, table, and modals... */}
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="glass-card">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#111] mb-2">
-                Search
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#333]" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search requests..."
-                  className="glass-input pl-10 w-full rounded-lg px-3 py-2 text-sm text-[#111]"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-[#111] mb-2">
-                Type
-              </label>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="glass-input w-full rounded-lg px-3 py-2 text-sm text-[#111]"
-              >
-                <option value="">All Types</option>
-                {requestTypes.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[#111] mb-2">
-                Status
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="glass-input w-full rounded-lg px-3 py-2 text-sm text-[#111]"
-              >
-                <option value="">All Status</option>
-                {requestStatuses.map(status => (
-                  <option key={status.value} value={status.value}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[#111] mb-2">
-                Priority
-              </label>
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                className="glass-input w-full rounded-lg px-3 py-2 text-sm text-[#111]"
-              >
-                <option value="">All Priorities</option>
-                {priorityLevels.map(priority => (
-                  <option key={priority.value} value={priority.value}>
-                    {priority.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Requests Table */}
       <div className="glass-card overflow-hidden">
@@ -902,6 +822,27 @@ const RequestsPage = () => {
       {renderDeleteModal()}
       {renderDetailModal()}
       </div>
+      <FilterModal
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        typeFilter={typeFilter}
+        setTypeFilter={setTypeFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        priorityFilter={priorityFilter}
+        setPriorityFilter={setPriorityFilter}
+        requestTypes={requestTypes}
+        requestStatuses={requestStatuses}
+        priorityLevels={priorityLevels}
+        onClearAll={() => {
+          setSearchTerm('')
+          setTypeFilter('')
+          setStatusFilter('')
+          setPriorityFilter('')
+        }}
+      />
     </DashboardLayout>
   )
 }

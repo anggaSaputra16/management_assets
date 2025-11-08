@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { 
   Package, 
   Plus, 
-  Search, 
+  Filter,
   Edit3, 
   Trash2, 
   Archive,
@@ -155,10 +155,10 @@ export default function InventoryPage() {
             <div className="flex space-x-3">
               <button
                 onClick={() => setModalOpen(true)}
-                className="glass-button px-4 py-2 rounded-lg text-[#111] flex items-center space-x-2 hover:scale-105 transition-transform"
+                className="glass-button inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-[#111] hover:scale-105 transition-transform"
               >
-                <Search className="h-4 w-4" />
-                <span>Filters</span>
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
               </button>
               <button
                 onClick={() => router.push('/inventory/loans')}
