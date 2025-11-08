@@ -143,8 +143,21 @@ router.get('/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const maintenanceRecord = await prisma.maintenanceRecord.findUnique({
-      where: { id },
+    const where = { 
+      id,
+      companyId: req.user.companyId
+    };
+
+    if (req.user.role === 'TECHNICIAN') {
+      where.technicianId = req.user.id;
+    } else if (req.user.role === 'DEPARTMENT_USER') {
+      where.asset = {
+        departmentId: req.user.departmentId
+      };
+    }
+
+    const maintenanceRecord = await prisma.maintenanceRecord.findFirst({
+      where,
       include: {
         asset: {
           select: {
@@ -182,6 +195,14 @@ router.get('/:id', authenticate, async (req, res, next) => {
             name: true,
             contactPerson: true,
             phone: true,
+            email: true
+          }
+        },
+        editedByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
             email: true
           }
         }
@@ -230,9 +251,12 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'), 
       });
     }
 
-    // Check if asset exists
-    const asset = await prisma.asset.findUnique({
-      where: { id: value.assetId }
+    // Check if asset exists within same company
+    const asset = await prisma.asset.findFirst({
+      where: { 
+        id: value.assetId,
+        companyId: req.user.companyId
+      }
     });
 
     if (!asset) {
@@ -244,8 +268,11 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'), 
 
     // Validate technician if provided
     if (value.technicianId) {
-      const technician = await prisma.user.findUnique({
-        where: { id: value.technicianId }
+      const technician = await prisma.user.findFirst({
+        where: { 
+          id: value.technicianId,
+          companyId: req.user.companyId
+        }
       });
 
       if (!technician || technician.role !== 'TECHNICIAN') {
@@ -258,8 +285,11 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'), 
 
     // Validate vendor if provided
     if (value.vendorId) {
-      const vendor = await prisma.vendor.findUnique({
-        where: { id: value.vendorId }
+      const vendor = await prisma.vendor.findFirst({
+        where: { 
+          id: value.vendorId,
+          companyId: req.user.companyId
+        }
       });
 
       if (!vendor || !vendor.isActive) {
@@ -270,9 +300,12 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'), 
       }
     }
 
-    // Create maintenance record
+    // Auto-assign companyId
     const maintenanceRecord = await prisma.maintenanceRecord.create({
-      data: value,
+      data: {
+        ...value,
+        companyId: req.user.companyId
+      },
       include: {
         asset: {
           select: {
@@ -375,6 +408,10 @@ router.put('/:id', authenticate, async (req, res, next) => {
       };
     }
 
+    // Add audit fields
+    value.editedBy = req.user.userId;
+    value.lastEditedAt = new Date();
+    
     // Use transaction to update both maintenance record and asset
     const result = await prisma.$transaction(async (tx) => {
       const updatedRecord = await tx.maintenanceRecord.update({

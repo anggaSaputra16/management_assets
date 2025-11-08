@@ -154,7 +154,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
             department: {
               select: { name: true }
             },
-            assignedTo: {
+            assignedEmployee: {
               select: {
                 firstName: true,
                 lastName: true,
@@ -317,6 +317,10 @@ router.put('/:id', authenticate, async (req, res, next) => {
       });
     }
 
+    // Add audit fields
+    value.editedBy = req.user.userId;
+    value.lastEditedAt = new Date();
+    
     // Update audit record
     const updatedRecord = await prisma.auditRecord.update({
       where: { id },
@@ -645,7 +649,7 @@ router.get('/:id/report', authenticate, authorize('AUDITOR', 'ADMIN', 'ASSET_ADM
             category: true,
             location: true,
             department: true,
-            assignedTo: {
+            assignedEmployee: {
               select: {
                 firstName: true,
                 lastName: true,

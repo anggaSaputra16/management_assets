@@ -79,7 +79,7 @@ export default function DataTable({
     return (
       <div className="glass-card p-8">
         <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black/10"></div>
           <span className="ml-2">Loading...</span>
         </div>
       </div>
@@ -103,12 +103,12 @@ export default function DataTable({
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-200">
+            <tr className="border-b border-black/10">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`text-left py-3 px-4 font-semibold text-gray-700 ${
-                    sortable && !col.isAction ? 'cursor-pointer hover:bg-gray-50' : ''
+                  className={`text-left py-3 px-4 font-semibold text-[#111] ${
+                    sortable && !col.isAction ? 'cursor-pointer hover:bg-white/60' : ''
                   }`}
                   onClick={() => !col.isAction && handleSort(col.key)}
                 >
@@ -133,7 +133,7 @@ export default function DataTable({
               <tr>
                 <td 
                   colSpan={columns.length} 
-                  className="text-center py-8 text-gray-500"
+                  className="text-center py-8 text-[#333]"
                 >
                   No data available
                 </td>
@@ -142,7 +142,7 @@ export default function DataTable({
               filteredData.map((item, index) => (
                 <tr 
                   key={item.id || index} 
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                  className="border-b border-black/10 hover:bg-white/60 transition-colors"
                 >
                   {columns.map((col) => (
                     <td key={col.key} className="py-3 px-4">
@@ -163,7 +163,7 @@ export default function DataTable({
       </div>
 
       {filteredData.length > 0 && (
-        <div className="mt-4 text-sm text-gray-500">
+        <div className="mt-4 text-sm text-[#333]">
           Showing {filteredData.length} of {data.length} entries
         </div>
       )}

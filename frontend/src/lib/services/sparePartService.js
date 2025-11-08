@@ -87,5 +87,16 @@ export const sparePartService = {
       console.error('Failed to fetch low stock spare parts:', error)
       throw error
     }
-  }
+  },
+  
+  // Get master options for spare parts (categories and part types)
+  getOptions: async () => {
+    try {
+      const response = await api.get('/spare-parts/options')
+      return response.data
+    } catch (error) {
+      console.error('Failed to fetch spare part options:', error)
+      throw error
+    }
+  },
 }

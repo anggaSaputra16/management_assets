@@ -119,10 +119,10 @@ export default function CreateRequestPage() {
   ]
 
   const priorities = [
-    { value: 'LOW', label: 'Low', color: 'text-gray-600' },
-    { value: 'MEDIUM', label: 'Medium', color: 'text-yellow-600' },
-    { value: 'HIGH', label: 'High', color: 'text-orange-600' },
-    { value: 'URGENT', label: 'Urgent', color: 'text-red-600' }
+    { value: 'LOW', label: 'Low', color: 'text-[#333]' },
+    { value: 'MEDIUM', label: 'Medium', color: 'text-[#111]' },
+    { value: 'HIGH', label: 'High', color: 'text-[#111]' },
+    { value: 'URGENT', label: 'Urgent', color: 'text-[#111]' }
   ]
 
   return (
@@ -137,8 +137,8 @@ export default function CreateRequestPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Create New Request</h1>
-            <p className="text-gray-600">Submit a new asset request for approval</p>
+            <h1 className="text-2xl font-bold text-[#111]">Create New Request</h1>
+            <p className="text-[#333]">Submit a new asset request for approval</p>
           </div>
         </div>
 
@@ -147,13 +147,13 @@ export default function CreateRequestPage() {
             {/* Main Form */}
             <div className="lg:col-span-2 space-y-6">
               {/* Basic Information */}
-              <div className="bg-white rounded-lg shadow">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">Basic Information</h3>
+              <div className="glass-card shadow">
+                <div className="px-6 py-4 border-b border-black/10">
+                  <h3 className="text-lg font-medium text-[#111]">Basic Information</h3>
                 </div>
                 <div className="p-6 space-y-4">
                   <div>
-                    <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="title" className="block text-sm font-medium text-[#111]">
                       Request Title *
                     </label>
                     <input
@@ -163,13 +163,13 @@ export default function CreateRequestPage() {
                       value={formData.title}
                       onChange={handleInputChange}
                       required
-                      className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="Enter a descriptive title for your request"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="description" className="block text-sm font-medium text-[#111]">
                       Description *
                     </label>
                     <textarea
@@ -179,14 +179,14 @@ export default function CreateRequestPage() {
                       onChange={handleInputChange}
                       required
                       rows={4}
-                      className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="Provide detailed description of your request"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="type" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="type" className="block text-sm font-medium text-[#111]">
                         Request Type *
                       </label>
                       <select
@@ -195,7 +195,7 @@ export default function CreateRequestPage() {
                         value={formData.type}
                         onChange={handleInputChange}
                         required
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       >
                         {requestTypes.map(type => (
                           <option key={type.value} value={type.value}>
@@ -206,7 +206,7 @@ export default function CreateRequestPage() {
                     </div>
 
                     <div>
-                      <label htmlFor="priority" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="priority" className="block text-sm font-medium text-[#111]">
                         Priority *
                       </label>
                       <select
@@ -215,7 +215,7 @@ export default function CreateRequestPage() {
                         value={formData.priority}
                         onChange={handleInputChange}
                         required
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       >
                         {priorities.map(priority => (
                           <option key={priority.value} value={priority.value}>
@@ -227,7 +227,7 @@ export default function CreateRequestPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="justification" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="justification" className="block text-sm font-medium text-[#111]">
                       Business Justification *
                     </label>
                     <textarea
@@ -237,7 +237,7 @@ export default function CreateRequestPage() {
                       onChange={handleInputChange}
                       required
                       rows={3}
-                      className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       placeholder="Explain why this request is necessary for business operations"
                     />
                   </div>
@@ -245,14 +245,14 @@ export default function CreateRequestPage() {
               </div>
 
               {/* Asset & Technical Details */}
-              <div className="bg-white rounded-lg shadow">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">Asset & Technical Details</h3>
+              <div className="glass-card shadow">
+                <div className="px-6 py-4 border-b border-black/10">
+                  <h3 className="text-lg font-medium text-[#111]">Asset & Technical Details</h3>
                 </div>
                 <div className="p-6 space-y-4">
                   {(formData.type === 'ASSIGNMENT' || formData.type === 'RETURN' || formData.type === 'REPAIR' || formData.type === 'REPLACEMENT') && (
                     <div>
-                      <label htmlFor="assetId" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="assetId" className="block text-sm font-medium text-[#111]">
                         Select Asset
                       </label>
                       <select
@@ -260,7 +260,7 @@ export default function CreateRequestPage() {
                         name="assetId"
                         value={formData.assetId}
                         onChange={handleInputChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       >
                         <option value="">Select an asset</option>
                         {assets.map(asset => (
@@ -274,7 +274,7 @@ export default function CreateRequestPage() {
 
                   {formData.type === 'PURCHASE' && (
                     <div>
-                      <label htmlFor="specifications" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="specifications" className="block text-sm font-medium text-[#111]">
                         Technical Specifications
                       </label>
                       <textarea
@@ -283,7 +283,7 @@ export default function CreateRequestPage() {
                         value={formData.specifications}
                         onChange={handleInputChange}
                         rows={4}
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:ring-2 focus:ring-black/20 focus:border-black/30"
                         placeholder="List technical specifications, requirements, and features needed"
                       />
                     </div>
@@ -292,7 +292,7 @@ export default function CreateRequestPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {formData.type === 'PURCHASE' && (
                       <div>
-                        <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="quantity" className="block text-sm font-medium text-[#111]">
                           Quantity
                         </label>
                         <input
@@ -302,13 +302,13 @@ export default function CreateRequestPage() {
                           value={formData.quantity}
                           onChange={handleInputChange}
                           min="1"
-                          className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="mt-1 block w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:ring-2 focus:ring-black/20 focus:border-black/30"
                         />
                       </div>
                     )}
 
                     <div>
-                      <label htmlFor="estimatedCost" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="estimatedCost" className="block text-sm font-medium text-[#111]">
                         Estimated Cost (IDR)
                       </label>
                       <input
@@ -319,13 +319,13 @@ export default function CreateRequestPage() {
                         onChange={handleInputChange}
                         min="0"
                         step="0.01"
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:ring-2 focus:ring-black/20 focus:border-black/30"
                         placeholder="0.00"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="expectedDeliveryDate" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="expectedDeliveryDate" className="block text-sm font-medium text-[#111]">
                         Expected Delivery Date
                       </label>
                       <input
@@ -335,7 +335,7 @@ export default function CreateRequestPage() {
                         value={formData.expectedDeliveryDate}
                         onChange={handleInputChange}
                         min={new Date().toISOString().split('T')[0]}
-                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:ring-2 focus:ring-black/20 focus:border-black/30"
                       />
                     </div>
                   </div>
@@ -347,14 +347,14 @@ export default function CreateRequestPage() {
                 <button
                   type="button"
                   onClick={() => router.push('/requests')}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="px-6 py-2 border border-black/10 text-[#111] rounded-lg hover:bg-white/60"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Creating...' : 'Create Request'}
                 </button>
@@ -364,14 +364,14 @@ export default function CreateRequestPage() {
             {/* Sidebar */}
             <div className="space-y-6">
               {/* Request Guidelines */}
-              <div className="bg-white rounded-lg shadow">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">Request Guidelines</h3>
+              <div className="glass-card shadow">
+                <div className="px-6 py-4 border-b border-black/10">
+                  <h3 className="text-lg font-medium text-[#111]">Request Guidelines</h3>
                 </div>
                 <div className="p-6">
-                  <div className="space-y-4 text-sm text-gray-600">
+                  <div className="space-y-4 text-sm text-[#333]">
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Request Types:</h4>
+                      <h4 className="font-medium text-[#111] mb-2">Request Types:</h4>
                       <ul className="space-y-1">
                         <li><strong>Purchase:</strong> New asset acquisition</li>
                         <li><strong>Assignment:</strong> Assign existing asset</li>
@@ -382,17 +382,17 @@ export default function CreateRequestPage() {
                     </div>
                     
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Priority Levels:</h4>
+                      <h4 className="font-medium text-[#111] mb-2">Priority Levels:</h4>
                       <ul className="space-y-1">
-                        <li><span className="text-gray-600">Low:</span> Standard business need</li>
-                        <li><span className="text-yellow-600">Medium:</span> Important for operations</li>
-                        <li><span className="text-orange-600">High:</span> Critical business impact</li>
-                        <li><span className="text-red-600">Urgent:</span> Immediate action required</li>
+                        <li><span className="text-[#333]">Low:</span> Standard business need</li>
+                        <li><span className="text-[#111]">Medium:</span> Important for operations</li>
+                        <li><span className="text-[#111]">High:</span> Critical business impact</li>
+                        <li><span className="text-[#111]">Urgent:</span> Immediate action required</li>
                       </ul>
                     </div>
 
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Tips for Approval:</h4>
+                      <h4 className="font-medium text-[#111] mb-2">Tips for Approval:</h4>
                       <ul className="space-y-1">
                         <li>• Provide clear business justification</li>
                         <li>• Include accurate cost estimates</li>
@@ -405,53 +405,53 @@ export default function CreateRequestPage() {
               </div>
 
               {/* Requester Info */}
-              <div className="bg-white rounded-lg shadow">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">Requester Information</h3>
+              <div className="glass-card shadow">
+                <div className="px-6 py-4 border-b border-black/10">
+                  <h3 className="text-lg font-medium text-[#111]">Requester Information</h3>
                 </div>
                 <div className="p-6">
                   <div className="space-y-3 text-sm">
                     <div>
-                      <span className="font-medium text-gray-700">Name:</span>
-                      <p className="text-gray-900">{user?.firstName} {user?.lastName}</p>
+                      <span className="font-medium text-[#111]">Name:</span>
+                      <p className="text-[#111]">{user?.firstName} {user?.lastName}</p>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-700">Email:</span>
-                      <p className="text-gray-900">{user?.email}</p>
+                      <span className="font-medium text-[#111]">Email:</span>
+                      <p className="text-[#111]">{user?.email}</p>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-700">Department:</span>
-                      <p className="text-gray-900">{user?.department?.name || 'N/A'}</p>
+                      <span className="font-medium text-[#111]">Department:</span>
+                      <p className="text-[#111]">{user?.department?.name || 'N/A'}</p>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-700">Role:</span>
-                      <p className="text-gray-900">{user?.role}</p>
+                      <span className="font-medium text-[#111]">Role:</span>
+                      <p className="text-[#111]">{user?.role}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Request Preview */}
-              <div className="bg-white rounded-lg shadow">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">Request Preview</h3>
+              <div className="glass-card shadow">
+                <div className="px-6 py-4 border-b border-black/10">
+                  <h3 className="text-lg font-medium text-[#111]">Request Preview</h3>
                 </div>
                 <div className="p-6">
                   <div className="space-y-3 text-sm">
                     <div>
-                      <span className="font-medium text-gray-700">Type:</span>
-                      <p className="text-gray-900">{requestTypes.find(t => t.value === formData.type)?.label}</p>
+                      <span className="font-medium text-[#111]">Type:</span>
+                      <p className="text-[#111]">{requestTypes.find(t => t.value === formData.type)?.label}</p>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-700">Priority:</span>
+                      <span className="font-medium text-[#111]">Priority:</span>
                       <p className={priorities.find(p => p.value === formData.priority)?.color}>
                         {priorities.find(p => p.value === formData.priority)?.label}
                       </p>
                     </div>
                     {formData.estimatedCost && (
                       <div>
-                        <span className="font-medium text-gray-700">Est. Cost:</span>
-                        <p className="text-gray-900">
+                        <span className="font-medium text-[#111]">Est. Cost:</span>
+                        <p className="text-[#111]">
                           {new Intl.NumberFormat('id-ID', {
                             style: 'currency',
                             currency: 'IDR'
@@ -461,8 +461,8 @@ export default function CreateRequestPage() {
                     )}
                     {formData.expectedDeliveryDate && (
                       <div>
-                        <span className="font-medium text-gray-700">Expected Date:</span>
-                        <p className="text-gray-900">
+                        <span className="font-medium text-[#111]">Expected Date:</span>
+                        <p className="text-[#111]">
                           {new Date(formData.expectedDeliveryDate).toLocaleDateString('id-ID')}
                         </p>
                       </div>

@@ -13,7 +13,7 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
-import { useCompanyStore, useDepartmentStore } from '../../stores'
+import { useCompanyStore, useDepartmentStore, useEnumStore } from '../../stores'
 import DashboardLayout from '../../components/layouts/DashboardLayout';
 import { useInventoryStore } from '../../stores';
 
@@ -40,12 +40,18 @@ export default function InventoryPage() {
   const [generated, setGenerated] = useState(false)
 
   const { companies, fetchCompanies } = useCompanyStore()
-  const { departments: departmentOptions, fetchDepartmentsByCompany } = useDepartmentStore()
+  const { departments: departmentOptions, fetchDepartmentsByCompany, fetchDepartments } = useDepartmentStore()
+  const {
+    assetStatuses,
+    assetConditions,
+    initializeEnums
+  } = useEnumStore()
 
   // initial: load companies only. Do NOT auto-load inventory data until user generates
   useEffect(() => {
     fetchCompanies()
-  }, [fetchCompanies]);
+    initializeEnums()
+  }, [fetchCompanies, initializeEnums]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -69,7 +75,9 @@ export default function InventoryPage() {
 
     // fetch department scoped inventories and stats
     setGenerated(true)
-    await fetchInventories(1, { companyId: selectedCompany, departmentId: selectedDepartment })
+    // set filters and fetch inventories (fetchInventories expects (page, limit))
+    setInventoryFilters({ departmentId: selectedDepartment })
+    await fetchInventories(1)
     await fetchStats()
   }
 
@@ -94,30 +102,30 @@ export default function InventoryPage() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'AVAILABLE':
-        return 'bg-green-100 text-green-800';
+        return 'bg-white/60 text-[#111]';
       case 'LOANED':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-white/60 text-[#111]';
       case 'MAINTENANCE':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-white/60 text-[#111]';
       case 'RETIRED':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-[#111]';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-[#111]';
     }
   };
 
   const getConditionColor = (condition) => {
     switch (condition) {
       case 'GOOD':
-        return 'bg-green-100 text-green-800';
+        return 'bg-white/60 text-[#111]';
       case 'FAIR':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-white/60 text-[#111]';
       case 'POOR':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-white/60 text-[#111]';
       case 'DAMAGED':
-        return 'bg-red-100 text-red-800';
+        return 'bg-white/60 text-[#111]';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-[#111]';
     }
   };
 
@@ -125,29 +133,26 @@ export default function InventoryPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="glass-card p-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400"></div>
+        <div className="glass-card">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Inventory Management</h1>
-              <p className="text-gray-600">Manage inventory items and track loans</p>
+              <h1 className="text-2xl font-bold text-[#111]">Inventory Management</h1>
+              <p className="text-[#333]">Manage inventory items and track loans</p>
             </div>
             <div className="flex space-x-3">
               <button
                 onClick={() => router.push('/inventory/loans')}
-                className="glass-button px-4 py-2 rounded-lg text-gray-700 flex items-center space-x-2 hover:scale-105 transition-transform relative overflow-hidden group"
+                className="glass-button px-4 py-2 rounded-lg text-[#111] flex items-center space-x-2 hover:scale-105 transition-transform"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 to-amber-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <Archive className="h-4 w-4 relative z-10" />
-                <span className="relative z-10">Manage Loans</span>
+                <Archive className="h-4 w-4" />
+                <span>Manage Loans</span>
               </button>
               <button
                 onClick={() => router.push('/inventory/create')}
-                className="glass-button px-4 py-2 rounded-lg text-gray-700 flex items-center space-x-2 hover:scale-105 transition-transform relative overflow-hidden group"
+                className="glass-button px-4 py-2 rounded-lg text-[#111] flex items-center space-x-2 hover:scale-105 transition-transform"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/10 to-green-400/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <Plus className="h-4 w-4 relative z-10" />
-                <span className="relative z-10">Add Inventory</span>
+                <Plus className="h-4 w-4" />
+                <span>Add Inventory</span>
               </button>
             </div>
           </div>
@@ -156,79 +161,64 @@ export default function InventoryPage() {
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="glass-card p-6 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-400"></div>
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 to-indigo-400/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="flex items-center justify-between relative z-10">
+            <div className="glass-card">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Inventory</p>
-                  <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{stats.totalInventory}</p>
+                  <p className="text-sm font-medium text-[#333]">Total Inventory</p>
+                  <p className="text-2xl font-bold text-[#111]">{stats.totalInventory}</p>
                 </div>
-                <Package className="h-8 w-8 text-blue-500" />
+                <Package className="h-8 w-8 text-[#111]" />
               </div>
             </div>
 
-            <div className="glass-card p-6 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-emerald-400"></div>
-              <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-emerald-400/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="flex items-center justify-between relative z-10">
+            <div className="glass-card">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Available</p>
-                  <p className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{stats.availableInventory}</p>
+                  <p className="text-sm font-medium text-[#333]">Available</p>
+                  <p className="text-2xl font-bold text-[#111]">{stats.availableInventory}</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-500" />
+                <CheckCircle className="h-8 w-8 text-[#111]" />
               </div>
             </div>
 
-            <div className="glass-card p-6 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-violet-400"></div>
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-400/5 to-violet-400/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="flex items-center justify-between relative z-10">
+            <div className="glass-card">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Loaned</p>
-                  <p className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">{stats.loanedInventory}</p>
+                  <p className="text-sm font-medium text-[#333]">Loaned</p>
+                  <p className="text-2xl font-bold text-[#111]">{stats.loanedInventory}</p>
                 </div>
-                <Archive className="h-8 w-8 text-purple-500" />
+                <Archive className="h-8 w-8 text-[#111]" />
               </div>
             </div>
 
-            <div className="glass-card p-6 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-red-400"></div>
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-red-400/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="flex items-center justify-between relative z-10">
+            <div className="glass-card">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Loans</p>
-                  <p className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">{stats.activeLoans}</p>
+                  <p className="text-sm font-medium text-[#333]">Active Loans</p>
+                  <p className="text-2xl font-bold text-[#111]">{stats.activeLoans}</p>
                 </div>
-                <Clock className="h-8 w-8 text-orange-500" />
+                <Clock className="h-8 w-8 text-[#111]" />
               </div>
             </div>
           </div>
         )}
 
         {/* Filters */}
-        <div className="glass-card p-6 rounded-lg shadow-sm border border-white/20">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Search inventory..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+        <div className="glass-card">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
 
-            <div className="flex space-x-2">
               <select
                 value={selectedCompany}
                 onChange={(e) => {
-                  setSelectedCompany(e.target.value)
-                  // load departments for selected company
-                  fetchDepartmentsByCompany(e.target.value)
+                  const companyId = e.target.value
+                  setSelectedCompany(companyId)
+                  if (fetchDepartmentsByCompany && typeof fetchDepartmentsByCompany === 'function') {
+                    fetchDepartmentsByCompany(companyId)
+                  } else if (fetchDepartments && typeof fetchDepartments === 'function') {
+                    fetchDepartments()
+                  }
                 }}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="glass-input px-3 py-2 rounded-lg text-[#111]"
               >
                 <option value="">Select Company</option>
                 {companies.map(c => (
@@ -239,54 +229,66 @@ export default function InventoryPage() {
               <select
                 value={selectedDepartment}
                 onChange={(e) => setSelectedDepartment(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="glass-input px-3 py-2 rounded-lg text-[#111]"
               >
                 <option value="">Select Department</option>
                 {departmentOptions.map(d => (
                   <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
               </select>
+
+            <div className="flex items-center justify-start">
+              <button onClick={handleGenerate} className="glass-button px-4 py-2 rounded-lg text-[#111] hover:scale-105 transition-transform">Generate</button>
             </div>
 
-            <div className="flex items-center">
-              <button onClick={handleGenerate} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Generate</button>
+              <div className="relative flex items-center justify-start">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#333] h-4 w-4" />
+              <input
+                type="text"
+                placeholder="Search inventory..."
+                value={searchTerm}
+                onChange={handleSearch}
+                className="glass-input pl-10 pr-4 py-2 w-full rounded-lg text-[#111]"
+              />
             </div>
 
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="glass-input px-3 py-2 rounded-lg text-[#111]"
             >
               <option value="">All Status</option>
-              <option value="AVAILABLE">Available</option>
-              <option value="LOANED">Loaned</option>
-              <option value="MAINTENANCE">Maintenance</option>
-              <option value="RETIRED">Retired</option>
+              {assetStatuses.map(status => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
             </select>
 
             <select
               value={selectedCondition}
               onChange={(e) => setSelectedCondition(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="glass-input px-3 py-2 rounded-lg text-[#111]"
             >
               <option value="">All Conditions</option>
-              <option value="GOOD">Good</option>
-              <option value="FAIR">Fair</option>
-              <option value="POOR">Poor</option>
-              <option value="DAMAGED">Damaged</option>
+              {assetConditions.map(condition => (
+                <option key={condition.value} value={condition.value}>
+                  {condition.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
 
         {/* Error Message */}
         {inventoryError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="glass-card border-2 border-black/10">
             <div className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-              <p className="text-red-700">{inventoryError}</p>
+              <AlertTriangle className="h-5 w-5 text-[#111] mr-2" />
+              <p className="text-[#111]">{inventoryError}</p>
               <button
                 onClick={clearInventoryError}
-                className="ml-auto text-red-600 hover:text-red-800"
+                className="ml-auto text-[#111] hover:scale-110 transition-transform"
               >
                 ×
               </button>
@@ -295,99 +297,171 @@ export default function InventoryPage() {
         )}
 
         {/* Inventory Table */}
-        <div className="glass-card rounded-lg shadow-sm border border-white/20 overflow-hidden">
+        <div className="glass-card overflow-hidden">
           {inventoryLoading ? (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#111]"></div>
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+              <div className="glass-table overflow-x-auto rounded-xl">
+                <table className="min-w-full">
+                  <thead className="bg-white/60">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Inventory
+                      <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
+                        Inventory Tag
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Asset
+                      <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
+                        Asset Info
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Department
+                      <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
+                        Department & Location
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
+                        Custodian
+                      </th>
+                      <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
                         Quantity
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Condition
+                      <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
+                        Loans
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-[#111] font-semibold uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-black/10">
                     {generated && inventories.length > 0 ? inventories.map((inventory) => (
-                      <tr key={inventory.id} className="hover:bg-gray-50">
+                      <tr key={inventory.id} className="hover:bg-white/40">
                         <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-bold text-[#111]">
+                            {inventory.inventoryTag}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
                           <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {inventory.inventoryTag}
+                            <div className="text-sm font-medium text-[#111]">
+                              {inventory.asset?.name}
                             </div>
-                            {inventory.location && (
-                              <div className="text-sm text-gray-500">{inventory.location}</div>
+                            <div className="text-xs text-[#333]">
+                              Tag: {inventory.asset?.assetTag}
+                            </div>
+                            {inventory.asset?.serialNumber && (
+                              <div className="text-xs text-[#333]">
+                                S/N: {inventory.asset.serialNumber}
+                              </div>
+                            )}
+                            <div className="text-xs text-[#333]">
+                              {inventory.asset?.category?.name}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div>
+                            <div className="text-sm font-medium text-[#111]">
+                              📁 {inventory.department?.name}
+                            </div>
+                            <div className="text-xs text-[#333]">
+                              Code: {inventory.department?.code}
+                            </div>
+                            {inventory.asset?.location && (
+                              <div className="text-xs text-[#333] mt-1">
+                                📍 {inventory.asset.location.name}
+                                {inventory.asset.location.building && (
+                                  <span className="ml-1">
+                                    - {inventory.asset.location.building}
+                                    {inventory.asset.location.floor && ` Floor ${inventory.asset.location.floor}`}
+                                    {inventory.asset.location.room && ` Room ${inventory.asset.location.room}`}
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {inventory.asset.name}
+                        <td className="px-6 py-4">
+                          {inventory.custodian ? (
+                            <div>
+                              <div className="text-sm text-[#111]">
+                                {inventory.custodian.firstName} {inventory.custodian.lastName}
+                              </div>
+                              {inventory.custodian.username && (
+                                <div className="text-xs text-[#333]">
+                                  @{inventory.custodian.username}
+                                </div>
+                              )}
+                              {inventory.custodian.role && (
+                                <div className="text-xs text-[#333]">
+                                  {inventory.custodian.role}
+                                </div>
+                              )}
                             </div>
-                            <div className="text-sm text-gray-500">
-                              {inventory.asset.assetTag}
-                            </div>
-                          </div>
+                          ) : (
+                            <span className="text-xs text-[#333]">No custodian</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {inventory.department.name}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm font-semibold text-[#111]">
                             {inventory.availableQty} / {inventory.quantity}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-[#333]">
                             Available / Total
                           </div>
+                          {inventory.condition && (
+                            <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full mt-1 ${getConditionColor(inventory.condition)}`}>
+                              {inventory.condition}
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(inventory.status)}`}>
                             {inventory.status}
                           </span>
+                          {inventory.asset?.status && (
+                            <div className="text-xs text-[#333] mt-1">
+                              Asset: {inventory.asset.status}
+                            </div>
+                          )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getConditionColor(inventory.condition)}`}>
-                            {inventory.condition}
-                          </span>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="text-sm font-medium text-[#111]">
+                            {(inventory.loans ? inventory.loans.filter(l => l.status === 'ACTIVE').length : 0) || 0}
+                          </div>
+                          <div className="text-xs text-[#333]">
+                            Active Loans
+                          </div>
+                          {inventory.loans && inventory.loans.some(l => l.status === 'ACTIVE') && (() => {
+                            const activeLoan = inventory.loans.find(l => l.status === 'ACTIVE')
+                            return (
+                              <div className="text-left mt-2">
+                                <div className="text-xs text-[#111]">
+                                  <strong>Borrower:</strong> {activeLoan?.borrowerEmployee ? `${activeLoan.borrowerEmployee.firstName} ${activeLoan.borrowerEmployee.lastName}` : '—'}
+                                </div>
+                                <div className="text-xs text-[#111]">
+                                  <strong>Responsible:</strong> {activeLoan?.responsibleEmployee ? `${activeLoan.responsibleEmployee.firstName} ${activeLoan.responsibleEmployee.lastName}` : '—'}
+                                </div>
+                                <div className="text-xs text-[#111]">
+                                  <strong>Expected Return:</strong> {activeLoan?.expectedReturnDate ? new Date(activeLoan.expectedReturnDate).toLocaleDateString() : '—'}
+                                </div>
+                              </div>
+                            )
+                          })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-2">
-                            {/* FIX: Removed View Mode - only Edit and Delete buttons shown */}
                             <button
                               onClick={() => router.push(`/inventory/${inventory.id}/edit`)}
-                              className="text-yellow-600 hover:text-yellow-900"
+                              className="text-[#111] hover:scale-110 transition-transform"
                               title="Edit"
                             >
                               <Edit3 className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => handleDelete(inventory.id)}
-                              className="text-red-600 hover:text-red-900"
+                              className="text-[#111] hover:scale-110 transition-transform"
                               title="Delete"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -397,14 +471,14 @@ export default function InventoryPage() {
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan="7" className="px-6 py-12 text-center">
-                          <div className="text-gray-500">
-                            <Package className="mx-auto h-12 w-12 text-gray-400" />
+                        <td colSpan="8" className="px-6 py-12 text-center">
+                          <div className="text-[#111]">
+                            <Package className="mx-auto h-12 w-12 text-[#333]" />
                             <p className="mt-2 text-sm font-medium">No inventory items found</p>
                             <p className="text-sm">Get started by creating your first inventory item.</p>
                             <button
                               onClick={() => router.push('/inventory/create')}
-                              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                              className="glass-button mt-4 px-4 py-2 rounded-lg hover:scale-105 transition-transform"
                             >
                               Add Inventory
                             </button>
@@ -417,27 +491,28 @@ export default function InventoryPage() {
               </div>
 
               {/* Pagination */}
+              {/* Pagination */}
               {inventoryPagination.pages > 1 && (
-                <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200">
+                <div className="px-6 py-3 flex items-center justify-between border-t border-black/10">
                   <div className="flex-1 flex justify-between sm:hidden">
                     <button
                       onClick={() => handlePageChange(inventoryPagination.current - 1)}
                       disabled={!inventoryPagination.hasPrev}
-                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                      className="glass-button px-4 py-2 rounded-lg text-[#111] disabled:opacity-50"
                     >
                       Previous
                     </button>
                     <button
                       onClick={() => handlePageChange(inventoryPagination.current + 1)}
                       disabled={!inventoryPagination.hasNext}
-                      className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                      className="glass-button ml-3 px-4 py-2 rounded-lg text-[#111] disabled:opacity-50"
                     >
                       Next
                     </button>
                   </div>
                   <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-[#111]">
                         Showing page {inventoryPagination.current} of {inventoryPagination.pages}
                         ({inventoryPagination.total} total items)
                       </p>
@@ -447,14 +522,14 @@ export default function InventoryPage() {
                         <button
                           onClick={() => handlePageChange(inventoryPagination.current - 1)}
                           disabled={!inventoryPagination.hasPrev}
-                          className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                          className="glass-button px-2 py-2 rounded-l-md text-[#111] disabled:opacity-50"
                         >
                           Previous
                         </button>
                         <button
                           onClick={() => handlePageChange(inventoryPagination.current + 1)}
                           disabled={!inventoryPagination.hasNext}
-                          className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                          className="glass-button px-2 py-2 rounded-r-md text-[#111] disabled:opacity-50"
                         >
                           Next
                         </button>

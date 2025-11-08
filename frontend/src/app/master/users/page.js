@@ -13,7 +13,11 @@ export default function UsersPage() {
   const { user } = useAuthStore()
   const { 
     users, 
-    loading, 
+    loading,
+    currentPage,
+    pageSize,
+    totalUsers,
+    setPage,
     fetchUsers,
     createUser,
     updateUser,
@@ -57,10 +61,12 @@ export default function UsersPage() {
     'TOP_MANAGEMENT'
   ]
 
+  const [searchTerm, setSearchTerm] = useState('')
+
   useEffect(() => {
-    fetchUsers()
+    fetchUsers({ page: 1, limit: pageSize })
     fetchDepartments()
-  }, [fetchUsers, fetchDepartments])
+  }, [fetchUsers, fetchDepartments, pageSize])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -77,6 +83,8 @@ export default function UsersPage() {
       }
       setShowModal(false)
       resetForm()
+      // Refresh current page data
+      fetchUsers({ page: currentPage, limit: pageSize, search: searchTerm })
     } catch (error) {
       console.error('Error saving user:', error)
     }
@@ -122,6 +130,8 @@ export default function UsersPage() {
         await deleteUser(userToDelete.id)
         setShowDeleteModal(false)
         setUserToDelete(null)
+        // Refresh current page data
+        fetchUsers({ page: currentPage, limit: pageSize, search: searchTerm })
       } catch (error) {
         console.error('Error deleting user:', error)
       }
@@ -143,6 +153,17 @@ export default function UsersPage() {
     setEditingUser(null)
   }
 
+  const handleSearch = () => {
+    fetchUsers({ page: 1, limit: pageSize, search: searchTerm })
+  }
+
+  const handlePageChange = (newPage) => {
+    setPage(newPage)
+    fetchUsers({ page: newPage, limit: pageSize, search: searchTerm })
+  }
+
+  const totalPages = Math.ceil(totalUsers / pageSize)
+
   const columns = [
     { key: 'name', label: 'Name' },
     { key: 'email', label: 'Email' },
@@ -158,7 +179,7 @@ export default function UsersPage() {
         return `${item.firstName} ${item.lastName}`
       case 'role':
         return (
-          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+          <span className="px-2 py-1 text-xs font-medium rounded-full bg-white/60 text-[#111]">
             {item.role.replace('_', ' ')}
           </span>
         )
@@ -168,8 +189,8 @@ export default function UsersPage() {
         return (
           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
             item.isActive 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-red-100 text-red-800'
+              ? 'bg-white/60 text-[#111]' 
+              : 'bg-white/60 text-[#111]'
           }`}>
             {item.isActive ? 'Active' : 'Inactive'}
           </span>
@@ -183,7 +204,7 @@ export default function UsersPage() {
     <div className="flex space-x-2">
       <button
         onClick={() => handleEdit(item)}
-        className="text-blue-600 hover:text-blue-900"
+        className="text-[#111] hover:scale-110 transition-transform"
         title="Edit User"
       >
         <Edit className="w-4 h-4" />
@@ -193,7 +214,7 @@ export default function UsersPage() {
           setSelectedUser(item)
           setShowPasswordModal(true)
         }}
-        className="text-green-600 hover:text-green-900"
+        className="text-[#111] hover:scale-110 transition-transform"
         title="Change Password"
       >
         <Eye className="w-4 h-4" />
@@ -203,7 +224,7 @@ export default function UsersPage() {
           setUserToDelete(item)
           setShowDeleteModal(true)
         }}
-        className="text-red-600 hover:text-red-900"
+        className="text-[#111] hover:scale-110 transition-transform"
         title="Delete User"
       >
         <Trash2 className="w-4 h-4" />
@@ -221,11 +242,31 @@ export default function UsersPage() {
         <h1 className="text-2xl font-bold">Users</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center space-x-2"
+          className="glass-button text-white px-4 py-2 rounded hover:scale-105 transition-transform flex items-center space-x-2"
         >
           <Plus className="w-4 h-4" />
           <span>Add User</span>
         </button>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6 bg-white p-4 rounded-lg shadow">
+        <div className="flex gap-4">
+          <input
+            type="text"
+            placeholder="Search users by name, email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            className="flex-1 px-4 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-transparent"
+          />
+          <button
+            onClick={handleSearch}
+            className="px-6 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform transition-colors"
+          >
+            Search
+          </button>
+        </div>
       </div>
 
       <DataTable
@@ -235,6 +276,34 @@ export default function UsersPage() {
         formatCellValue={formatCellValue}
         renderActions={renderActions}
       />
+
+      {/* Pagination Controls */}
+      {totalUsers > 0 && (
+        <div className="flex justify-between items-center mt-6 px-4 py-4 bg-white rounded-lg shadow">
+          <div className="text-sm text-[#333]">
+            Showing {Math.min((currentPage - 1) * pageSize + 1, totalUsers)} to {Math.min(currentPage * pageSize, totalUsers)} of {totalUsers} users
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-4 py-2 glass-button text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform transition-colors"
+            >
+              Previous
+            </button>
+            <span className="px-4 py-2 text-[#111]">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              className="px-4 py-2 glass-button text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-transform transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit Modal */}
       {showModal && (
@@ -248,7 +317,7 @@ export default function UsersPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   First Name *
                 </label>
                 <input
@@ -256,13 +325,13 @@ export default function UsersPage() {
                   required
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                   placeholder="Enter first name"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Last Name *
                 </label>
                 <input
@@ -270,13 +339,13 @@ export default function UsersPage() {
                   required
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                   placeholder="Enter last name"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Email *
                 </label>
                 <input
@@ -284,13 +353,13 @@ export default function UsersPage() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                   placeholder="Enter email address"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Username *
                 </label>
                 <input
@@ -298,14 +367,14 @@ export default function UsersPage() {
                   required
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                   placeholder="Enter username"
                 />
               </div>
 
               {!editingUser && (
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Password *
                   </label>
                   <input
@@ -313,34 +382,34 @@ export default function UsersPage() {
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                    className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                     placeholder="Enter password"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Phone
                 </label>
                 <input
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                   placeholder="Enter phone number"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Role *
                 </label>
                 <select
                   required
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 >
                   <option value="">Select Role</option>
                   {roles.map(role => (
@@ -350,13 +419,13 @@ export default function UsersPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[#111] mb-1">
                   Department
                 </label>
                 <select
                   value={formData.departmentId}
                   onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                  className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                  className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 >
                   <option value="">Select Department</option>
                   {departments.map(dept => (
@@ -371,9 +440,9 @@ export default function UsersPage() {
                     type="checkbox"
                     checked={formData.isActive}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                    className="rounded border-black/10 text-[#111] focus:ring-black/20 mr-2"
                   />
-                  <span className="text-sm text-gray-700">Active</span>
+                  <span className="text-sm text-[#111]">Active</span>
                 </label>
               </div>
             </div>
@@ -385,14 +454,14 @@ export default function UsersPage() {
                   setShowModal(false)
                   resetForm()
                 }}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200"
+                className="px-4 py-2 text-[#333] bg-gray-100 rounded hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 glass-button text-white rounded hover:scale-105 transition-transform disabled:opacity-50"
               >
                 {loading ? 'Saving...' : (editingUser ? 'Update' : 'Create')}
               </button>
@@ -412,13 +481,13 @@ export default function UsersPage() {
         >
           <form onSubmit={handlePasswordChange} className="space-y-4">
             <div className="bg-gray-50 p-3 rounded">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-[#333]">
                 User: <span className="font-medium">{selectedUser.firstName} {selectedUser.lastName}</span>
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#111] mb-1">
                 New Password *
               </label>
               <input
@@ -426,13 +495,13 @@ export default function UsersPage() {
                 required
                 value={passwordData.newPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 placeholder="Enter new password"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#111] mb-1">
                 Confirm Password *
               </label>
               <input
@@ -440,7 +509,7 @@ export default function UsersPage() {
                 required
                 value={passwordData.confirmPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+                className="w-full p-2 border rounded focus:outline-none focus:border-black/30"
                 placeholder="Confirm new password"
               />
             </div>
@@ -452,14 +521,14 @@ export default function UsersPage() {
                   setShowPasswordModal(false)
                   setPasswordData({ newPassword: '', confirmPassword: '' })
                 }}
-                className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200"
+                className="px-4 py-2 text-[#333] bg-gray-100 rounded hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                className="px-4 py-2 glass-button text-white rounded hover:scale-105 transition-transform disabled:opacity-50"
               >
                 {loading ? 'Changing...' : 'Change Password'}
               </button>
@@ -487,14 +556,14 @@ export default function UsersPage() {
                 setShowDeleteModal(false)
                 setUserToDelete(null)
               }}
-              className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200"
+              className="px-4 py-2 text-[#333] bg-gray-100 rounded hover:bg-gray-200"
             >
               Cancel
             </button>
             <button
               onClick={handleDelete}
               disabled={loading}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+              className="px-4 py-2 glass-button text-white rounded hover:scale-105 transition-transform disabled:opacity-50"
             >
               {loading ? 'Deleting...' : 'Delete'}
             </button>

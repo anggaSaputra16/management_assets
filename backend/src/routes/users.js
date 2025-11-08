@@ -16,6 +16,7 @@ const createUserSchema = Joi.object({
   phone: Joi.string().allow('').optional(),
   role: Joi.string().valid('ADMIN', 'ASSET_ADMIN', 'MANAGER', 'DEPARTMENT_USER', 'TECHNICIAN', 'AUDITOR', 'TOP_MANAGEMENT').required(),
   departmentId: Joi.string().allow(null, '').optional(),
+  locationId: Joi.string().allow(null, '').optional(),
   companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional()
 });
@@ -28,6 +29,7 @@ const updateUserSchema = Joi.object({
   phone: Joi.string().allow('').optional(),
   role: Joi.string().valid('ADMIN', 'ASSET_ADMIN', 'MANAGER', 'DEPARTMENT_USER', 'TECHNICIAN', 'AUDITOR', 'TOP_MANAGEMENT').optional(),
   departmentId: Joi.string().allow(null, '').optional(),
+  locationId: Joi.string().allow(null, '').optional(),
   companyId: Joi.string().optional(),
   isActive: Joi.boolean().optional()
 });
@@ -88,6 +90,15 @@ router.get('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res
               id: true,
               name: true,
               code: true
+            }
+          },
+          location: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              building: true,
+              city: true
             }
           }
         },

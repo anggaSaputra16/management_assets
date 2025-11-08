@@ -90,6 +90,37 @@ export const softwareAssetsService = {
     return response.data;
   },
 
+  // Create one or multiple licenses for a software asset
+  createLicenses: async (softwareId, licensePayload) => {
+    // licensePayload can be object or array
+    const response = await api.post(`/software-assets/${encodeURIComponent(softwareId)}/licenses`, licensePayload);
+    return response.data.data;
+  },
+
+  // Update a license
+  updateLicense: async (softwareId, licenseId, data) => {
+    const response = await api.put(`/software-assets/${encodeURIComponent(softwareId)}/licenses/${encodeURIComponent(licenseId)}`, data);
+    return response.data.data;
+  },
+
+  // Delete (deactivate) a license
+  deleteLicense: async (softwareId, licenseId) => {
+    const response = await api.delete(`/software-assets/${encodeURIComponent(softwareId)}/licenses/${encodeURIComponent(licenseId)}`);
+    return response.data;
+  },
+
+  // Upload attachments for a software asset (multipart/form-data)
+  uploadAttachments: async (softwareId, files) => {
+    const form = new FormData();
+    for (const f of files) {
+      form.append('attachments', f);
+    }
+    const response = await api.post(`/software-assets/${encodeURIComponent(softwareId)}/attachments`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data.data;
+  },
+
   // Get software assets by type
   getByType: async (type) => {
     // Backend expects `softwareType` query param

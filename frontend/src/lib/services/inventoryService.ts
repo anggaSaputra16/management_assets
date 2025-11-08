@@ -154,6 +154,25 @@ class InventoryService {
     return response.data.data as InventoryResponse;
   }
 
+  async getAvailableAssets(departmentId?: string): Promise<Array<{
+    id: string;
+    assetTag: string;
+    name: string;
+    description?: string;
+    serialNumber?: string;
+    category: { name: string };
+    currentDepartment?: { id: string; name: string };
+    totalInCompany: number;
+    allocatedToThisDepartment: number;
+    availableToAllocate: number;
+    isAlreadyAllocated: boolean;
+  }>> {
+    const response = await api.get(`${this.basePath}/available-assets`, {
+      params: { departmentId }
+    });
+    return response.data.data;
+  }
+
   async createInventory(inventoryData: CreateInventoryData): Promise<InventoryItem> {
     const response = await api.post(this.basePath, inventoryData);
     return response.data.data as InventoryItem;

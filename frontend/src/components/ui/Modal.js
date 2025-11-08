@@ -54,17 +54,17 @@ export default function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="flex items-center justify-between p-6 border-b border-black/10">
+          <h2 className="text-xl font-semibold text-[#111]">
             {title}
           </h2>
           {showCloseButton && (
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-1 hover:bg-white/60 rounded-full transition-colors"
               type="button"
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className="w-5 h-5 text-[#333]" />
             </button>
           )}
         </div>

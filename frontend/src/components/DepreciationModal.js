@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAssetStore, useDepreciationStore } from '@/stores'
+import { useAssetStore, useDepreciationStore, useEnumStore } from '@/stores'
 import { Calculator, DollarSign, Clock, Percent, FileText, X, TrendingDown } from 'lucide-react'
 
 export default function DepreciationModal({ assetId, isOpen, onClose, onComplete }) {
@@ -12,6 +12,7 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
     currentCalculation,
     resetState 
   } = useDepreciationStore()
+  const { depreciationMethods } = useEnumStore()
   
   const [formData, setFormData] = useState({
     depreciationMethod: 'STRAIGHT_LINE',
@@ -144,7 +145,7 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
         <div className="flex justify-between items-center p-6 border-b border-white/20">
           <div className="flex items-center space-x-3">
             <div className="p-2 glass-button rounded-lg">
-              <TrendingDown className="w-6 h-6 text-green-400" />
+              <TrendingDown className="w-6 h-6 text-[#111]" />
             </div>
             <div>
               <h2 className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
@@ -168,8 +169,8 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
             {error && (
-              <div className="p-4 glass-card border border-red-300 bg-red-50/50 text-red-700 rounded-lg flex items-center space-x-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <div className="p-4 glass-card border border-black/10 bg-white/60/50 text-[#111] rounded-lg flex items-center space-x-2">
+                <div className="w-2 h-2 bg-white/600 rounded-full"></div>
                 <span>{error}</span>
               </div>
             )}
@@ -198,8 +199,8 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                     <span className="text-white/70">Current Status:</span>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                       currentCalculation 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
+                        ? 'bg-white/60 text-[#111]' 
+                        : 'bg-yellow-100 text-[#111]'
                     }`}>
                       {currentCalculation ? 'Configured' : 'Not Set'}
                     </span>
@@ -226,11 +227,13 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                       name="depreciationMethod"
                       value={formData.depreciationMethod}
                       onChange={handleChange}
-                      className="glass-input w-full px-3 py-2 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                      className="glass-input w-full px-3 py-2 rounded-lg text-[#111] focus:ring-2 focus:ring-black/20 focus:border-transparent"
                     >
-                      <option value="STRAIGHT_LINE">Straight Line</option>
-                      <option value="DECLINING_BALANCE">Declining Balance</option>
-                      <option value="DOUBLE_DECLINING_BALANCE">Double Declining Balance</option>
+                      {depreciationMethods && depreciationMethods.map((method) => (
+                        <option key={method.value} value={method.value}>
+                          {method.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -249,7 +252,7 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                         min="1"
                         max="50"
                         step="1"
-                        className="glass-input w-full px-3 py-2 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                        className="glass-input w-full px-3 py-2 rounded-lg text-[#111] focus:ring-2 focus:ring-black/20 focus:border-transparent"
                         required
                       />
                     </div>
@@ -267,7 +270,7 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                         onChange={handleChange}
                         min="0"
                         step="1000"
-                        className="glass-input w-full px-3 py-2 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                        className="glass-input w-full px-3 py-2 rounded-lg text-[#111] focus:ring-2 focus:ring-black/20 focus:border-transparent"
                       />
                     </div>
 
@@ -287,7 +290,7 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                           min="0.01"
                           max="1"
                           step="0.01"
-                          className="glass-input w-full px-3 py-2 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                          className="glass-input w-full px-3 py-2 rounded-lg text-[#111] focus:ring-2 focus:ring-black/20 focus:border-transparent"
                         />
                         <p className="text-xs text-white/60 mt-1">
                           {Math.round(formData.depreciationRate * 100)}% per year
@@ -327,13 +330,13 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                     </div>
                     <div className="flex justify-between py-2 border-b border-white/10">
                       <span className="text-white/70">Annual Depreciation:</span>
-                      <span className="text-green-400 font-medium">
+                      <span className="text-[#111] font-medium">
                         {formatCurrency(preview.annualDepreciation)}
                       </span>
                     </div>
                     <div className="flex justify-between py-2">
                       <span className="text-white/70">Monthly Depreciation:</span>
-                      <span className="text-green-400 font-medium">
+                      <span className="text-[#111] font-medium">
                         {formatCurrency(preview.monthlyDepreciation)}
                       </span>
                     </div>
@@ -361,7 +364,7 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
                 rows={3}
                 value={formData.notes}
                 onChange={handleChange}
-                className="glass-input w-full px-3 py-2 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
+                className="glass-input w-full px-3 py-2 rounded-lg text-[#111] focus:ring-2 focus:ring-black/20 focus:border-transparent resize-none"
                 placeholder="Add any notes about this depreciation setup..."
               />
             </div>
@@ -382,7 +385,7 @@ export default function DepreciationModal({ assetId, isOpen, onClose, onComplete
               className={`glass-button px-6 py-2 rounded-lg text-white font-medium transition-all hover:scale-105 ${
                 loading || !currentAsset?.purchasePrice
                   ? 'opacity-50 cursor-not-allowed' 
-                  : 'bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700'
+                  : 'bg-gradient-to-r from-transparent to-teal-600 hover:from-transparent hover:to-teal-700'
               }`}
             >
               {loading ? (

@@ -88,7 +88,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden">
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-xl font-semibold">Transfer Asset</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <button onClick={onClose} className="text-[#333] hover:text-[#111]">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -98,13 +98,13 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
         <form onSubmit={handleSubmit}>
           <div className="p-4">
             {error && (
-              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              <div className="mb-4 bg-white/60 border border-black/10 text-[#111] px-4 py-3 rounded">
                 {error}
               </div>
             )}
 
             {currentAsset && (
-              <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+              <div className="mb-4 bg-white/60 border border-black/10 text-[#111] px-4 py-3 rounded">
                 <p><strong>Asset:</strong> {currentAsset.name} ({currentAsset.assetTag})</p>
                 <p className="text-sm mt-1">
                   <strong>Current Location:</strong> {currentAsset.location?.name || 'N/A'} | 
@@ -114,14 +114,14 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
             )}
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-medium mb-2">
+              <label className="block text-[#111] text-sm font-medium mb-2">
                 New Location
               </label>
               <select
                 name="locationId"
                 value={formData.locationId}
                 onChange={handleChange}
-                className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="block w-full rounded-md border border-black/10 py-2 px-3 shadow-sm focus:border-black/30 focus:outline-none focus:ring-1 focus:ring-black/20"
               >
                 <option value="">Select Location</option>
                 {locations.map(location => (
@@ -137,14 +137,14 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-medium mb-2">
+              <label className="block text-[#111] text-sm font-medium mb-2">
                 New Department
               </label>
               <select
                 name="departmentId"
                 value={formData.departmentId}
                 onChange={handleChange}
-                className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="block w-full rounded-md border border-black/10 py-2 px-3 shadow-sm focus:border-black/30 focus:outline-none focus:ring-1 focus:ring-black/20"
               >
                 <option value="">Select Department</option>
                 {departments.map(department => (
@@ -160,7 +160,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-medium mb-2">
+              <label className="block text-[#111] text-sm font-medium mb-2">
                 Reason for Transfer *
               </label>
               <select
@@ -168,7 +168,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
                 value={formData.reason}
                 onChange={handleChange}
                 required
-                className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="block w-full rounded-md border border-black/10 py-2 px-3 shadow-sm focus:border-black/30 focus:outline-none focus:ring-1 focus:ring-black/20"
               >
                 <option value="">Select Reason</option>
                 <option value="DEPARTMENT_CHANGE">Department Change</option>
@@ -180,7 +180,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-medium mb-2">
+              <label className="block text-[#111] text-sm font-medium mb-2">
                 Notes
               </label>
               <textarea
@@ -188,7 +188,7 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
                 value={formData.notes}
                 onChange={handleChange}
                 rows={3}
-                className="block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="block w-full rounded-md border border-black/10 py-2 px-3 shadow-sm focus:border-black/30 focus:outline-none focus:ring-1 focus:ring-black/20"
                 placeholder="Additional details about this transfer..."
               ></textarea>
             </div>
@@ -198,14 +198,14 @@ export default function TransferModal({ assetId, isOpen, onClose, onTransferComp
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition"
+              className="px-4 py-2 bg-gray-200 text-[#111] rounded hover:bg-gray-300 transition"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center"
+              className="px-4 py-2 glass-button text-white rounded hover:scale-105 transition-transform transition flex items-center"
               disabled={loading}
             >
               {loading ? (

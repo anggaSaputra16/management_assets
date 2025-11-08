@@ -86,12 +86,7 @@ enum NotificationType {
   VENDOR_CONTRACT_EXPIRING
 }
 
-enum SparePartCategory {
-  HARDWARE
-  SOFTWARE
-  ACCESSORY
-  CONSUMABLE
-}
+// SparePartCategory removed - now using flexible string with Category table reference
 
 enum SparePartType {
   COMPONENT
@@ -175,13 +170,14 @@ model Company {
   updatedAt       DateTime @updatedAt
   
   // Relations
+  employees       Employee[]
   users           User[]
+  roles           Role[]
   departments     Department[]
   locations       Location[]
   assets          Asset[]
   categories      Category[]
   vendors         Vendor[]
-  positions       Position[]
   softwareAssets  SoftwareAsset[]
   softwareLicenses SoftwareLicense[]
   softwareInstallations SoftwareInstallation[]
@@ -200,22 +196,73 @@ model Company {
   @@map("companies")
 }
 
-// Employee Position/Job Title Management
-model Position {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  level       String?  // STAFF, SUPERVISOR, MANAGER, HEAD, DIRECTOR
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// Role Management - Define custom roles per company
+model Role {
+  id              String   @id @default(cuid())
+  name            String   // e.g., "Admin", "Asset Manager", "Technician"
+  code            String   // e.g., "ADMIN", "ASSET_MGR", "TECH"
+  description     String?
+  permissions     String[] // Array of permission codes
+  isSystemRole    Boolean  @default(false) // True for built-in roles that can't be deleted
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Foreign Keys
+  companyId       String?  // NULL for system-wide roles, set for company-specific roles
   
   // Relations
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
-  users       User[]
+  company         Company? @relation(fields: [companyId], references: [id])
   
-  @@map("positions")
+  @@unique([code, companyId]) // Role code must be unique per company
+  @@map("roles")
+}
+
+// Employee Management - For personnel who hold assets (may or may not have app access)
+model Employee {
+  id              String   @id @default(cuid())
+  npk             String   @unique // Nomor Pokok Karyawan
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  dateOfBirth     DateTime?
+  hireDate        DateTime?
+  terminationDate DateTime?
+  address         String?
+  position        String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Foreign Keys
+  companyId       String
+  departmentId    String?
+  locationId      String?
+  userId          String?   @unique // Optional link to User if employee has app access
+  
+  // Relations
+  company         Company     @relation(fields: [companyId], references: [id])
+  department      Department? @relation("EmployeeDepartment", fields: [departmentId], references: [id])
+  location        Location?   @relation("EmployeeLocation", fields: [locationId], references: [id])
+  user            User?       @relation("EmployeeUser", fields: [userId], references: [id])
+  
+  // Employee holds assets
+  assignedAssets  Asset[]     @relation("EmployeeAssets")
+  
+  // Employee transfer activities
+  transfersFrom   AssetTransfer[] @relation("TransferFromEmployee")
+  transfersTo     AssetTransfer[] @relation("TransferToEmployee")
+  
+  // Inventory loan activities
+  borrowedLoans   InventoryLoan[] @relation("LoanBorrowerEmployee")
+  responsibleLoans InventoryLoan[] @relation("LoanResponsibleEmployee")
+  
+  @@unique([companyId, npk])
+  @@index([companyId])
+  @@index([departmentId])
+  @@index([locationId])
+  @@map("employees")
 }
 
 // User Management with Multi-company and Enhanced Employee Data
@@ -242,20 +289,22 @@ model User {
   // Foreign Keys
   companyId       String
   departmentId    String?
-  positionId      String?
-  managerId       String?  // Direct manager/supervisor
+  locationId      String?      // Location where user is assigned/working (e.g., Head Office, Branch)
+  managerId       String?      // Direct manager/supervisor
   
   // Relations
   company         Company     @relation(fields: [companyId], references: [id])
   department      Department? @relation(fields: [departmentId], references: [id])
-  position        Position?   @relation(fields: [positionId], references: [id])
+  location        Location?   @relation("UserLocation", fields: [locationId], references: [id])
   manager         User?       @relation("ManagerSubordinate", fields: [managerId], references: [id])
   subordinates    User[]      @relation("ManagerSubordinate")
+  
+  // Link to employee (if user represents an employee with app access)
+  employee        Employee?   @relation("EmployeeUser")
   
   // User activities
   assetRequests    AssetRequest[]
   approvedRequests AssetRequest[] @relation("ApprovedBy")
-  assignedAssets   Asset[]        @relation("AssignedTo")
   maintenanceRecords MaintenanceRecord[] @relation("TechnicianMaintenance")
   managedDepartments Department[] @relation("DepartmentManager")
   auditRecords     AuditRecord[]
@@ -273,13 +322,10 @@ model User {
   
   // Inventory activities
   custodiedInventories Inventory[] @relation("InventoryCustodian")
-  borrowedLoans       InventoryLoan[] @relation("LoanBorrower")
+  requestedLoans      InventoryLoan[] @relation("LoanRequestedBy")
   approvedLoans       InventoryLoan[] @relation("LoanApprover")
-  responsibleLoans    InventoryLoan[] @relation("LoanResponsible")
   
-  // Asset Transfer activities
-  transfersFrom       AssetTransfer[] @relation("TransferFromUser")
-  transfersTo         AssetTransfer[] @relation("TransferToUser")
+  // Asset Transfer activities (User is for approval workflow, not ownership transfer)
   transfersRequested  AssetTransfer[] @relation("TransferRequestedBy")
   transfersApproved   AssetTransfer[] @relation("TransferApprovedBy")
   
@@ -298,6 +344,15 @@ model User {
   
   // Asset Attachments uploaded by user
   uploadedAssetAttachments AssetAttachment[] @relation("UploadedAttachments")
+  
+  // Audit relations - who edited what
+  editedAssets          Asset[]             @relation("AssetEditHistory")
+  editedRequests        AssetRequest[]      @relation("RequestEditHistory")
+  editedMaintenances    MaintenanceRecord[] @relation("MaintenanceEditHistory")
+  editedAudits          AuditRecord[]       @relation("AuditEditHistory")
+  editedTransfers       AssetTransfer[]     @relation("TransferEditHistory")
+  editedSpareParts      SparePart[]         @relation("SparePartEditHistory")
+  editedSoftwareAssets  SoftwareAsset[]     @relation("SoftwareAssetEditHistory")
   
   @@map("users")
 }
@@ -324,6 +379,7 @@ model Department {
   manager     User?       @relation("DepartmentManager", fields: [managerId], references: [id])
   parent      Department? @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id])
   children    Department[] @relation("DepartmentHierarchy")
+  employees   Employee[]  @relation("EmployeeDepartment")
   users       User[]
   assets      Asset[]
   assetRequests AssetRequest[]
@@ -362,6 +418,8 @@ model Location {
   // Relations
   company     Company @relation(fields: [companyId], references: [id])
   manager     User?   @relation("LocationManager", fields: [managerId], references: [id])
+  employees   Employee[] @relation("EmployeeLocation")
+  users       User[]  @relation("UserLocation")
   assets      Asset[]
   transfersFrom AssetTransfer[] @relation("TransferFromLocation")
   transfersTo   AssetTransfer[] @relation("TransferToLocation")
@@ -448,13 +506,17 @@ model Asset {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   
+  // Audit fields
+  editedBy        String?     // User ID who last edited
+  lastEditedAt    DateTime?   // Last edit timestamp
+  
   // Foreign Keys
   companyId       String
   categoryId      String
   vendorId        String?
   locationId      String?
   departmentId    String?
-  assignedToId    String?
+  assignedEmployeeId String?  // Changed from assignedToId to assignedEmployeeId
   
   // Relations
   company         Company      @relation(fields: [companyId], references: [id])
@@ -462,7 +524,8 @@ model Asset {
   vendor          Vendor?      @relation(fields: [vendorId], references: [id])
   location        Location?    @relation(fields: [locationId], references: [id])
   department      Department?  @relation(fields: [departmentId], references: [id])
-  assignedTo      User?        @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedEmployee Employee?   @relation("EmployeeAssets", fields: [assignedEmployeeId], references: [id])
+  editedByUser    User?        @relation("AssetEditHistory", fields: [editedBy], references: [id])
   
   // Asset activities
   assetRequests   AssetRequest[]
@@ -518,6 +581,10 @@ model AssetRequest {
   estimatedCost   Decimal?      @db.Decimal(15, 2)
   actualCost      Decimal?      @db.Decimal(15, 2)
   
+  // Audit fields
+  editedBy        String?       // User ID who last edited
+  lastEditedAt    DateTime?     // Last edit timestamp
+  
   // Foreign Keys
   requesterId     String
   departmentId    String
@@ -531,6 +598,7 @@ model AssetRequest {
   company         Company       @relation(fields: [companyId], references: [id])
   asset           Asset?        @relation(fields: [assetId], references: [id])
   approvedBy      User?         @relation("ApprovedBy", fields: [approvedById], references: [id])
+  editedByUser    User?         @relation("RequestEditHistory", fields: [editedBy], references: [id])
   
   // Request workflow tracking
   workflowSteps   RequestWorkflow[]
@@ -610,6 +678,10 @@ model MaintenanceRecord {
   notes           String?
   workDescription String?           // Detail pekerjaan yang dilakukan
   
+  // Audit fields
+  editedBy        String?           // User ID who last edited
+  lastEditedAt    DateTime?         // Last edit timestamp
+  
   // Foreign Keys
   assetId         String
   companyId       String            // Multi-company support
@@ -625,6 +697,7 @@ model MaintenanceRecord {
   technician      User?             @relation("TechnicianMaintenance", fields: [technicianId], references: [id])
   supervisor      User?             @relation("MaintenanceSupervisor", fields: [supervisorId], references: [id])
   vendor          Vendor?           @relation("MaintenanceVendor", fields: [vendorId], references: [id])
+  editedByUser    User?             @relation("MaintenanceEditHistory", fields: [editedBy], references: [id])
   partUsages      PartUsage[]       @relation("PartUsageMaintenance")
   attachments     MaintenanceAttachment[]
   
@@ -692,6 +765,10 @@ model AuditRecord {
   findings        String?
   recommendations String?
   
+  // Audit fields
+  editedBy        String?     // User ID who last edited
+  lastEditedAt    DateTime?   // Last edit timestamp
+  
   // Foreign Keys
   assetId         String?
   auditorId       String
@@ -699,6 +776,7 @@ model AuditRecord {
   // Relations
   asset           Asset?      @relation(fields: [assetId], references: [id])
   auditor         User        @relation(fields: [auditorId], references: [id])
+  editedByUser    User?       @relation("AuditEditHistory", fields: [editedBy], references: [id])
   
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -810,7 +888,7 @@ model SparePart {
   description     String?
   brand           String?
   model           String?
-  category        SparePartCategory @default(HARDWARE)
+  category        String            @default("HARDWARE") // Flexible category from master Category table
   partType        SparePartType     @default(COMPONENT)
   status          SparePartStatus   @default(ACTIVE)
   unitPrice       Decimal           @db.Decimal(10, 2)
@@ -824,6 +902,10 @@ model SparePart {
   notes           String?
   isActive        Boolean           @default(true)
   
+  // Audit fields
+  editedBy        String?           // User ID who last edited
+  lastEditedAt    DateTime?         // Last edit timestamp
+  
   // Foreign Keys
   vendorId        String?
   companyId       String            // Multi-company support
@@ -831,6 +913,7 @@ model SparePart {
   // Relations
   vendor          Vendor?           @relation("SparePartVendor", fields: [vendorId], references: [id])
   company         Company           @relation(fields: [companyId], references: [id])
+  editedByUser    User?             @relation("SparePartEditHistory", fields: [editedBy], references: [id])
   procurements    Procurement[]
   usages          PartUsage[]
   replacements    PartReplacement[] @relation("NewPart")
@@ -1064,16 +1147,20 @@ model AssetTransfer {
   approvalNotes   String?
   status          String    @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED
   
+  // Audit fields
+  editedBy        String?   // User ID who last edited
+  lastEditedAt    DateTime? // Last edit timestamp
+  
   // Foreign Keys
   assetId         String
   fromLocationId  String?
   toLocationId    String?
   fromDepartmentId String?
   toDepartmentId  String?
-  fromUserId      String?
-  toUserId        String?
-  requestedById   String
-  approvedById    String?
+  fromEmployeeId  String?  // Changed from fromUserId to fromEmployeeId
+  toEmployeeId    String?  // Changed from toUserId to toEmployeeId
+  requestedById   String   // User who requested the transfer (for approval workflow)
+  approvedById    String?  // User who approved the transfer
   
   // Relations
   asset           Asset     @relation("AssetTransfers", fields: [assetId], references: [id])
@@ -1081,10 +1168,11 @@ model AssetTransfer {
   toLocation      Location? @relation("TransferToLocation", fields: [toLocationId], references: [id])
   fromDepartment  Department? @relation("TransferFromDepartment", fields: [fromDepartmentId], references: [id])
   toDepartment    Department? @relation("TransferToDepartment", fields: [toDepartmentId], references: [id])
-  fromUser        User?     @relation("TransferFromUser", fields: [fromUserId], references: [id])
-  toUser          User?     @relation("TransferToUser", fields: [toUserId], references: [id])
+  fromEmployee    Employee? @relation("TransferFromEmployee", fields: [fromEmployeeId], references: [id])
+  toEmployee      Employee? @relation("TransferToEmployee", fields: [toEmployeeId], references: [id])
   requestedBy     User      @relation("TransferRequestedBy", fields: [requestedById], references: [id])
   approvedBy      User?     @relation("TransferApprovedBy", fields: [approvedById], references: [id])
+  editedByUser    User?     @relation("TransferEditHistory", fields: [editedBy], references: [id])
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -1155,6 +1243,7 @@ model Inventory {
   // Foreign Keys
   assetId         String
   departmentId    String
+  companyId       String    // Multi-company support for direct scoping
   custodianId     String?   // Person responsible for this inventory
   
   // Relations
@@ -1166,6 +1255,9 @@ model Inventory {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
+  @@unique([assetId, departmentId]) // Prevent duplicate inventory per asset-department
+  @@index([companyId, departmentId, status])
+  @@index([companyId, status])
   @@map("inventories")
 }
 
@@ -1184,16 +1276,18 @@ model InventoryLoan {
   approvalNotes   String?
   
   // Foreign Keys
-  inventoryId     String
-  borrowerId      String
-  approvedById    String?
-  responsibleId   String    // Person responsible for the loan
+  inventoryId           String
+  borrowerEmployeeId    String   // Employee who borrows
+  responsibleEmployeeId String   // Employee responsible for the loan
+  requestedById         String   // User who creates the loan request
+  approvedById          String?  // Manager/Admin who approves
   
   // Relations
-  inventory       Inventory @relation(fields: [inventoryId], references: [id])
-  borrower        User      @relation("LoanBorrower", fields: [borrowerId], references: [id])
-  approvedBy      User?     @relation("LoanApprover", fields: [approvedById], references: [id])
-  responsible     User      @relation("LoanResponsible", fields: [responsibleId], references: [id])
+  inventory           Inventory @relation(fields: [inventoryId], references: [id])
+  borrowerEmployee    Employee  @relation("LoanBorrowerEmployee", fields: [borrowerEmployeeId], references: [id])
+  responsibleEmployee Employee  @relation("LoanResponsibleEmployee", fields: [responsibleEmployeeId], references: [id])
+  requestedBy         User      @relation("LoanRequestedBy", fields: [requestedById], references: [id])
+  approvedBy          User?     @relation("LoanApprover", fields: [approvedById], references: [id])
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -1245,15 +1339,23 @@ model SoftwareAsset {
   category        String?
   systemRequirements Json?
   installationPath String?
+  // Directory paths (or JSON array) to attachments related to this software asset
+  // Stored as JSON string for backward compatibility with existing schema
+  dirAttachments  String?       @map("dir_attachments")
   isActive        Boolean       @default(true)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  
+  // Audit fields
+  editedBy        String?       // User ID who last edited
+  lastEditedAt    DateTime?     // Last edit timestamp
   
   // Foreign Keys
   companyId       String
   
   // Relations
   company         Company       @relation(fields: [companyId], references: [id])
+  editedByUser    User?         @relation("SoftwareAssetEditHistory", fields: [editedBy], references: [id])
   licenses        SoftwareLicense[]
   installations   SoftwareInstallation[]
   

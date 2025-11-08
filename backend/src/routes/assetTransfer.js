@@ -18,6 +18,8 @@ const createTransferSchema = Joi.object({
   toDepartmentId: Joi.string().optional(),
   fromUserId: Joi.string().optional(),
   toUserId: Joi.string().optional(),
+  fromEmployeeId: Joi.string().optional(),
+  toEmployeeId: Joi.string().optional(),
   companyId: Joi.string().optional()
 })
 
@@ -33,7 +35,9 @@ const updateTransferSchema = Joi.object({
   fromDepartmentId: Joi.string().optional(),
   toDepartmentId: Joi.string().optional(),
   fromUserId: Joi.string().optional(),
-  toUserId: Joi.string().optional()
+  toUserId: Joi.string().optional(),
+  fromEmployeeId: Joi.string().optional(),
+  toEmployeeId: Joi.string().optional()
 })
 
 // Generate transfer number
@@ -96,8 +100,8 @@ router.get('/', authenticate, async (req, res) => {
           toLocation: { select: { name: true } },
           fromDepartment: { select: { name: true } },
           toDepartment: { select: { name: true } },
-          fromUser: { select: { firstName: true, lastName: true } },
-          toUser: { select: { firstName: true, lastName: true } },
+          fromEmployee: { select: { firstName: true, lastName: true } },
+          toEmployee: { select: { firstName: true, lastName: true } },
           requestedBy: { select: { firstName: true, lastName: true } },
           approvedBy: { select: { firstName: true, lastName: true } }
         },
@@ -146,7 +150,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), asy
       include: {
         location: true,
         department: true,
-        assignedTo: true
+        assignedEmployee: true
       }
     })
 
@@ -165,13 +169,26 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), asy
     // Generate transfer number
     const transferNumber = await generateTransferNumber()
 
+    // Normalize input and support legacy userId fields by mapping to employee fields
+    const processedData = {
+      transferNumber,
+      reason: value.reason,
+      notes: value.notes,
+      effectiveDate: value.effectiveDate || null,
+      status: 'PENDING',
+      assetId: asset.id,
+      fromLocationId: asset.locationId || null,
+      toLocationId: value.toLocationId || value.locationId || null,
+      fromDepartmentId: asset.departmentId || null,
+      toDepartmentId: value.toDepartmentId || value.departmentId || null,
+      fromEmployeeId: asset.assignedEmployeeId || null,
+      toEmployeeId: value.toEmployeeId || value.toUserId || null,
+      requestedById: req.user.id
+    }
+
     // Create the transfer
     const transfer = await prisma.assetTransfer.create({
-      data: {
-        ...value,
-        transferNumber,
-        requestedById: req.user.id
-      },
+      data: processedData,
       include: {
         asset: {
           select: {
@@ -185,8 +202,8 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), asy
         toLocation: { select: { name: true } },
         fromDepartment: { select: { name: true } },
         toDepartment: { select: { name: true } },
-        fromUser: { select: { firstName: true, lastName: true } },
-        toUser: { select: { firstName: true, lastName: true } },
+        fromEmployee: { select: { firstName: true, lastName: true } },
+        toEmployee: { select: { firstName: true, lastName: true } },
         requestedBy: { select: { firstName: true, lastName: true } }
       }
     })
@@ -221,14 +238,14 @@ router.get('/:id', authenticate, async (req, res) => {
             category: { select: { name: true } }
           }
         },
-        fromLocation: { select: { name: true } },
-        toLocation: { select: { name: true } },
-        fromDepartment: { select: { name: true } },
-        toDepartment: { select: { name: true } },
-        fromUser: { select: { firstName: true, lastName: true } },
-        toUser: { select: { firstName: true, lastName: true } },
-        requestedBy: { select: { firstName: true, lastName: true } },
-        approvedBy: { select: { firstName: true, lastName: true } }
+  fromLocation: { select: { name: true } },
+  toLocation: { select: { name: true } },
+  fromDepartment: { select: { name: true } },
+  toDepartment: { select: { name: true } },
+  fromEmployee: { select: { firstName: true, lastName: true } },
+  toEmployee: { select: { firstName: true, lastName: true } },
+  requestedBy: { select: { firstName: true, lastName: true } },
+  approvedBy: { select: { firstName: true, lastName: true } }
       }
     })
 
@@ -289,6 +306,10 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), a
       updateData.approvedById = req.user.id
     }
 
+    // Add audit fields
+    updateData.editedBy = req.user.userId;
+    updateData.lastEditedAt = new Date();
+    
     const transfer = await prisma.assetTransfer.update({
       where: { id },
       data: updateData,
@@ -301,23 +322,24 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), a
             category: { select: { name: true } }
           }
         },
-        fromLocation: { select: { name: true } },
-        toLocation: { select: { name: true } },
-        fromDepartment: { select: { name: true } },
-        toDepartment: { select: { name: true } },
-        fromUser: { select: { firstName: true, lastName: true } },
-        toUser: { select: { firstName: true, lastName: true } },
-        requestedBy: { select: { firstName: true, lastName: true } },
-        approvedBy: { select: { firstName: true, lastName: true } }
+  fromLocation: { select: { name: true } },
+  toLocation: { select: { name: true } },
+  fromDepartment: { select: { name: true } },
+  toDepartment: { select: { name: true } },
+  fromEmployee: { select: { firstName: true, lastName: true } },
+  toEmployee: { select: { firstName: true, lastName: true } },
+  requestedBy: { select: { firstName: true, lastName: true } },
+  approvedBy: { select: { firstName: true, lastName: true } }
       }
     })
 
     // If transfer is completed, update the asset
     if (value.status === 'COMPLETED') {
       const updateAssetData = {}
-      if (value.toLocationId) updateAssetData.locationId = value.toLocationId
-      if (value.toDepartmentId) updateAssetData.departmentId = value.toDepartmentId
-      if (value.toUserId) updateAssetData.assignedToId = value.toUserId
+  if (value.toLocationId) updateAssetData.locationId = value.toLocationId
+  if (value.toDepartmentId) updateAssetData.departmentId = value.toDepartmentId
+  if (value.toUserId) updateAssetData.assignedEmployeeId = value.toUserId
+  if (value.toEmployeeId) updateAssetData.assignedEmployeeId = value.toEmployeeId
 
       if (Object.keys(updateAssetData).length > 0) {
         await prisma.asset.update({
@@ -408,7 +430,9 @@ router.post('/:id/approve', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MAN
       data: {
         status: 'APPROVED',
         approvedById: req.user.id,
-        approvalNotes
+        approvalNotes,
+        editedBy: req.user.userId,
+        lastEditedAt: new Date()
       },
       include: {
         asset: {
@@ -489,7 +513,9 @@ router.post('/:id/complete', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MA
         where: { id },
         data: {
           status: 'COMPLETED',
-          effectiveDate: new Date()
+          effectiveDate: new Date(),
+          editedBy: req.user.userId,
+          lastEditedAt: new Date()
         }
       })
 
@@ -497,7 +523,8 @@ router.post('/:id/complete', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MA
       const updateAssetData = {}
       if (transfer.toLocationId) updateAssetData.locationId = transfer.toLocationId
       if (transfer.toDepartmentId) updateAssetData.departmentId = transfer.toDepartmentId
-      if (transfer.toUserId) updateAssetData.assignedToId = transfer.toUserId
+  if (transfer.toUserId) updateAssetData.assignedEmployeeId = transfer.toUserId
+  if (transfer.toEmployeeId) updateAssetData.assignedEmployeeId = transfer.toEmployeeId
 
       // Apply price deduction if requested
       if (priceDeductNumber !== null) {
@@ -546,8 +573,8 @@ router.post('/:id/complete', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MA
           action: 'TRANSFER',
           entityType: 'ASSET',
           entityId: transfer.assetId,
-          oldValues: assetBefore ? JSON.stringify({ currentValue: assetBefore.currentValue, locationId: assetBefore.locationId, departmentId: assetBefore.departmentId, assignedToId: assetBefore.assignedToId }) : null,
-          newValues: JSON.stringify({ currentValue: updatedAsset.currentValue, locationId: updatedAsset.locationId, departmentId: updatedAsset.departmentId, assignedToId: updatedAsset.assignedToId }),
+          oldValues: assetBefore ? JSON.stringify({ currentValue: assetBefore.currentValue, locationId: assetBefore.locationId, departmentId: assetBefore.departmentId, assignedEmployeeId: assetBefore.assignedEmployeeId }) : null,
+          newValues: JSON.stringify({ currentValue: updatedAsset.currentValue, locationId: updatedAsset.locationId, departmentId: updatedAsset.departmentId, assignedEmployeeId: updatedAsset.assignedEmployeeId }),
           description: descriptionParts.join(' | '),
           ipAddress: req.ip || null,
           userAgent: req.get('User-Agent') || null,

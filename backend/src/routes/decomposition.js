@@ -18,7 +18,7 @@ const decompositionSchema = Joi.object({
       description: Joi.string().optional().allow(''),
       quantity: Joi.number().integer().min(1).default(1),
       unitPrice: Joi.number().min(0).default(0),
-      category: Joi.string().valid('HARDWARE','SOFTWARE','ACCESSORY','CONSUMABLE').optional(),
+      category: Joi.string().optional(), // Made flexible to accept any string from master category
       partType: Joi.string().valid('COMPONENT','ACCESSORY','CONSUMABLE','TOOL','SOFTWARE').optional()
     })
   ).min(1).required()
@@ -27,14 +27,28 @@ const decompositionSchema = Joi.object({
 // GET /api/decomposition - list decomposition plans (asset requests with ASSET_BREAKDOWN)
 router.get('/', authenticate, async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query
+    const { page = 1, limit = 20, search, status } = req.query
     const pageNum = parseInt(page) || 1
-    const limitNum = parseInt(limit) || 20
+    const limitNum = Math.min(parseInt(limit) || 20, 100) // Cap at 100 for performance
     const offset = (pageNum - 1) * limitNum
 
     const where = {
       requestType: 'ASSET_BREAKDOWN',
       companyId: req.user.companyId
+    }
+
+    // Add search filter
+    if (search && search.trim()) {
+      where.OR = [
+        { title: { contains: search.trim(), mode: 'insensitive' } },
+        { description: { contains: search.trim(), mode: 'insensitive' } },
+        { requestNumber: { contains: search.trim(), mode: 'insensitive' } }
+      ]
+    }
+
+    // Add status filter
+    if (status && status.trim() && status !== 'ALL') {
+      where.status = status.trim()
     }
 
     const [items, total] = await Promise.all([
@@ -44,21 +58,74 @@ router.get('/', authenticate, async (req, res) => {
         take: limitNum,
         orderBy: { requestedDate: 'desc' },
         include: {
-          requester: { select: { id: true, firstName: true, lastName: true } },
-          asset: { select: { id: true, assetTag: true, name: true } }
+          requester: { 
+            select: { 
+              id: true, 
+              firstName: true, 
+              lastName: true,
+              email: true 
+            } 
+          },
+          asset: { 
+            select: { 
+              id: true, 
+              assetTag: true, 
+              name: true,
+              status: true,
+              category: true
+            } 
+          }
         }
       }),
       prisma.assetRequest.count({ where })
     ])
 
+    // OPTIMIZATION: Batch fetch all spare parts linked to these decompositions in ONE query
+    const requestIds = items.map(r => r.id)
+    const linkedSpareParts = await prisma.sparePart.findMany({
+      where: {
+        createdFromRequestId: { in: requestIds },
+        companyId: req.user.companyId
+      },
+      select: {
+        id: true,
+        name: true,
+        partNumber: true,
+        category: true,
+        stockLevel: true,
+        createdFromRequestId: true
+      }
+    })
+
+    // Group spare parts by request ID
+    const sparePartsByRequest = {}
+    linkedSpareParts.forEach(sp => {
+      const reqId = sp.createdFromRequestId
+      if (!sparePartsByRequest[reqId]) sparePartsByRequest[reqId] = []
+      sparePartsByRequest[reqId].push(sp)
+    })
+
     // Parse notes (plan items) for each request so frontend can display item counts and details
     // Frontend expects an `items` array on each decomposition object, so provide that
     const itemsWithPlan = items.map(r => {
       let planItems = []
-      try {
-        if (r.notes) planItems = JSON.parse(r.notes)
-      } catch (e) {
-        planItems = []
+      
+      // Prefer linked spare parts (faster and more accurate)
+      if (sparePartsByRequest[r.id] && sparePartsByRequest[r.id].length > 0) {
+        planItems = sparePartsByRequest[r.id].map(sp => ({
+          id: sp.id,
+          name: sp.name,
+          partNumber: sp.partNumber,
+          category: sp.category,
+          quantity: sp.stockLevel || 1
+        }))
+      } else {
+        // Fallback: parse from notes for older records
+        try {
+          if (r.notes) planItems = JSON.parse(r.notes)
+        } catch (e) {
+          planItems = []
+        }
       }
 
       return {
@@ -70,7 +137,16 @@ router.get('/', authenticate, async (req, res) => {
       }
     })
 
-    res.json({ success: true, data: itemsWithPlan, pagination: { page: pageNum, limit: limitNum, total } })
+    res.json({ 
+      success: true, 
+      data: itemsWithPlan, 
+      pagination: { 
+        page: pageNum, 
+        limit: limitNum, 
+        total,
+        totalPages: Math.ceil(total / limitNum)
+      } 
+    })
   } catch (err) {
     console.error('Error listing decompositions:', err)
     res.status(500).json({ success: false, message: 'Failed to list decompositions', error: err.message })
@@ -196,6 +272,13 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'), 
 // POST /api/decomposition/:id/execute - execute the decomposition plan
 router.post('/:id/execute', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'), async (req, res) => {
   const { id } = req.params
+  // Accept optional post-decomposition status from client (RETIRED, INACTIVE, DISPOSED)
+  let { postStatus } = req.body || {}
+  if (postStatus) postStatus = String(postStatus).trim().toUpperCase()
+  const allowedPostStatuses = ['RETIRED', 'INACTIVE', 'DISPOSED']
+  if (postStatus && !allowedPostStatuses.includes(postStatus)) {
+    return res.status(400).json({ success: false, message: `Invalid postStatus. Allowed: ${allowedPostStatuses.join(', ')}` })
+  }
   try {
     const reqRecord = await prisma.assetRequest.findUnique({ where: { id }, include: { asset: true } })
     if (!reqRecord || reqRecord.requestType !== 'ASSET_BREAKDOWN') {
@@ -246,6 +329,37 @@ router.post('/:id/execute', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TEC
 
     console.log(`Executing decomposition plan ${id} for asset ${reqRecord.asset?.id} - items:`, JSON.stringify(items))
 
+    // OPTIMIZATION: Batch fetch existing spare parts BEFORE transaction to reduce queries inside transaction
+    const partNumbersToCheck = items.map(it => it.partNumber).filter(pn => pn && String(pn).trim())
+    const namesToCheck = items.map(it => it.name).filter(n => n && String(n).trim())
+    
+    const existingSpareParts = await prisma.sparePart.findMany({
+      where: {
+        companyId: reqRecord.companyId,
+        OR: [
+          { partNumber: { in: partNumbersToCheck } },
+          { name: { in: namesToCheck, mode: 'insensitive' } }
+        ]
+      },
+      select: {
+        id: true,
+        partNumber: true,
+        name: true,
+        stockLevel: true,
+        unitPrice: true,
+        notes: true,
+        createdFromRequestId: true
+      }
+    })
+
+    // Create lookup maps for fast access
+    const spareByPartNumber = {}
+    const spareByName = {}
+    existingSpareParts.forEach(sp => {
+      if (sp.partNumber) spareByPartNumber[sp.partNumber.toLowerCase()] = sp
+      if (sp.name) spareByName[sp.name.toLowerCase()] = sp
+    })
+
     // Transaction: create spare parts and asset components
     // Derive fallback unit price from source asset purchase price if items don't specify unitPrice
     const totalItemsQuantity = items.reduce((s, it) => s + (Number(it.quantity) || 1), 0)
@@ -253,6 +367,8 @@ router.post('/:id/execute', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TEC
 
     const created = await prisma.$transaction(async (tx) => {
       const results = []
+      const sparePartIds = [] // Collect IDs to batch fetch at end
+      
       for (const it of items) {
         try {
           // Normalize numeric fields
@@ -265,18 +381,14 @@ router.post('/:id/execute', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TEC
           }
 
           console.log('Creating spare part for item:', it)
-          // Try to upsert existing spare part: prefer matching by partNumber if provided,
-          // otherwise attempt a name match. If found, increment stock; otherwise create.
+          // OPTIMIZATION: Use pre-fetched spare parts instead of querying in loop
           const partNumberCandidate = it.partNumber && String(it.partNumber).trim() !== '' ? String(it.partNumber).trim() : null
           let spare = null
 
-          if (partNumberCandidate) {
-            spare = await tx.sparePart.findFirst({ where: { companyId: reqRecord.companyId, partNumber: partNumberCandidate } })
-          }
-
-          // Fallback: try to find by exact name (case-insensitive contains) if no partNumber match
-          if (!spare) {
-            spare = await tx.sparePart.findFirst({ where: { companyId: reqRecord.companyId, name: { contains: it.name || '', mode: 'insensitive' } } })
+          if (partNumberCandidate && spareByPartNumber[partNumberCandidate.toLowerCase()]) {
+            spare = spareByPartNumber[partNumberCandidate.toLowerCase()]
+          } else if (it.name && spareByName[it.name.toLowerCase()]) {
+            spare = spareByName[it.name.toLowerCase()]
           }
 
           if (spare) {
@@ -330,6 +442,8 @@ router.post('/:id/execute', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TEC
             console.log('Created spare part id:', spare.id)
           }
 
+          sparePartIds.push(spare.id)
+
           const comp = await tx.assetComponent.create({
             data: {
               name: it.name,
@@ -347,45 +461,67 @@ router.post('/:id/execute', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TEC
 
           console.log('Created asset component id:', comp.id)
 
-          // Re-fetch spare part within the transaction to include related data
-          const spareWithIncludes = await tx.sparePart.findUnique({
-            where: { id: spare.id },
-            include: {
-              vendor: { select: { id: true, name: true, code: true } },
-              company: { select: { id: true, name: true } },
-              sourceComponents: { include: { asset: { select: { id: true, assetTag: true, name: true } } } }
-            }
-          })
-
-          results.push({ sparePart: spareWithIncludes, component: comp })
+          results.push({ sparePartId: spare.id, componentId: comp.id })
         } catch (itemErr) {
           console.error('Error creating spare/component for item', it, itemErr)
           // rethrow to rollback transaction and return error
           throw itemErr
         }
       }
+      
+      // OPTIMIZATION: Batch fetch all spare parts with includes at end instead of one-by-one
+      const sparesWithIncludes = await tx.sparePart.findMany({
+        where: { id: { in: sparePartIds } },
+        include: {
+          vendor: { select: { id: true, name: true, code: true } },
+          company: { select: { id: true, name: true } },
+          sourceComponents: { 
+            include: { 
+              asset: { 
+                select: { id: true, assetTag: true, name: true } 
+              } 
+            } 
+          }
+        }
+      })
+      
+      // Map back to results
+      const finalResults = results.map(r => {
+        const spare = sparesWithIncludes.find(s => s.id === r.sparePartId)
+        return { sparePart: spare, componentId: r.componentId }
+      })
 
       // Mark request as completed and set completedDate
       await tx.assetRequest.update({ where: { id }, data: { status: 'COMPLETED', completedDate: new Date() } })
 
-      // Update the source asset status: mark it as RETIRED and deactivate it so it's no longer active after decomposition
+      // Update the source asset status: use requested postStatus (default RETIRED) and deactivate it so it's no longer active after decomposition
       try {
         if (reqRecord.asset && reqRecord.asset.id) {
-          await tx.asset.update({
+          console.log(`🔧 DECOMPOSITION: Updating asset ${reqRecord.asset.assetTag} (${reqRecord.asset.id}) status to RETIRED and isActive: false`)
+          
+          const updatedAsset = await tx.asset.update({
             where: { id: reqRecord.asset.id },
             data: {
-              status: 'RETIRED',
+              status: postStatus || 'RETIRED',
               isActive: false,
               notes: `${reqRecord.asset.notes || ''}\n[${new Date().toISOString()}] Asset decomposed via request ${id}`
             }
           })
+          
+          console.log(`✅ DECOMPOSITION: Asset ${reqRecord.asset.assetTag} successfully updated - Status: ${updatedAsset.status}, Active: ${updatedAsset.isActive}`)
+        } else {
+          console.warn(`⚠️ DECOMPOSITION: No asset found to update for request ${id}`)
         }
       } catch (assetUpdateErr) {
-        console.error('Failed to update source asset status after decomposition:', assetUpdateErr)
-        // don't fail the entire transaction for asset note update, but bubble the warning
+        console.error('❌ DECOMPOSITION: Failed to update source asset status after decomposition:', assetUpdateErr)
+        // IMPORTANT: Re-throw error to fail transaction if asset update fails
+        throw assetUpdateErr
       }
 
-      return results
+      return finalResults
+    }, {
+      timeout: 30000, // 30 second timeout for complex transactions
+      maxWait: 10000  // Maximum time to wait for transaction to start
     })
 
     res.json({ success: true, message: 'Decomposition executed', data: created })

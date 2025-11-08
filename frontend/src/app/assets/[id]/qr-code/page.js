@@ -327,7 +327,7 @@ export default function AssetQRCodePage() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-black/10"></div>
         </div>
       </DashboardLayout>
     )
@@ -337,8 +337,8 @@ export default function AssetQRCodePage() {
     return (
       <DashboardLayout>
         <div className="text-center py-12">
-          <h2 className="text-2xl font-bold text-gray-900">Asset Not Found</h2>
-          <p className="text-gray-600">The asset you&apos;re looking for doesn&apos;t exist.</p>
+          <h2 className="text-2xl font-bold text-[#111]">Asset Not Found</h2>
+          <p className="text-[#333]">The asset you&apos;re looking for doesn&apos;t exist.</p>
         </div>
       </DashboardLayout>
     )
@@ -352,19 +352,19 @@ export default function AssetQRCodePage() {
           <div className="flex items-center space-x-4">
             <button
               onClick={() => router.back()}
-              className="p-2 hover:bg-gray-100 rounded-lg"
+              className="p-2 hover:bg-white/40 rounded-lg text-[#111]"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Asset QR Code</h1>
-              <p className="text-gray-600">{currentAsset.name} - {currentAsset.assetTag}</p>
+              <h1 className="text-2xl font-bold text-[#111]">Asset QR Code</h1>
+              <p className="text-[#333]">{currentAsset.name} - {currentAsset.assetTag}</p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setShowScanner(true)}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="flex items-center px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform"
             >
               <Camera className="h-4 w-4 mr-2" />
               Scan QR Code
@@ -374,9 +374,9 @@ export default function AssetQRCodePage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* QR Code Display */}
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="glass-card shadow p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900 flex items-center">
+              <h3 className="text-lg font-medium text-[#111] flex items-center">
                 <QrCode className="h-5 w-5 mr-2" />
                 Asset QR Code
               </h3>
@@ -384,7 +384,7 @@ export default function AssetQRCodePage() {
                 <button
                   onClick={handleGenerateQR}
                   disabled={generatingQR}
-                  className="flex items-center px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+                  className="flex items-center px-3 py-1 text-sm bg-gray-100 text-[#111] rounded-lg hover:bg-gray-200 disabled:opacity-50"
                 >
                   <RefreshCw className={`h-4 w-4 mr-1 ${generatingQR ? 'animate-spin' : ''}`} />
                   {generatingQR ? 'Generating...' : 'Regenerate'}
@@ -405,14 +405,14 @@ export default function AssetQRCodePage() {
                 <div className="flex items-center justify-center space-x-4">
                   <button
                     onClick={handleDownloadQR}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="flex items-center px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform"
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </button>
                   <button
                     onClick={handlePrintQR}
-                    className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                    className="flex items-center px-4 py-2 glass-button text-[#111] rounded-lg hover:bg-purple-700"
                   >
                     <Printer className="h-4 w-4 mr-2" />
                     Print
@@ -421,13 +421,13 @@ export default function AssetQRCodePage() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <QrCode className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No QR Code Generated</h3>
-                <p className="text-gray-600 mb-4">Generate a QR code for this asset to enable quick scanning and identification.</p>
+                <QrCode className="mx-auto h-16 w-16 text-[#333] mb-4" />
+                <h3 className="text-lg font-medium text-[#111] mb-2">No QR Code Generated</h3>
+                <p className="text-[#333] mb-4">Generate a QR code for this asset to enable quick scanning and identification.</p>
                 <button
                   onClick={handleGenerateQR}
                   disabled={generatingQR}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 mx-auto"
+                  className="flex items-center px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform disabled:opacity-50 mx-auto"
                 >
                   <QrCode className="h-4 w-4 mr-2" />
                   {generatingQR ? 'Generating...' : 'Generate QR Code'}
@@ -437,59 +437,59 @@ export default function AssetQRCodePage() {
           </div>
 
           {/* Asset Information */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Asset Information</h3>
+          <div className="glass-card shadow p-6">
+            <h3 className="text-lg font-medium text-[#111] mb-4">Asset Information</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-500">Asset Tag:</span>
-                <span className="text-sm text-gray-900">{currentAsset.assetTag}</span>
+                <span className="text-sm font-medium text-[#333]">Asset Tag:</span>
+                <span className="text-sm text-[#111]">{currentAsset.assetTag}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-500">Name:</span>
-                <span className="text-sm text-gray-900">{currentAsset.name}</span>
+                <span className="text-sm font-medium text-[#333]">Name:</span>
+                <span className="text-sm text-[#111]">{currentAsset.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-500">Category:</span>
-                <span className="text-sm text-gray-900">{currentAsset.category?.name || 'N/A'}</span>
+                <span className="text-sm font-medium text-[#333]">Category:</span>
+                <span className="text-sm text-[#111]">{currentAsset.category?.name || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-500">Status:</span>
+                <span className="text-sm font-medium text-[#333]">Status:</span>
                 <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                  currentAsset.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
-                  currentAsset.status === 'IN_USE' ? 'bg-blue-100 text-blue-800' :
-                  currentAsset.status === 'MAINTENANCE' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-gray-100 text-gray-800'
+                  currentAsset.status === 'AVAILABLE' ? 'bg-white/60 text-[#111]' :
+                  currentAsset.status === 'IN_USE' ? 'bg-white/60 text-[#111]' :
+                  currentAsset.status === 'MAINTENANCE' ? 'bg-white/60 text-[#111]' :
+                  'bg-gray-100 text-[#111]'
                 }`}>
                   {currentAsset.status}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-500">Location:</span>
-                <span className="text-sm text-gray-900">{currentAsset.location?.name || 'Not assigned'}</span>
+                <span className="text-sm font-medium text-[#333]">Location:</span>
+                <span className="text-sm text-[#111]">{currentAsset.location?.name || 'Not assigned'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-500">Department:</span>
-                <span className="text-sm text-gray-900">{currentAsset.department?.name || 'Not assigned'}</span>
+                <span className="text-sm font-medium text-[#333]">Department:</span>
+                <span className="text-sm text-[#111]">{currentAsset.department?.name || 'Not assigned'}</span>
               </div>
               {currentAsset.serialNumber && (
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-500">Serial Number:</span>
-                  <span className="text-sm text-gray-900">{currentAsset.serialNumber}</span>
+                  <span className="text-sm font-medium text-[#333]">Serial Number:</span>
+                  <span className="text-sm text-[#111]">{currentAsset.serialNumber}</span>
                 </div>
               )}
               {currentAsset.poNumber && (
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-500">PO Number:</span>
-                  <span className="text-sm text-gray-900">{currentAsset.poNumber}</span>
+                  <span className="text-sm font-medium text-[#333]">PO Number:</span>
+                  <span className="text-sm text-[#111]">{currentAsset.poNumber}</span>
                 </div>
               )}
             </div>
 
             {qrCodeData && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h4 className="text-sm font-medium text-gray-900 mb-2">QR Code Data</h4>
+              <div className="mt-6 pt-6 border-t border-black/10">
+                <h4 className="text-sm font-medium text-[#111] mb-2">QR Code Data</h4>
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                  <pre className="text-xs text-[#111] whitespace-pre-wrap">
                     {JSON.stringify(qrCodeData, null, 2)}
                   </pre>
                 </div>
@@ -499,9 +499,9 @@ export default function AssetQRCodePage() {
         </div>
 
         {/* Instructions */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-800 mb-2">QR Code Usage Instructions</h3>
-          <ul className="text-sm text-blue-700 space-y-1">
+        <div className="bg-white/60 border border-black/10 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-[#111] mb-2">QR Code Usage Instructions</h3>
+          <ul className="text-sm text-[#111] space-y-1">
             <li>• Use the &quot;Download&quot; button to save the QR code as an image file</li>
             <li>• Use the &quot;Print&quot; button to print a label with the QR code and asset information</li>
             <li>• Scan QR codes with the &quot;Scan QR Code&quot; button to quickly access asset information</li>

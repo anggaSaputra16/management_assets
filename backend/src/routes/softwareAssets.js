@@ -10,6 +10,7 @@ const router = express.Router()
 const prisma = new PrismaClient()
 
 // Validation schema untuk combined Software Asset and License data
+// Allow unknown keys so frontend can send additional compatibility fields (e.g., legacy 'cost') without failing validation.
 const combinedSoftwareAssetSchema = Joi.object({
   // Software Asset fields
   name: Joi.string().required().min(2).max(100),
@@ -49,7 +50,6 @@ const combinedSoftwareAssetSchema = Joi.object({
   ).required(),
   license_key: Joi.string().optional().allow(''),
   status: Joi.string().valid('ACTIVE', 'EXPIRED', 'SUSPENDED', 'CANCELLED', 'PENDING_RENEWAL', 'VIOLATION').optional().default('ACTIVE'),
-  cost: Joi.number().optional().min(0).max(9999999999999.99),
   purchase_date: Joi.date().optional().allow(null),
   expiry_date: Joi.date().when('license_type', {
     is: 'SUBSCRIPTION',
@@ -61,7 +61,7 @@ const combinedSoftwareAssetSchema = Joi.object({
   vendor_id: Joi.string().optional().allow(''),
   company_id: Joi.string().optional(),
   companyId: Joi.string().optional() // allow camelCase for compatibility
-})
+}).unknown(true)
 
 // GET /api/software-assets - Get all software assets with multi-company filtering
 router.get('/', authenticate, async (req, res) => {
@@ -119,6 +119,24 @@ router.get('/', authenticate, async (req, res) => {
             include: {
               vendor: {
                 select: { id: true, name: true }
+              }
+            }
+          },
+          // Include a small sample of recent active installations so the UI can show
+          // which devices have this software installed without an extra request.
+          installations: {
+            where: { status: 'INSTALLED' },
+            take: 5,
+            orderBy: { installationDate: 'desc' },
+            include: {
+              asset: {
+                select: {
+                  id: true,
+                  name: true,
+                  assetTag: true,
+                  location: { select: { id: true, name: true } },
+                  department: { select: { id: true, name: true } }
+                }
               }
             }
           },
@@ -277,9 +295,22 @@ router.get('/:id', authenticate, async (req, res) => {
       })
     }
 
+    // Fetch software attachments (separate table without explicit relation)
+    const attachments = await prisma.softwareAttachment.findMany({
+      where: { softwareAssetId: id },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    // Return the software asset plus attachments and dirAttachments field
+    const result = {
+      ...softwareAsset,
+      attachments,
+      dirAttachments: softwareAsset.dirAttachments || null
+    }
+
     res.json({
       success: true,
-      data: softwareAsset
+      data: result
     })
   } catch (error) {
     console.error('Error fetching software asset:', error)
@@ -319,7 +350,6 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
       license_type,
       license_key,
       status: licenseStatus,
-      cost,
       purchase_date,
       expiry_date,
       max_installations,
@@ -366,6 +396,10 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
     if ('companyId' in softwareAssetData) {
       delete softwareAssetData.companyId
     }
+    // Remove legacy/compat fields that are not part of the prisma model
+    if ('cost' in softwareAssetData) {
+      delete softwareAssetData.cost
+    }
 
     // Create software asset with license in transaction
     const result = await prisma.$transaction(async (prisma) => {
@@ -379,7 +413,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
 
       // Create license if license data is provided
       let license = null
-      if (license_type || license_key || cost) {
+      if (license_type || license_key) {
         license = await prisma.softwareLicense.create({
           data: {
             softwareAssetId: softwareAsset.id,
@@ -392,7 +426,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
             availableSeats: (max_installations || 1) - (current_installations || 0),
             purchaseDate: purchase_date ? new Date(purchase_date) : null,
             expiryDate: expiry_date ? new Date(expiry_date) : null,
-            purchaseCost: cost ? parseFloat(cost) : null,
+            purchaseCost: null,
             vendorId: vendor_id || null
           }
         })
@@ -496,7 +530,7 @@ router.post('/batch', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
         })
 
         // Create license if present
-        if (value.license_type || value.license_key || value.cost) {
+  if (value.license_type || value.license_key) {
           const mapLicenseType = (type) => {
             const mapping = {
               'SINGLE_USER': 'PERPETUAL',
@@ -517,7 +551,7 @@ router.post('/batch', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
               availableSeats: (value.max_installations || 1) - (value.current_installations || 0),
               purchaseDate: value.purchase_date ? new Date(value.purchase_date) : null,
               expiryDate: value.expiry_date ? new Date(value.expiry_date) : null,
-              purchaseCost: value.cost ? parseFloat(value.cost) : null,
+              purchaseCost: null,
               vendorId: value.vendor_id || null
             }
           })
@@ -599,7 +633,6 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       license_type,
       license_key,
       status: licenseStatus,
-      cost,
       purchase_date,
       expiry_date,
       max_installations,
@@ -612,6 +645,10 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
     // Remove companyId/camelCase from frontend value if present
     if ('companyId' in softwareAssetData) {
       delete softwareAssetData.companyId;
+    }
+    // Remove legacy/compat fields that are not part of the prisma model
+    if ('cost' in softwareAssetData) {
+      delete softwareAssetData.cost;
     }
 
     // Update software asset only with its own fields
@@ -649,7 +686,7 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
           availableSeats: (max_installations || latestLicense.totalSeats) - (current_installations || latestLicense.usedSeats),
           purchaseDate: purchase_date ? new Date(purchase_date) : latestLicense.purchaseDate,
           expiryDate: expiry_date ? new Date(expiry_date) : latestLicense.expiryDate,
-          purchaseCost: cost ? parseFloat(cost) : latestLicense.purchaseCost,
+          purchaseCost: latestLicense.purchaseCost,
           vendorId: vendor_id || latestLicense.vendorId
         }
       });
@@ -826,6 +863,33 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
           created.push(record);
         }
 
+        // Prepare relative paths for storage in softwareAsset.dirAttachments
+        // relative to repository root so frontend can compose base URL + path
+        const repoRoot = path.resolve(__dirname, '..', '..')
+        const relPaths = req.files.map(f => {
+          const rel = path.relative(repoRoot, f.path).replace(/\\/g, '/')
+          return rel.startsWith('uploads/') ? rel : `uploads/${path.basename(f.path)}`
+        })
+
+        // Store as JSON string (backwards compatible). If there's an existing value, merge.
+        try {
+          const existing = await prisma.softwareAsset.findUnique({ where: { id } })
+          let merged = relPaths
+          if (existing && existing.dirAttachments) {
+            try {
+              const prev = JSON.parse(existing.dirAttachments)
+              if (Array.isArray(prev)) merged = Array.from(new Set([...prev, ...relPaths]))
+            } catch (e) {
+              // if existing value is a plain string, include it too
+              merged = Array.from(new Set([existing.dirAttachments, ...relPaths].filter(Boolean)))
+            }
+          }
+
+          await prisma.softwareAsset.update({ where: { id }, data: { dirAttachments: JSON.stringify(merged) } })
+        } catch (e) {
+          console.warn('Failed to update softwareAsset.dirAttachments:', e)
+        }
+
         res.status(201).json({ success: true, message: 'Software attachments uploaded', data: created });
       } catch (error) {
         next(error);
@@ -834,3 +898,126 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
   });
 
 module.exports = router
+
+// --- License CRUD endpoints for software assets ---
+// Create one or multiple licenses for a given software asset
+router.post('/:id/licenses', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res) => {
+  try {
+    const { id } = req.params
+    const payload = req.body
+
+    // payload can be a single license object or an array
+    const licenses = Array.isArray(payload) ? payload : [payload]
+
+    // Verify software asset exists and belongs to user's company (or allow ADMIN override)
+    const softwareAsset = await prisma.softwareAsset.findUnique({ where: { id } })
+    if (!softwareAsset) return res.status(404).json({ success: false, message: 'Software asset not found' })
+    if (softwareAsset.companyId !== req.user.companyId && !['ADMIN', 'TOP_MANAGEMENT'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to modify licenses for this software asset' })
+    }
+
+    const created = []
+    for (const raw of licenses) {
+      const mapLicenseType = (type) => {
+        const mapping = { 'SINGLE_USER': 'PERPETUAL', 'MULTI_USER': 'VOLUME', 'SITE_LICENSE': 'ENTERPRISE' }
+        return mapping[type] || type
+      }
+
+      const license = await prisma.softwareLicense.create({
+        data: {
+          softwareAssetId: id,
+          companyId: softwareAsset.companyId,
+          licenseType: mapLicenseType(raw.license_type) || 'PERPETUAL',
+          licenseKey: raw.license_key || null,
+          status: raw.status || 'ACTIVE',
+          totalSeats: raw.max_installations || (raw.totalSeats || 1),
+          usedSeats: raw.current_installations || (raw.usedSeats || 0),
+          availableSeats: (raw.max_installations || (raw.totalSeats || 1)) - (raw.current_installations || (raw.usedSeats || 0)),
+          purchaseDate: raw.purchase_date ? new Date(raw.purchase_date) : null,
+          expiryDate: raw.expiry_date ? new Date(raw.expiry_date) : null,
+          purchaseCost: null,
+          vendorId: raw.vendor_id || raw.vendorId || null
+        }
+      })
+      created.push(license)
+    }
+
+    res.status(201).json({ success: true, message: 'Licenses created', data: created })
+  } catch (error) {
+    console.error('Create licenses error:', error)
+    res.status(500).json({ success: false, message: 'Failed to create licenses', error: error.message })
+  }
+})
+
+// Update a license
+router.put('/:id/licenses/:licenseId', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res) => {
+  try {
+    const { id, licenseId } = req.params
+    const raw = req.body
+
+    // Verify software asset exists and belongs to the user's company
+    const softwareAsset = await prisma.softwareAsset.findUnique({ where: { id } })
+    if (!softwareAsset) return res.status(404).json({ success: false, message: 'Software asset not found' })
+    if (softwareAsset.companyId !== req.user.companyId && !['ADMIN', 'TOP_MANAGEMENT'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to modify licenses for this software asset' })
+    }
+
+    const license = await prisma.softwareLicense.findUnique({ where: { id: licenseId } })
+    if (!license) return res.status(404).json({ success: false, message: 'License not found' })
+
+    // Prevent cross-software modification
+    if (license.softwareAssetId !== id) return res.status(400).json({ success: false, message: 'License does not belong to this software asset' })
+
+    const updated = await prisma.softwareLicense.update({
+      where: { id: licenseId },
+      data: {
+        licenseType: raw.license_type || license.licenseType,
+        licenseKey: raw.license_key || license.licenseKey,
+        status: raw.status || license.status,
+        totalSeats: raw.max_installations || raw.totalSeats || license.totalSeats,
+        usedSeats: raw.current_installations || raw.usedSeats || license.usedSeats,
+        availableSeats: (raw.max_installations || raw.totalSeats || license.totalSeats) - (raw.current_installations || raw.usedSeats || license.usedSeats),
+        purchaseDate: raw.purchase_date ? new Date(raw.purchase_date) : license.purchaseDate,
+        expiryDate: raw.expiry_date ? new Date(raw.expiry_date) : license.expiryDate,
+  purchaseCost: license.purchaseCost,
+        vendorId: raw.vendor_id || raw.vendorId || license.vendorId
+      }
+    })
+
+    res.json({ success: true, message: 'License updated', data: updated })
+  } catch (error) {
+    console.error('Update license error:', error)
+    res.status(500).json({ success: false, message: 'Failed to update license', error: error.message })
+  }
+})
+
+// Delete (soft) a license
+router.delete('/:id/licenses/:licenseId', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, res) => {
+  try {
+    const { id, licenseId } = req.params
+
+    const softwareAsset = await prisma.softwareAsset.findUnique({ where: { id } })
+    if (!softwareAsset) return res.status(404).json({ success: false, message: 'Software asset not found' })
+    if (softwareAsset.companyId !== req.user.companyId && !['ADMIN', 'TOP_MANAGEMENT'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to modify licenses for this software asset' })
+    }
+
+    const license = await prisma.softwareLicense.findUnique({ where: { id: licenseId } })
+    if (!license) return res.status(404).json({ success: false, message: 'License not found' })
+    if (license.softwareAssetId !== id) return res.status(400).json({ success: false, message: 'License does not belong to this software asset' })
+
+    // Check if license has active installations; prevent deletion if so
+    const activeInst = await prisma.softwareInstallation.count({ where: { licenseId, status: 'INSTALLED' } })
+    if (activeInst > 0) {
+      return res.status(400).json({ success: false, message: 'Cannot delete license with active installations' })
+    }
+
+    // Soft-delete: mark as inactive
+    await prisma.softwareLicense.update({ where: { id: licenseId }, data: { isActive: false, status: 'INACTIVE' } })
+
+    res.json({ success: true, message: 'License deactivated' })
+  } catch (error) {
+    console.error('Delete license error:', error)
+    res.status(500).json({ success: false, message: 'Failed to delete license', error: error.message })
+  }
+})

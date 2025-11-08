@@ -14,8 +14,8 @@ export default function AdminDashboard() {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
-        <h2 className="text-xl font-medium text-gray-900">Redirecting...</h2>
-        <p className="text-gray-600 mt-2">Taking you to the admin dashboard</p>
+        <h2 className="text-xl font-medium text-[#111]">Redirecting...</h2>
+        <p className="text-[#333] mt-2">Taking you to the admin dashboard</p>
       </div>
     </div>
   )

@@ -184,7 +184,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
             category: {
               select: { name: true }
             },
-            assignedTo: {
+            assignedEmployee: {
               select: {
                 firstName: true,
                 lastName: true
@@ -386,8 +386,11 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res, next) =
     const { id } = req.params;
 
     // Check if location exists
-    const location = await prisma.location.findUnique({
-      where: { id },
+    const location = await prisma.location.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId
+      },
       include: {
         _count: {
           select: {
@@ -433,8 +436,11 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
     const { id } = req.params;
 
     // Check if location exists
-    const location = await prisma.location.findUnique({
-      where: { id }
+    const location = await prisma.location.findFirst({
+      where: { 
+        id,
+        companyId: req.user.companyId
+      }
     });
 
     if (!location) {
@@ -443,6 +449,8 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
         message: 'Location not found'
       });
     }
+
+    const companyFilter = { companyId: req.user.companyId };
 
     const [
       totalAssets,
@@ -453,6 +461,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
     ] = await Promise.all([
       prisma.asset.count({
         where: { 
+          ...companyFilter,
           locationId: id,
           isActive: true 
         }
@@ -460,6 +469,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       prisma.asset.groupBy({
         by: ['status'],
         where: { 
+          ...companyFilter,
           locationId: id,
           isActive: true 
         },
@@ -468,6 +478,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       prisma.asset.groupBy({
         by: ['categoryId'],
         where: { 
+          ...companyFilter,
           locationId: id,
           isActive: true 
         },
@@ -475,6 +486,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       }),
       prisma.asset.aggregate({
         where: { 
+          ...companyFilter,
           locationId: id,
           isActive: true 
         },
@@ -482,6 +494,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
       }),
       prisma.asset.count({
         where: {
+          ...companyFilter,
           locationId: id,
           status: 'IN_USE',
           isActive: true
@@ -491,6 +504,7 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
 
     // Get category names for the statistics
     const categories = await prisma.category.findMany({
+      where: companyFilter,
       select: { id: true, name: true }
     });
 
@@ -523,9 +537,14 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
 // Get building summary
 router.get('/buildings/summary', authenticate, async (req, res, next) => {
   try {
+    const companyFilter = { companyId: req.user.companyId };
+    
     const buildings = await prisma.location.groupBy({
       by: ['building'],
-      where: { isActive: true },
+      where: { 
+        ...companyFilter,
+        isActive: true 
+      },
       _count: { building: true }
     });
 
@@ -534,12 +553,14 @@ router.get('/buildings/summary', authenticate, async (req, res, next) => {
         const [locationCount, assetCount, totalValue] = await Promise.all([
           prisma.location.count({
             where: { 
+              ...companyFilter,
               building: building.building,
               isActive: true 
             }
           }),
           prisma.asset.count({
             where: { 
+              ...companyFilter,
               location: { 
                 building: building.building,
                 isActive: true
@@ -549,6 +570,7 @@ router.get('/buildings/summary', authenticate, async (req, res, next) => {
           }),
           prisma.asset.aggregate({
             where: { 
+              ...companyFilter,
               location: { 
                 building: building.building,
                 isActive: true

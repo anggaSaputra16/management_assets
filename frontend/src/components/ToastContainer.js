@@ -17,28 +17,28 @@ const ToastContainer = () => {
   const getToastIcon = (type) => {
     switch (type) {
       case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-400" />
+        return <CheckCircle className="h-5 w-5 text-[#111]" />
       case 'error':
-        return <XCircle className="h-5 w-5 text-red-400" />
+        return <XCircle className="h-5 w-5 text-[#111]" />
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-400" />
+        return <AlertTriangle className="h-5 w-5 text-[#111]" />
       case 'info':
       default:
-        return <Info className="h-5 w-5 text-blue-400" />
+        return <Info className="h-5 w-5 text-[#111]" />
     }
   }
 
   const getToastStyles = (type) => {
     switch (type) {
       case 'success':
-        return 'bg-white border-green-200 text-green-800 shadow-lg'
+        return 'bg-white border-black/10 text-[#111] shadow-lg'
       case 'error':
-        return 'bg-white border-red-200 text-red-800 shadow-lg'
+        return 'bg-white border-black/10 text-[#111] shadow-lg'
       case 'warning':
-        return 'bg-white border-yellow-200 text-yellow-800 shadow-lg'
+        return 'bg-white border-yellow-200 text-[#111] shadow-lg'
       case 'info':
       default:
-        return 'bg-white border-blue-200 text-blue-800 shadow-lg'
+        return 'bg-white border-black/10 text-[#111] shadow-lg'
     }
   }
 
@@ -62,7 +62,7 @@ const ToastContainer = () => {
           <div className="ml-4 flex-shrink-0 flex">
             <button
               onClick={() => removeToast(toast.id)}
-              className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none"
+              className="inline-flex text-[#333] hover:text-[#333] focus:outline-none"
             >
               <X className="h-4 w-4" />
             </button>

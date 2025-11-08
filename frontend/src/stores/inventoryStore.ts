@@ -287,6 +287,7 @@ export const useInventoryStore = create<InventoryState & InventoryActions>()(
         await Promise.all([
           get().fetchLoans(),
           get().fetchInventories(),
+          get().fetchStats(),
         ]);
         
         set({ loansLoading: false });
@@ -311,6 +312,7 @@ export const useInventoryStore = create<InventoryState & InventoryActions>()(
         await Promise.all([
           get().fetchLoans(),
           get().fetchInventories(),
+          get().fetchStats(),
         ]);
         
         set({ loansLoading: false });
@@ -333,7 +335,11 @@ export const useInventoryStore = create<InventoryState & InventoryActions>()(
           const updatedLoan = await inventoryService.approveLoan(id, approvalData);
 
           // Refresh loans list
-          await get().fetchLoans();
+          await Promise.all([
+            get().fetchLoans(),
+            get().fetchInventories(),
+            get().fetchStats(),
+          ]);
 
           set({ loansLoading: false });
           return updatedLoan;

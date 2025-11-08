@@ -9,9 +9,14 @@ interface AssetState {
   error: string | null
   searchTerm: string
   statusFilter: string
+  companyFilter: string
   conditionFilter: string
   showModal: boolean
   editingAsset: Asset | null
+  // Pagination state
+  currentPage: number
+  pageSize: number
+  totalAssets: number
   formData: {
     name: string
     assetTag: string
@@ -19,7 +24,7 @@ interface AssetState {
     locationId: string
     departmentId: string
     vendorId: string
-    assignedToId: string
+  assignedEmployeeId: string
     model: string
     serialNumber: string
     brand: string
@@ -50,7 +55,7 @@ interface ExportFilters {
 }
 
 interface AssetActions {
-  fetchAssets: () => Promise<void>
+  fetchAssets: (params?: { page?: number; limit?: number; search?: string; status?: string; condition?: string; companyId?: string }) => Promise<void>
   fetchAsset: (id: string) => Promise<void>
   fetchMultipleAssets: (ids: string[]) => Promise<void>
   createAsset: (data: Partial<Asset> | FormData) => Promise<void>
@@ -60,6 +65,7 @@ interface AssetActions {
   exportAssets: (format?: string, filters?: ExportFilters) => Promise<Blob>
   setSearchTerm: (term: string) => void
   setStatusFilter: (status: string) => void
+  setCompanyFilter: (companyId: string) => void
   setConditionFilter: (condition: string) => void
   setShowModal: (show: boolean) => void
   setEditingAsset: (asset: Asset | null) => void
@@ -68,6 +74,8 @@ interface AssetActions {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
   handleFieldChange: (field: string, value: unknown) => void
   getFilteredAssets: () => Asset[]
+  setPage: (page: number) => void
+  setPageSize: (size: number) => void
   getAssetStats: () => Array<{
     title: string
     value: number
@@ -85,7 +93,7 @@ const initialFormData = {
   locationId: '',
   departmentId: '',
   vendorId: '',
-  assignedToId: '',
+  assignedEmployeeId: '',
   model: '',
   serialNumber: '',
   brand: '',
@@ -108,15 +116,66 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
   searchTerm: '',
   statusFilter: '',
   conditionFilter: '',
+  companyFilter: '',
   showModal: false,
   editingAsset: null,
+  currentPage: 1,
+  pageSize: 20,
+  totalAssets: 0,
   formData: initialFormData,
 
-  fetchAssets: async () => {
+  fetchAssets: async (params) => {
     set({ loading: true, error: null })
     try {
-      const response = await assetService.getAllAssets()
-      set({ assets: response.data || [], loading: false })
+  const { currentPage, pageSize, searchTerm, statusFilter, conditionFilter, companyFilter } = get()
+      
+      // Build query params with pagination
+      const queryParams: Record<string, string> = {
+        page: (params?.page || currentPage).toString(),
+        limit: (params?.limit || pageSize).toString(),
+        total: 'true' // Request total count from backend
+      }
+      
+      // Add filters if provided
+      if (params?.search || searchTerm) {
+        queryParams.search = params?.search || searchTerm
+      }
+      if (params?.status || statusFilter) {
+        queryParams.status = params?.status || statusFilter
+      }
+      if (params?.condition || conditionFilter) {
+        queryParams.condition = params?.condition || conditionFilter
+      }
+      if (params?.companyId || companyFilter) {
+        queryParams.companyId = params?.companyId || companyFilter
+      }
+      
+      const response = await assetService.getAllAssets(queryParams)
+
+      // Debug log raw response shape to help troubleshooting (will appear in browser console)
+      console.debug('[AssetStore] raw fetchAssets response:', response)
+
+      // Normalize different API response shapes. The backend sometimes
+      // returns { data: [...], pagination: { page, total } }
+      // other times it may return { success: true, data: [...], pagination: {...} }
+      // or nested shapes like response.data.data. Handle these safely.
+      const maybeData = response?.data ?? response
+      const list = Array.isArray(maybeData)
+        ? maybeData
+        : (Array.isArray(response?.data?.data)
+          ? response.data.data
+          : (Array.isArray(maybeData?.data) ? maybeData.data : []))
+
+      const meta = response?.meta || response?.pagination || maybeData?.meta || maybeData?.pagination || {}
+
+      console.debug('[AssetStore] normalized assets:', { count: Array.isArray(list) ? list.length : 0, meta })
+
+      set({
+        assets: list,
+        totalAssets: meta?.total || meta?.count || 0,
+        currentPage: meta?.page || (params?.page || 1),
+        loading: false
+      })
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to fetch assets', loading: false })
     }
@@ -151,6 +210,7 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
         await assetService.createAsset(data)
       } else {
         // Handle regular object data
+        const legacyAssignedToId = (data as unknown as Record<string, unknown>)['assignedToId'] as string | undefined
         const assetData = {
           ...data,
           // Keep IDs as strings since backend uses CUID strings
@@ -158,7 +218,7 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
           locationId: data.locationId?.toString() || '',
           departmentId: data.departmentId ? data.departmentId.toString() : null,
           vendorId: data.vendorId ? data.vendorId.toString() : null,
-          assignedToId: data.assignedToId ? data.assignedToId.toString() : null,
+          assignedEmployeeId: data.assignedEmployeeId ? data.assignedEmployeeId.toString() : (legacyAssignedToId ? legacyAssignedToId.toString() : null),
           // Send prices as strings (backend will convert)
           purchasePrice: data.purchasePrice ? data.purchasePrice.toString() : null,
           currentValue: data.currentValue ? data.currentValue.toString() : null,
@@ -187,6 +247,7 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
         await assetService.updateAsset(id, data)
       } else {
         // Handle regular object data
+        const legacyAssignedToId = (data as unknown as Record<string, unknown>)['assignedToId'] as string | undefined
         const assetData = {
           ...data,
           // Keep IDs as strings since backend uses CUID strings
@@ -194,7 +255,7 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
           locationId: data.locationId?.toString() || undefined,
           departmentId: data.departmentId ? data.departmentId.toString() : null,
           vendorId: data.vendorId ? data.vendorId.toString() : null,
-          assignedToId: data.assignedToId ? data.assignedToId.toString() : null,
+          assignedEmployeeId: data.assignedEmployeeId ? data.assignedEmployeeId.toString() : (legacyAssignedToId ? legacyAssignedToId.toString() : null),
           // Send prices as strings (backend will convert)
           purchasePrice: data.purchasePrice ? data.purchasePrice.toString() : null,
           currentValue: data.currentValue ? data.currentValue.toString() : null,
@@ -244,8 +305,11 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
 
   setSearchTerm: (term) => set({ searchTerm: term }),
   setStatusFilter: (status) => set({ statusFilter: status }),
+  setCompanyFilter: (companyId) => set({ companyFilter: companyId }),
   setConditionFilter: (condition) => set({ conditionFilter: condition }),
   setShowModal: (show) => set({ showModal: show }),
+  setPage: (page) => set({ currentPage: page }),
+  setPageSize: (size) => set({ pageSize: size }),
   
   setEditingAsset: (asset) => {
     set({ editingAsset: asset })
@@ -258,7 +322,8 @@ export const useAssetStore = create<AssetState & AssetActions>((set, get) => ({
           locationId: asset.locationId?.toString() || '',
           departmentId: asset.departmentId?.toString() || '',
           vendorId: asset.vendorId?.toString() || '',
-          assignedToId: asset.assignedToId?.toString() || '',
+          // support legacy 'assignedToId' if present in older records
+          assignedEmployeeId: asset.assignedEmployeeId?.toString() || ((asset as unknown as Record<string, unknown>)['assignedToId'] as string) || '',
           model: asset.model || '',
           serialNumber: asset.serialNumber || '',
           brand: asset.brand || '',

@@ -69,8 +69,8 @@ export default function LoginPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <div className="text-gray-500">Loading...</div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black/10"></div>
+          <div className="text-[#333]">Loading...</div>
         </div>
       </div>
     )
@@ -83,12 +83,12 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center">
           <div className="mx-auto h-16 w-16 glass-card rounded-full flex items-center justify-center">
-            <Building2 className="h-8 w-8 text-gray-700" />
+            <Building2 className="h-8 w-8 text-[#111]" />
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-800">
+          <h2 className="mt-6 text-3xl font-bold text-[#111]">
             Asset Management System
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-[#333]">
             Masuk ke akun Anda
           </p>
         </div>
@@ -97,13 +97,13 @@ export default function LoginPage() {
         <div className="glass-card p-8">
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             {errors.root && (
-              <div className="bg-red-500/20 border border-red-400/30 text-red-300 px-4 py-3 rounded-md text-sm">
+              <div className="glass-button/20 border border-black/10/30 text-[#111] px-4 py-3 rounded-md text-sm">
                 {errors.root.message}
               </div>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-[#111]">
                 Email
               </label>
               <div className="mt-1">
@@ -111,17 +111,17 @@ export default function LoginPage() {
                   {...register('email')}
                   type="email"
                   autoComplete="email"
-                  className="glass-input w-full px-3 py-2 rounded-md placeholder-gray-500"
+                  className="glass-input w-full px-3 py-2 rounded-md placeholder-[#666]"
                   placeholder="your@email.com"
                 />
                 {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                  <p className="mt-1 text-sm text-[#111]">{errors.email.message}</p>
                 )}
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-[#111]">
                 Password
               </label>
               <div className="mt-1 relative">
@@ -129,7 +129,7 @@ export default function LoginPage() {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  className="glass-input w-full px-3 py-2 rounded-md placeholder-gray-500 pr-10"
+                  className="glass-input w-full px-3 py-2 rounded-md placeholder-[#666] pr-10"
                   placeholder="••••••••"
                 />
                 <button
@@ -138,13 +138,13 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-500" />
+                    <EyeOff className="h-4 w-4 text-[#333]" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-500" />
+                    <Eye className="h-4 w-4 text-[#333]" />
                   )}
                 </button>
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                  <p className="mt-1 text-sm text-[#111]">{errors.password.message}</p>
                 )}
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="glass-button w-full py-2 px-4 rounded-md text-sm font-medium text-gray-700 hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                className="glass-button w-full py-2 px-4 rounded-md text-sm font-medium text-[#111] hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Masuk...' : 'Masuk'}
               </button>
@@ -162,7 +162,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-sm text-[#333]">
           <p>&copy; 2024 Asset Management System By Nuii. All rights reserved.</p>
         </div>
       </div>

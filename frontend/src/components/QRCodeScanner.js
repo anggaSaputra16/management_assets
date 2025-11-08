@@ -288,7 +288,7 @@ const QRCodeScanner = ({ onScan, onClose, isOpen }) => {
         <div className="flex justify-between items-center p-6 border-b border-white/20">
           <div className="flex items-center space-x-3">
             <div className="p-2 glass-button rounded-lg">
-              <Camera className="w-6 h-6 text-blue-400" />
+              <Camera className="w-6 h-6 text-[#111]" />
             </div>
             <div>
               <h2 className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
@@ -307,8 +307,8 @@ const QRCodeScanner = ({ onScan, onClose, isOpen }) => {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {error && (
-            <div className="p-4 glass-card border border-red-300 bg-red-50/50 text-red-700 rounded-lg flex items-center space-x-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
+            <div className="p-4 glass-card border border-black/10 bg-white/60/50 text-[#111] rounded-lg flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-[#111]" />
               <span>{error}</span>
             </div>
           )}
@@ -322,7 +322,7 @@ const QRCodeScanner = ({ onScan, onClose, isOpen }) => {
                 disabled={!hasCamera}
                 className={`flex-1 p-3 rounded-lg flex items-center justify-center space-x-2 transition-all ${
                   useCamera 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
+                    ? 'bg-gradient-to-r from-transparent to-purple-600 text-white' 
                     : hasCamera 
                       ? 'glass-button text-white/70 hover:text-white hover:scale-105' 
                       : 'glass-button opacity-50 cursor-not-allowed text-white/50'
@@ -335,7 +335,7 @@ const QRCodeScanner = ({ onScan, onClose, isOpen }) => {
                 onClick={() => setUseCamera(false)}
                 className={`flex-1 p-3 rounded-lg flex items-center justify-center space-x-2 transition-all ${
                   !useCamera 
-                    ? 'bg-gradient-to-r from-green-500 to-teal-600 text-white' 
+                    ? 'bg-gradient-to-r from-transparent to-teal-600 text-white' 
                     : 'glass-button text-white/70 hover:text-white hover:scale-105'
                 }`}
               >
@@ -352,7 +352,7 @@ const QRCodeScanner = ({ onScan, onClose, isOpen }) => {
               <select
                 value={selectedCamera || ''}
                 onChange={handleCameraChange}
-                className="glass-input w-full px-3 py-2 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                className="glass-input w-full px-3 py-2 rounded-lg text-[#111] focus:ring-2 focus:ring-black/20 focus:border-transparent"
               >
                 {availableCameras.map((camera, index) => (
                   <option key={camera.deviceId} value={camera.deviceId}>
@@ -381,11 +381,11 @@ const QRCodeScanner = ({ onScan, onClose, isOpen }) => {
                         className="hidden"
                       />
                       {/* Scan overlay */}
-                      <div className="absolute inset-4 border-2 border-blue-400 rounded-lg">
-                        <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-400"></div>
-                        <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-blue-400"></div>
-                        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-blue-400"></div>
-                        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-blue-400"></div>
+                      <div className="absolute inset-4 border-2 border-black/10 rounded-lg">
+                        <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-black/10"></div>
+                        <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-black/10"></div>
+                        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-black/10"></div>
+                        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-black/10"></div>
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div className="animate-pulse w-4 h-4 bg-blue-400 rounded-full"></div>
@@ -410,7 +410,7 @@ const QRCodeScanner = ({ onScan, onClose, isOpen }) => {
                       className={`flex-1 glass-button px-4 py-3 rounded-lg font-medium transition-all hover:scale-105 ${
                         isScanning 
                           ? 'bg-gradient-to-r from-red-500 to-pink-600 text-white' 
-                          : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                          : 'bg-gradient-to-r from-transparent to-purple-600 text-white'
                       }`}
                     >
                       {isScanning ? (
@@ -440,7 +440,7 @@ const QRCodeScanner = ({ onScan, onClose, isOpen }) => {
               <div
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                   dragOver 
-                    ? 'border-blue-400 bg-blue-50/50' 
+                    ? 'border-black/10 bg-white/60/50' 
                     : 'border-white/30 bg-white/5'
                 }`}
                 onDragOver={handleDragOver}
@@ -473,7 +473,7 @@ const QRCodeScanner = ({ onScan, onClose, isOpen }) => {
           {/* Instructions */}
           <div className="glass-card p-4">
             <h3 className="text-sm font-medium text-white/90 mb-3 flex items-center">
-              <Smartphone className="w-4 h-4 mr-2 text-blue-400" />
+              <Smartphone className="w-4 h-4 mr-2 text-[#111]" />
               Instructions
             </h3>
             <div className="text-sm text-white/70 space-y-2">

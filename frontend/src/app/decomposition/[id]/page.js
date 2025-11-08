@@ -75,7 +75,7 @@ export default function DecompositionDetailPage() {
         showSuccess('Decomposition executed successfully')
         // Refresh decomposition data and spare parts inventory so newly created spare parts are visible
         fetchDecomposition()
-        try { fetchSpareParts() } catch (e) { /* ignore */ }
+        try { fetchSpareParts() } catch { /* ignore */ }
         setShowExecuteModal(false)
       } else {
         showError(response.message || 'Failed to execute decomposition')
@@ -110,10 +110,10 @@ export default function DecompositionDetailPage() {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      PENDING: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
-      IN_PROGRESS: { bg: 'bg-blue-100', text: 'text-blue-800', icon: Settings },
-      COMPLETED: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
-      CANCELLED: { bg: 'bg-red-100', text: 'text-red-800', icon: AlertCircle }
+      PENDING: { bg: 'bg-white/60', text: 'text-[#111]', icon: Clock },
+      IN_PROGRESS: { bg: 'bg-white/60', text: 'text-[#111]', icon: Settings },
+      COMPLETED: { bg: 'bg-white/60', text: 'text-[#111]', icon: CheckCircle },
+      CANCELLED: { bg: 'bg-white/60', text: 'text-[#111]', icon: AlertCircle }
     }
     
     const config = statusConfig[status] || statusConfig.PENDING
@@ -129,10 +129,10 @@ export default function DecompositionDetailPage() {
 
   const getActionBadge = (action) => {
     const actionConfig = {
-      Transfer: { bg: 'bg-blue-100', text: 'text-blue-800' },
-      Dispose: { bg: 'bg-red-100', text: 'text-red-800' },
-      Store: { bg: 'bg-gray-100', text: 'text-gray-800' },
-      Repair: { bg: 'bg-yellow-100', text: 'text-yellow-800' }
+      Transfer: { bg: 'bg-white/60', text: 'text-[#111]' },
+      Dispose: { bg: 'bg-white/60', text: 'text-[#111]' },
+      Store: { bg: 'bg-gray-100', text: 'text-[#111]' },
+      Repair: { bg: 'bg-white/60', text: 'text-[#111]' }
     }
     
     const config = actionConfig[action] || actionConfig.Store
@@ -152,7 +152,7 @@ export default function DecompositionDetailPage() {
     return (
       <DashboardLayout title="Decomposition Details">
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black/10"></div>
         </div>
       </DashboardLayout>
     )
@@ -162,12 +162,12 @@ export default function DecompositionDetailPage() {
     return (
       <DashboardLayout title="Decomposition Not Found">
         <div className="text-center py-12">
-          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Decomposition Not Found</h3>
-          <p className="text-gray-600 mb-4">The decomposition plan you&apos;re looking for doesn&apos;t exist.</p>
+          <AlertCircle className="h-12 w-12 text-[#333] mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-[#111] mb-2">Decomposition Not Found</h3>
+          <p className="text-[#333] mb-4">The decomposition plan you&apos;re looking for doesn&apos;t exist.</p>
           <button
             onClick={() => router.push('/decomposition')}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="inline-flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Decomposition
@@ -179,13 +179,13 @@ export default function DecompositionDetailPage() {
 
   const ExecuteModal = () => (
   <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full">
+      <div className="glass-card max-w-md w-full">
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Execute Decomposition</h3>
-          <p className="text-gray-600 mb-6">
+          <h3 className="text-lg font-semibold text-[#111] mb-4">Execute Decomposition</h3>
+          <p className="text-[#333] mb-6">
             Are you sure you want to execute this decomposition plan? This action will:
           </p>
-          <ul className="list-disc list-inside text-sm text-gray-600 mb-6 space-y-1">
+          <ul className="list-disc list-inside text-sm text-[#333] mb-6 space-y-1">
             <li>Transfer selected components to target assets</li>
             <li>Update component statuses based on actions</li>
             <li>Create transfer records for tracking</li>
@@ -194,7 +194,7 @@ export default function DecompositionDetailPage() {
           <div className="flex space-x-3">
             <button
               onClick={() => setShowExecuteModal(false)}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              className="flex-1 px-4 py-2 border border-black/10 rounded-lg text-[#111] hover:bg-white/60"
               disabled={executing}
             >
               Cancel
@@ -202,7 +202,7 @@ export default function DecompositionDetailPage() {
             <button
               onClick={handleExecute}
               disabled={executing}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+              className="flex-1 px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50 flex items-center justify-center"
             >
               {executing ? (
                 <>
@@ -230,19 +230,19 @@ export default function DecompositionDetailPage() {
           <div className="flex items-center space-x-4">
             <button
               onClick={() => router.push('/decomposition')}
-              className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100"
+              className="p-2 text-[#333] hover:text-[#111] rounded-lg hover:bg-white/40"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <GitBranch className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-white/60 rounded-lg">
+                <GitBranch className="h-6 w-6 text-[#111]" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-[#111]">
                   Decomposition Plan
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-[#333]">
                   {decomposition.sourceAsset?.name} → {decomposition.targetAsset?.name || 'Multiple Assets'}
                 </p>
               </div>
@@ -252,18 +252,18 @@ export default function DecompositionDetailPage() {
           <div className="flex items-center space-x-3">
             {getStatusBadge(decomposition.status)}
             
-            {decomposition.status === 'PENDING' && (
+            {decomposition.status === 'APPROVED' && (
               <div className="flex space-x-2">
                 <button
                   onClick={() => setShowExecuteModal(true)}
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="inline-flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <Play className="h-4 w-4 mr-2" />
                   Execute
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  className="inline-flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
@@ -278,31 +278,31 @@ export default function DecompositionDetailPage() {
           {/* Details Panel */}
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Information */}
-            <div className="bg-white rounded-lg shadow border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Basic Information</h3>
+            <div className="glass-card shadow border border-black/10">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">Basic Information</h3>
               </div>
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Source Asset
                     </label>
                     <div className="flex items-center space-x-2">
-                      <Package className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-900">
+                      <Package className="h-4 w-4 text-[#333]" />
+                      <span className="text-sm text-[#111]">
                         {decomposition.sourceAsset?.name} ({decomposition.sourceAsset?.assetTag})
                       </span>
                     </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Target Asset
                     </label>
                     <div className="flex items-center space-x-2">
-                      <Package className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-900">
+                      <Package className="h-4 w-4 text-[#333]" />
+                      <span className="text-sm text-[#111]">
                         {decomposition.targetAsset?.name ? 
                           `${decomposition.targetAsset.name} (${decomposition.targetAsset.assetTag})` : 
                           'Multiple Assets'
@@ -312,24 +312,24 @@ export default function DecompositionDetailPage() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Planned Date
                     </label>
                     <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-900">
+                      <Calendar className="h-4 w-4 text-[#333]" />
+                      <span className="text-sm text-[#111]">
                         {new Date(decomposition.plannedDate).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Performed By
                     </label>
                     <div className="flex items-center space-x-2">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-900">
+                      <User className="h-4 w-4 text-[#333]" />
+                      <span className="text-sm text-[#111]">
                         {decomposition.performedBy ? 
                           `${decomposition.performedBy.firstName} ${decomposition.performedBy.lastName}` :
                           'Not assigned'
@@ -340,12 +340,12 @@ export default function DecompositionDetailPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Reason
                   </label>
                   <div className="flex items-start space-x-2">
-                    <FileText className="h-4 w-4 text-gray-400 mt-0.5" />
-                    <span className="text-sm text-gray-900">
+                    <FileText className="h-4 w-4 text-[#333] mt-0.5" />
+                    <span className="text-sm text-[#111]">
                       {decomposition.reason || 'No reason provided'}
                     </span>
                   </div>
@@ -353,11 +353,11 @@ export default function DecompositionDetailPage() {
                 
                 {decomposition.notes && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Notes
                     </label>
                     <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-sm text-gray-700">{decomposition.notes}</p>
+                      <p className="text-sm text-[#111]">{decomposition.notes}</p>
                     </div>
                   </div>
                 )}
@@ -365,40 +365,40 @@ export default function DecompositionDetailPage() {
             </div>
 
             {/* Components to Process */}
-            <div className="bg-white rounded-lg shadow border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Components to Process</h3>
-                <p className="text-sm text-gray-600">
+            <div className="glass-card shadow border border-black/10">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">Components to Process</h3>
+                <p className="text-sm text-[#333]">
                   {decomposition.items?.length || 0} components in this decomposition plan
                 </p>
               </div>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-black/10">
+                  <thead className="bg-white/60">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                         Component
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                         Action
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                         Details
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                         Notes
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-black/10">
                     {decomposition.items?.map((item, index) => (
                       <tr key={index}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-[#111]">
                               {item.component?.name || 'Unknown Component'}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-[#333]">
                               {item.component?.partNumber && `PN: ${item.component.partNumber}`}
                             </div>
                           </div>
@@ -407,7 +407,7 @@ export default function DecompositionDetailPage() {
                           {getActionBadge(item.action)}
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-[#111]">
                             {item.targetAssetId && item.action === 'Transfer' && (
                               <span>
                                 Transfer to: {compatibleAssets.find(a => a.id === item.targetAssetId)?.name || 'Unknown Asset'}
@@ -419,7 +419,7 @@ export default function DecompositionDetailPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-700">
+                          <div className="text-sm text-[#111]">
                             {item.notes || 'No notes'}
                           </div>
                         </td>
@@ -434,9 +434,9 @@ export default function DecompositionDetailPage() {
           {/* Timeline & Status */}
           <div className="space-y-6">
             {/* Status Card */}
-            <div className="bg-white rounded-lg shadow border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Status</h3>
+            <div className="glass-card shadow border border-black/10">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">Status</h3>
               </div>
               <div className="p-6 space-y-4">
                 <div className="text-center">
@@ -445,23 +445,23 @@ export default function DecompositionDetailPage() {
                 
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Created:</span>
-                    <span className="text-gray-900">
+                    <span className="text-[#333]">Created:</span>
+                    <span className="text-[#111]">
                       {formatDateTime(decomposition.createdAt)}
                     </span>
                   </div>
                   
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Updated:</span>
-                    <span className="text-gray-900">
+                    <span className="text-[#333]">Updated:</span>
+                    <span className="text-[#111]">
                       {formatDateTime(decomposition.updatedAt)}
                     </span>
                   </div>
                   
                   {decomposition.completedAt && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Completed:</span>
-                      <span className="text-gray-900">
+                      <span className="text-[#333]">Completed:</span>
+                      <span className="text-[#111]">
                         {formatDateTime(decomposition.completedAt)}
                       </span>
                     </div>
@@ -471,66 +471,66 @@ export default function DecompositionDetailPage() {
             </div>
 
             {/* Progress */}
-            <div className="bg-white rounded-lg shadow border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Progress</h3>
+            <div className="glass-card shadow border border-black/10">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">Progress</h3>
               </div>
               <div className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3">
                     <div className={`w-3 h-3 rounded-full ${
-                      decomposition.status !== 'PENDING' ? 'bg-green-500' : 'bg-gray-300'
+                      decomposition.status !== 'PENDING' ? 'bg-white/600' : 'bg-gray-300'
                     }`}></div>
-                    <span className="text-sm text-gray-700">Plan Created</span>
+                    <span className="text-sm text-[#111]">Plan Created</span>
                   </div>
                   
                   <div className="flex items-center space-x-3">
                     <div className={`w-3 h-3 rounded-full ${
-                      decomposition.status === 'IN_PROGRESS' || decomposition.status === 'COMPLETED' ? 'bg-green-500' : 'bg-gray-300'
+                      decomposition.status === 'IN_PROGRESS' || decomposition.status === 'COMPLETED' ? 'bg-white/600' : 'bg-gray-300'
                     }`}></div>
-                    <span className="text-sm text-gray-700">Execution Started</span>
+                    <span className="text-sm text-[#111]">Execution Started</span>
                   </div>
                   
                   <div className="flex items-center space-x-3">
                     <div className={`w-3 h-3 rounded-full ${
-                      decomposition.status === 'COMPLETED' ? 'bg-green-500' : 'bg-gray-300'
+                      decomposition.status === 'COMPLETED' ? 'bg-white/600' : 'bg-gray-300'
                     }`}></div>
-                    <span className="text-sm text-gray-700">Completed</span>
+                    <span className="text-sm text-[#111]">Completed</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Summary Statistics */}
-            <div className="bg-white rounded-lg shadow border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Summary</h3>
+            <div className="glass-card shadow border border-black/10">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">Summary</h3>
               </div>
               <div className="p-6 space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total Components:</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-[#333]">Total Components:</span>
+                  <span className="font-medium text-[#111]">
                     {decomposition.items?.length || 0}
                   </span>
                 </div>
                 
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">To Transfer:</span>
-                  <span className="font-medium text-blue-600">
+                  <span className="text-[#333]">To Transfer:</span>
+                  <span className="font-medium text-[#111]">
                     {decomposition.items?.filter(item => item.action === 'Transfer').length || 0}
                   </span>
                 </div>
                 
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">To Dispose:</span>
-                  <span className="font-medium text-red-600">
+                  <span className="text-[#333]">To Dispose:</span>
+                  <span className="font-medium text-[#111]">
                     {decomposition.items?.filter(item => item.action === 'Dispose').length || 0}
                   </span>
                 </div>
                 
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">To Store:</span>
-                  <span className="font-medium text-gray-600">
+                  <span className="text-[#333]">To Store:</span>
+                  <span className="font-medium text-[#333]">
                     {decomposition.items?.filter(item => item.action === 'Store').length || 0}
                   </span>
                 </div>

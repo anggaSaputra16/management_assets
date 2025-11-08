@@ -192,11 +192,11 @@ const TransferPage = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800'
-      case 'APPROVED': return 'bg-green-100 text-green-800'
-      case 'REJECTED': return 'bg-red-100 text-red-800'
-      case 'COMPLETED': return 'bg-blue-100 text-blue-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'PENDING': return 'bg-white/60 text-[#111]'
+      case 'APPROVED': return 'bg-white/60 text-[#111]'
+      case 'REJECTED': return 'bg-white/60 text-[#111]'
+      case 'COMPLETED': return 'bg-white/60 text-[#111]'
+      default: return 'bg-gray-100 text-[#111]'
     }
   }
 
@@ -216,12 +216,12 @@ const TransferPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <ArrowRightLeft className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-white/60 rounded-lg">
+              <ArrowRightLeft className="h-6 w-6 text-[#111]" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Asset Transfers</h1>
-              <p className="text-gray-600">Manage asset transfers between locations, departments, and users</p>
+              <h1 className="text-2xl font-bold text-[#111]">Asset Transfers</h1>
+              <p className="text-[#333]">Manage asset transfers between locations, departments, and users</p>
             </div>
           </div>
           <button
@@ -229,7 +229,7 @@ const TransferPage = () => {
               resetForm()
               setShowModal(true)
             }}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
           >
             <Plus className="h-4 w-4 mr-2" />
             New Transfer
@@ -237,23 +237,23 @@ const TransferPage = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="glass-card shadow p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#333]" />
                 <input
                   type="text"
                   placeholder="Search transfers..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pl-10 pr-4 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 />
               </div>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
               >
                 <option value="">All Status</option>
                 <option value="PENDING">Pending</option>
@@ -264,7 +264,7 @@ const TransferPage = () => {
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center px-3 py-2 text-[#333] hover:text-[#111]"
             >
               <Filter className="h-4 w-4 mr-2" />
               Filters
@@ -273,57 +273,57 @@ const TransferPage = () => {
         </div>
 
         {/* Transfers List */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="glass-card shadow">
           {loading ? (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-black/10"></div>
             </div>
           ) : transfers.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-black/10">
+                <thead className="bg-white/60">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                       Transfer
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                       Asset
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                       From/To
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#333] uppercase tracking-wider">
                       Date
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-[#333] uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-black/10">
                   {transfers.map((transfer) => (
-                    <tr key={transfer.id} className="hover:bg-gray-50">
+                    <tr key={transfer.id} className="hover:bg-white/60">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-[#111]">
                             {transfer.transferNumber}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-[#333]">
                             {transfer.reason}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <Package className="h-4 w-4 text-gray-400 mr-2" />
+                          <Package className="h-4 w-4 text-[#333] mr-2" />
                           <div>
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-[#111]">
                               {transfer.asset?.name}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-[#333]">
                               {transfer.asset?.assetTag}
                             </div>
                           </div>
@@ -332,19 +332,19 @@ const TransferPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="space-y-1">
                           {transfer.fromLocation && transfer.toLocation && (
-                            <div className="flex items-center text-sm text-gray-500">
+                            <div className="flex items-center text-sm text-[#333]">
                               <MapPin className="h-3 w-3 mr-1" />
                               {transfer.fromLocation.name} → {transfer.toLocation.name}
                             </div>
                           )}
                           {transfer.fromDepartment && transfer.toDepartment && (
-                            <div className="flex items-center text-sm text-gray-500">
+                            <div className="flex items-center text-sm text-[#333]">
                               <Building2 className="h-3 w-3 mr-1" />
                               {transfer.fromDepartment.name} → {transfer.toDepartment.name}
                             </div>
                           )}
                           {transfer.fromUser && transfer.toUser && (
-                            <div className="flex items-center text-sm text-gray-500">
+                            <div className="flex items-center text-sm text-[#333]">
                               <User className="h-3 w-3 mr-1" />
                               {transfer.fromUser.firstName} → {transfer.toUser.firstName}
                             </div>
@@ -357,14 +357,14 @@ const TransferPage = () => {
                           <span className="ml-1">{transfer.status}</span>
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#333]">
                         {new Date(transfer.transferDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
                           <button
                             onClick={() => setSelectedTransfer(transfer)}
-                            className="text-gray-400 hover:text-blue-600"
+                            className="text-[#333] hover:scale-110 transition-transform"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
@@ -372,13 +372,13 @@ const TransferPage = () => {
                             <>
                               <button
                                 onClick={() => handleEdit(transfer)}
-                                className="text-gray-400 hover:text-blue-600"
+                                className="text-[#333] hover:scale-110 transition-transform"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => handleApprove(transfer.id)}
-                                className="text-gray-400 hover:text-green-600"
+                                className="text-[#333] hover:scale-110 transition-transform"
                               >
                                 Approve
                               </button>
@@ -387,7 +387,7 @@ const TransferPage = () => {
                           {transfer.status === 'APPROVED' && (
                             <button
                               onClick={() => handleComplete(transfer.id)}
-                              className="text-gray-400 hover:text-blue-600"
+                              className="text-[#333] hover:scale-110 transition-transform"
                             >
                               Complete
                             </button>
@@ -401,30 +401,30 @@ const TransferPage = () => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <ArrowRightLeft className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No transfers</h3>
-              <p className="mt-1 text-sm text-gray-500">Get started by creating a new asset transfer.</p>
+              <ArrowRightLeft className="mx-auto h-12 w-12 text-[#333]" />
+              <h3 className="mt-2 text-sm font-medium text-[#111]">No transfers</h3>
+              <p className="mt-1 text-sm text-[#333]">Get started by creating a new asset transfer.</p>
             </div>
           )}
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-black/10">
               <div className="flex-1 flex justify-between">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-4 py-2 border border-black/10 text-sm font-medium rounded-md text-[#111] bg-white hover:bg-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-[#111]">
                   Page {currentPage} of {totalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-4 py-2 border border-black/10 text-sm font-medium rounded-md text-[#111] bg-white hover:bg-white/40 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
@@ -435,10 +435,10 @@ const TransferPage = () => {
 
         {/* Transfer Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-white/10 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-card shadow-2xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+              <div className="px-6 py-4 border-b border-black/10">
+                <h3 className="text-lg font-medium text-[#111]">
                   {editingTransfer ? 'Edit Transfer' : 'Create New Transfer'}
                 </h3>
               </div>
@@ -446,14 +446,14 @@ const TransferPage = () => {
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Asset *
                     </label>
                     <select
                       value={formData.assetId}
                       onChange={(e) => setFormData({...formData, assetId: e.target.value})}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     >
                       <option value="">Select Asset</option>
                       {assets.map(asset => (
@@ -465,14 +465,14 @@ const TransferPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Transfer Reason *
                     </label>
                     <select
                       value={formData.reason}
                       onChange={(e) => setFormData({...formData, reason: e.target.value})}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     >
                       <option value="">Select Reason</option>
                       <option value="Relocation">Relocation</option>
@@ -485,25 +485,25 @@ const TransferPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       Transfer Date
                     </label>
                     <input
                       type="date"
                       value={formData.transferDate}
                       onChange={(e) => setFormData({...formData, transferDate: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       From Location
                     </label>
                     <select
                       value={formData.fromLocationId}
                       onChange={(e) => setFormData({...formData, fromLocationId: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     >
                       <option value="">Select Location</option>
                       {locations.map(location => (
@@ -515,13 +515,13 @@ const TransferPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       To Location
                     </label>
                     <select
                       value={formData.toLocationId}
                       onChange={(e) => setFormData({...formData, toLocationId: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     >
                       <option value="">Select Location</option>
                       {locations.map(location => (
@@ -533,13 +533,13 @@ const TransferPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       From Department
                     </label>
                     <select
                       value={formData.fromDepartmentId}
                       onChange={(e) => setFormData({...formData, fromDepartmentId: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     >
                       <option value="">Select Department</option>
                       {departments.map(department => (
@@ -551,13 +551,13 @@ const TransferPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-[#111] mb-1">
                       To Department
                     </label>
                     <select
                       value={formData.toDepartmentId}
                       onChange={(e) => setFormData({...formData, toDepartmentId: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     >
                       <option value="">Select Department</option>
                       {departments.map(department => (
@@ -570,33 +570,33 @@ const TransferPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[#111] mb-1">
                     Notes
                   </label>
                   <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({...formData, notes: e.target.value})}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-black/10 rounded-lg focus:ring-2 focus:ring-black/20 focus:border-black/30"
                     placeholder="Additional notes about the transfer"
                   />
                 </div>
 
-                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-black/10">
                   <button
                     type="button"
                     onClick={() => {
                       resetForm()
                       setShowModal(false)
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 text-[#111] bg-gray-100 rounded-lg hover:bg-gray-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50"
                   >
                     {loading ? 'Saving...' : editingTransfer ? 'Update Transfer' : 'Create Transfer'}
                   </button>

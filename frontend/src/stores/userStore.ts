@@ -34,6 +34,9 @@ interface UserState {
   showModal: boolean
   showPasswordModal: boolean
   editingUser: User | null
+  currentPage: number
+  pageSize: number
+  totalUsers: number
   formData: {
     firstName: string
     lastName: string
@@ -56,7 +59,7 @@ interface UserState {
 }
 
 interface UserActions {
-  fetchUsers: () => Promise<void>
+  fetchUsers: (params?: { page?: number; limit?: number; search?: string; role?: string; department?: string; status?: string }) => Promise<void>
   createUser: (data: Partial<User>) => Promise<void>
   updateUser: (id: number, data: Partial<User>) => Promise<void>
   deleteUser: (id: number) => Promise<void>
@@ -71,6 +74,8 @@ interface UserActions {
   setEditingUser: (user: User | null) => void
   setFormData: (data: Partial<UserState['formData']>) => void
   setPasswordData: (data: Partial<UserState['passwordData']>) => void
+  setPage: (page: number) => void
+  setPageSize: (size: number) => void
   resetForm: () => void
   resetPasswordForm: () => void
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
@@ -118,16 +123,37 @@ export const useUserStore = create<UserState & UserActions>((set, get) => ({
   showModal: false,
   showPasswordModal: false,
   editingUser: null,
+  currentPage: 1,
+  pageSize: 20,
+  totalUsers: 0,
   formData: initialFormData,
   passwordData: initialPasswordData,
 
-  fetchUsers: async () => {
+  fetchUsers: async (params) => {
     set({ loading: true, error: null })
     try {
-      const response = await userService.getAllUsers()
-      // Handle the nested response structure
+      const { currentPage, pageSize, roleFilter, departmentFilter, statusFilter } = get()
+      const queryParams: Record<string, string> = {
+        page: (params?.page || currentPage).toString(),
+        limit: (params?.limit || pageSize).toString()
+      }
+      
+      if (params?.search) queryParams.search = params.search
+      if (params?.role || roleFilter) queryParams.role = params?.role || roleFilter
+      if (params?.department || departmentFilter) queryParams.department = params?.department || departmentFilter
+      if (params?.status || statusFilter) queryParams.status = params?.status || statusFilter
+      
+      const response = await userService.getAllUsers(queryParams)
+      // Handle the nested response structure with pagination
       const users = response.data?.users || response.users || response.data || []
-      set({ users: Array.isArray(users) ? users : [], loading: false })
+      const pagination = response.data?.pagination || response.pagination || {}
+      
+      set({ 
+        users: Array.isArray(users) ? users : [], 
+        totalUsers: pagination.total || 0,
+        currentPage: pagination.current || 1,
+        loading: false 
+      })
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to fetch users', loading: false })
     }
@@ -206,6 +232,8 @@ export const useUserStore = create<UserState & UserActions>((set, get) => ({
   setStatusFilter: (status) => set({ statusFilter: status }),
   setShowModal: (show) => set({ showModal: show }),
   setShowPasswordModal: (show) => set({ showPasswordModal: show }),
+  setPage: (page) => set({ currentPage: page }),
+  setPageSize: (size) => set({ pageSize: size }),
   
   setEditingUser: (user) => {
     set({ editingUser: user })

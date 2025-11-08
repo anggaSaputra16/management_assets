@@ -53,7 +53,9 @@ router.get('/', authenticate, async (req, res) => {
     const offset = (pageNum - 1) * limitNum
 
     // Build where clause based on provided filters
-    const where = {}
+    const where = {
+      companyId: req.user.companyId // Filter by user's company
+    }
 
     if (search && search.trim() !== '') {
       where.OR = [
@@ -127,9 +129,42 @@ router.get('/', authenticate, async (req, res) => {
       total = results[1]
     }
 
+    // Post-process spare parts to resolve category names from Category table
+    // Get all unique category strings used by these spare parts
+    const categoryStrings = [...new Set(spareParts.map(sp => sp.category).filter(Boolean))]
+    
+    let categoryMap = {}
+    if (categoryStrings.length > 0) {
+      const categories = await prisma.category.findMany({
+        where: {
+          companyId: req.user.companyId,
+          OR: [
+            { id: { in: categoryStrings } }, // Match by ID
+            { code: { in: categoryStrings } }, // Match by code
+            { name: { in: categoryStrings } }  // Match by name
+          ]
+        },
+        select: { id: true, code: true, name: true }
+      })
+      
+      // Create a map of ID/code/name -> display name
+      categories.forEach(cat => {
+        categoryMap[cat.id] = cat.name    // ID -> name mapping
+        categoryMap[cat.code] = cat.name  // Code -> name mapping
+        categoryMap[cat.name] = cat.name  // Name -> name mapping (identity)
+      })
+    }
+
+    // Enhance spare parts with resolved category names
+    const enhancedSpareParts = spareParts.map(sp => ({
+      ...sp,
+      categoryName: categoryMap[sp.category] || sp.category, // Use resolved name or fallback to original string
+      categoryDisplay: categoryMap[sp.category] || sp.category
+    }))
+
     res.json({
       success: true,
-      data: spareParts,
+      data: enhancedSpareParts,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -138,6 +173,7 @@ router.get('/', authenticate, async (req, res) => {
       }
     })
     console.log(`GET /api/spare-parts: returning ${spareParts.length} spare parts (total in DB: ${total})`)
+    console.log(`Category resolution: ${Object.keys(categoryMap).length} categories mapped`)
   } catch (error) {
     console.error('Error fetching spare parts:', error)
     res.status(500).json({
@@ -162,7 +198,38 @@ if (process.env.NODE_ENV !== 'production') {
         }
       })
 
-      return res.json({ success: true, data: spareParts })
+      // Post-process to resolve category names (without company filter for public)
+      const categoryStrings = [...new Set(spareParts.map(sp => sp.category).filter(Boolean))]
+      let categoryMap = {}
+      
+      if (categoryStrings.length > 0) {
+        // Check both category IDs and code/name matches
+        const categories = await prisma.category.findMany({
+          where: {
+            OR: [
+              { id: { in: categoryStrings } }, // Match by ID
+              { code: { in: categoryStrings } }, // Match by code
+              { name: { in: categoryStrings } }  // Match by name
+            ]
+          },
+          select: { id: true, code: true, name: true }
+        })
+        
+        categories.forEach(cat => {
+          categoryMap[cat.id] = cat.name    // ID -> name mapping
+          categoryMap[cat.code] = cat.name  // Code -> name mapping
+          categoryMap[cat.name] = cat.name  // Name -> name mapping (identity)
+        })
+      }
+
+      // Enhance spare parts with resolved category names
+      const enhancedSpareParts = spareParts.map(sp => ({
+        ...sp,
+        categoryName: categoryMap[sp.category] || sp.category,
+        categoryDisplay: categoryMap[sp.category] || sp.category
+      }))
+
+      return res.json({ success: true, data: enhancedSpareParts })
     } catch (error) {
       console.error('Error in /api/spare-parts/public:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch spare parts (public)', error: error.message })
@@ -231,6 +298,31 @@ router.get('/stats', authenticate, async (req, res) => {
   }
 })
 
+// GET /api/spare-parts/options - return available categories and part types based on existing spare parts
+router.get('/options', authenticate, async (req, res) => {
+  try {
+    const companyId = req.user.companyId
+
+    const categoriesGroup = await prisma.sparePart.groupBy({
+      by: ['category'],
+      where: { companyId },
+    })
+
+    const typesGroup = await prisma.sparePart.groupBy({
+      by: ['partType'],
+      where: { companyId },
+    })
+
+    const categories = categoriesGroup.map(c => c.category).sort()
+    const partTypes = typesGroup.map(t => t.partType).sort()
+
+    return res.json({ success: true, data: { categories, partTypes } })
+  } catch (error) {
+    console.error('Error fetching spare part options:', error)
+    return res.status(500).json({ success: false, message: 'Failed to fetch spare part options', error: error.message })
+  }
+})
+
 // GET /api/spare-parts/low-stock - Get low stock spare parts
 router.get('/low-stock', authenticate, async (req, res) => {
   try {
@@ -250,9 +342,39 @@ router.get('/low-stock', authenticate, async (req, res) => {
       typeof p.stockLevel === 'number' && typeof p.reorderPoint === 'number' && p.stockLevel <= p.reorderPoint
     )
 
+    // Post-process to resolve category names
+    const categoryStrings = [...new Set(filteredLowStock.map(sp => sp.category).filter(Boolean))]
+    let categoryMap = {}
+    
+    if (categoryStrings.length > 0) {
+      const categories = await prisma.category.findMany({
+        where: {
+          OR: [
+            { id: { in: categoryStrings } }, // Match by ID
+            { code: { in: categoryStrings } }, // Match by code
+            { name: { in: categoryStrings } }  // Match by name
+          ]
+        },
+        select: { id: true, code: true, name: true }
+      })
+      
+      categories.forEach(cat => {
+        categoryMap[cat.id] = cat.name    // ID -> name mapping
+        categoryMap[cat.code] = cat.name  // Code -> name mapping
+        categoryMap[cat.name] = cat.name  // Name -> name mapping (identity)
+      })
+    }
+
+    // Enhance spare parts with resolved category names
+    const enhancedLowStock = filteredLowStock.map(sp => ({
+      ...sp,
+      categoryName: categoryMap[sp.category] || sp.category,
+      categoryDisplay: categoryMap[sp.category] || sp.category
+    }))
+
     res.json({
       success: true,
-      data: filteredLowStock
+      data: enhancedLowStock
     })
   } catch (error) {
     console.error('Error fetching low stock parts:', error)
@@ -635,9 +757,35 @@ router.get('/:id', authenticate, async (req, res) => {
       })
     }
 
+    // Resolve category name from Category table
+    let categoryName = sparePart.category
+    if (sparePart.category) {
+      const category = await prisma.category.findFirst({
+        where: {
+          companyId: sparePart.companyId,
+          OR: [
+            { id: sparePart.category },    // Match by ID
+            { code: sparePart.category },  // Match by code
+            { name: sparePart.category }   // Match by name
+          ]
+        },
+        select: { name: true }
+      })
+      if (category) {
+        categoryName = category.name
+      }
+    }
+
+    // Enhance spare part with resolved category name
+    const enhancedSparePart = {
+      ...sparePart,
+      categoryName: categoryName,
+      categoryDisplay: categoryName
+    }
+
     res.json({
       success: true,
-      data: sparePart
+      data: enhancedSparePart
     })
   } catch (error) {
     console.error('Error fetching spare part:', error)
