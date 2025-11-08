@@ -282,6 +282,40 @@ async function main() {
       console.log(`  ✅ ${company.name}: ${vendorData.length} vendors`);
     }
 
+    // ==================== CREATE EMPLOYEES PER COMPANY ====================
+    console.log('\n👤 Creating Employees for each company...');
+    
+    const employeesByCompany = {};
+    
+    for (const company of companies) {
+      const departments = departmentsByCompany[company.id];
+      const locations = locationsByCompany[company.id];
+      employeesByCompany[company.id] = [];
+
+      const employeeCount = 5;
+      for (let j = 0; j < employeeCount; j++) {
+        const department = departments[j % departments.length];
+        const location = locations[j % locations.length];
+        
+        const employee = await prisma.employee.create({
+          data: {
+            npk: `NPK-${company.code}-${String(j + 1).padStart(4, '0')}`,
+            firstName: `Employee${j + 1}`,
+            lastName: company.code,
+            email: `employee${j + 1}@${company.code.toLowerCase()}.com`,
+            phone: `+628123456${String(j).padStart(3, '0')}`,
+            position: j % 2 === 0 ? 'Staff' : 'Senior Staff',
+            hireDate: new Date(2023, j % 12, 1),
+            companyId: company.id,
+            departmentId: department.id,
+            locationId: location.id
+          }
+        });
+        employeesByCompany[company.id].push(employee);
+      }
+      console.log(`  ✅ ${company.name}: ${employeeCount} employees`);
+    }
+
     // ==================== CREATE ASSETS PER COMPANY ====================
     console.log('\n💼 Creating Assets for each company...');
     
@@ -290,7 +324,7 @@ async function main() {
       const locations = locationsByCompany[company.id];
       const vendors = vendorsByCompany[company.id];
       const departments = departmentsByCompany[company.id];
-      const users = usersByCompany[company.id];
+      const employees = employeesByCompany[company.id];
 
       const assetCount = 10; // 10 assets per company
 
@@ -299,7 +333,7 @@ async function main() {
         const location = locations[j % locations.length];
         const vendor = vendors[j % vendors.length];
         const department = departments[j % departments.length];
-        const assignedUser = j < 5 ? users[j % users.length] : null;
+        const assignedEmployee = j < 5 ? employees[j % employees.length] : null;
 
         await prisma.asset.create({
           data: {
@@ -320,7 +354,7 @@ async function main() {
             locationId: location.id,
             vendorId: vendor.id,
             departmentId: department.id,
-            assignedToId: assignedUser?.id
+            assignedEmployeeId: assignedEmployee?.id
           }
         });
       }
@@ -423,9 +457,10 @@ async function main() {
     console.log('\n✨ Multi-company seeding completed successfully!');
     console.log('\n📊 Summary:');
     console.log(`   Companies: ${companies.length}`);
-    console.log(`   Sites: ${Object.values(sitesByCompany).flat().length}`);
+    console.log(`   Locations: ${Object.values(locationsByCompany).flat().length}`);
     console.log(`   Departments: ${companies.length * 4}`);
-    console.log(`   Users: ${companies.length * 4} (all assigned to sites)`);
+    console.log(`   Users: ${companies.length * 4}`);
+    console.log(`   Employees: ${companies.length * 5}`);
     console.log(`   Categories: ${companies.length * 5}`);
     console.log(`   Vendors: ${companies.length * 2}`);
     console.log(`   Assets: ${companies.length * 10}`);
