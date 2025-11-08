@@ -33,7 +33,15 @@ export default function CreateInventoryPage() {
   return (
     <DashboardLayout>
       <div className="glass-card p-6">
-        <h2 className="text-xl font-bold mb-4">Create Inventory</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Create Inventory</h2>
+          <button
+            onClick={() => router.push('/inventory')}
+            className="glass-button px-3 py-2 rounded-lg text-[#111] hover:scale-105 transition-transform"
+          >
+            Back to List
+          </button>
+        </div>
         <InventoryForm onSubmit={handleCreate} submitLabel="Create" showAssetSelector={true} />
       </div>
     </DashboardLayout>
