@@ -86,7 +86,12 @@ enum NotificationType {
   VENDOR_CONTRACT_EXPIRING
 }
 
-// SparePartCategory removed - now using flexible string with Category table reference
+enum SparePartCategory {
+  HARDWARE
+  SOFTWARE
+  ACCESSORY
+  CONSUMABLE
+}
 
 enum SparePartType {
   COMPONENT
@@ -888,7 +893,7 @@ model SparePart {
   description     String?
   brand           String?
   model           String?
-  category        String            @default("HARDWARE") // Flexible category from master Category table
+  category        SparePartCategory @default(HARDWARE)
   partType        SparePartType     @default(COMPONENT)
   status          SparePartStatus   @default(ACTIVE)
   unitPrice       Decimal           @db.Decimal(10, 2)
