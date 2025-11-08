@@ -142,7 +142,7 @@ export default function FilterModal({
                 disabled={loading}
                 className="glass-button px-4 py-2 rounded-lg text-[#111] font-medium hover:scale-105 transition-transform disabled:opacity-50"
               >
-                {loading ? 'Loading...' : 'Apply & Generate'}
+                {loading ? 'Loading...' : 'Apply'}
               </button>
               <button
                 onClick={() => { if (onClearAll) onClearAll(); if (onClose) onClose(); }}

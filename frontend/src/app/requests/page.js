@@ -405,7 +405,7 @@ const RequestsPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50"
+                className="px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform disabled:opacity-50"
               >
                 {loading ? 'Saving...' : editingRequest ? 'Update Request' : 'Create Request'}
               </button>
@@ -439,7 +439,7 @@ const RequestsPage = () => {
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
+                className="px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform"
               >
                 Delete
               </button>
@@ -564,7 +564,7 @@ const RequestsPage = () => {
                     handleApprove(selectedRequest.id)
                     setShowDetailModal(false)
                   }}
-                  className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
+                  className="px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform"
                 >
                   <CheckCircle className="h-4 w-4 mr-2 inline" />
                   Approve
@@ -574,7 +574,7 @@ const RequestsPage = () => {
                     handleReject(selectedRequest.id, 'Rejected from detail view')
                     setShowDetailModal(false)
                   }}
-                  className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
+                  className="px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform"
                 >
                   <XCircle className="h-4 w-4 mr-2 inline" />
                   Reject
