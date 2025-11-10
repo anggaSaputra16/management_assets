@@ -151,7 +151,7 @@ export default function RequestDetailPage() {
           <div className="mt-6">
             <button
               onClick={() => router.push('/requests')}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-[#111] glass-button hover:scale-105 transition-transform"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white glass-button hover:scale-105 transition-transform"
             >
               Back to Requests
             </button>
@@ -167,11 +167,11 @@ export default function RequestDetailPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="glass-card p-4 sm:p-6 flex items-center justify-between rounded-lg">
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => router.push('/requests')}
-              className="glass-button p-2 rounded-lg text-[#111] hover:scale-105 transition-transform"
+              className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
@@ -182,28 +182,31 @@ export default function RequestDetailPage() {
           </div>
 
           <div className="flex items-center space-x-3">
+            {/* Action buttons based on status and permissions */}
             {request.status === 'PENDING' && ['ADMIN', 'ASSET_ADMIN', 'MANAGER'].includes(user?.role) && (
               <>
                 <button
                   onClick={handleApproveRequest}
-                  className="glass-button flex items-center px-4 py-2 rounded-lg text-[#111] hover:scale-105 transition-transform"
+                  className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Approve
                 </button>
                 <button
                   onClick={handleRejectRequest}
-                  className="glass-button flex items-center px-4 py-2 rounded-lg text-[#111] hover:scale-105 transition-transform"
+                  className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Reject
                 </button>
               </>
             )}
-            {(request.requesterId === user?.id || ['ADMIN', 'ASSET_ADMIN'].includes(user?.role)) && request.status === 'PENDING' && (
+            
+            {(request.requesterId === user?.id || ['ADMIN', 'ASSET_ADMIN'].includes(user?.role)) && 
+             request.status === 'PENDING' && (
               <button
                 onClick={() => router.push(`/requests/${request.id}/edit`)}
-                className="glass-button flex items-center px-4 py-2 rounded-lg text-[#111] hover:scale-105 transition-transform"
+                className="flex items-center px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
               >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
@@ -340,7 +343,7 @@ export default function RequestDetailPage() {
                         <button
                           type="submit"
                           disabled={!comment.trim() || submittingComment}
-                          className="px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {submittingComment ? 'Adding...' : 'Add Comment'}
                         </button>
