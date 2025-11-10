@@ -21,19 +21,11 @@ export const metadata = {
   description: "Comprehensive Asset Management System",
 };
 
-// Ensure proper mobile scaling and notch safe areas
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  viewportFit: "cover" as const,
-};
-
-export default function RootLayout({ children }: React.PropsWithChildren) {
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen overflow-x-hidden`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <WaveBackground opacity={0.9} speed={0.3} />
         <ToastProvider>
