@@ -142,7 +142,8 @@ export default function InventoryForm({ initialData = {}, onSubmit, submitLabel 
       </div>
 
       <div className="flex space-x-2">
-        <button type="submit" className="glass-button text-white px-4 py-2 rounded">{submitLabel}</button>
+        <button type="submit" className="glass-button px-4 py-2 rounded text-[#111] font-medium hover:scale-105 transition-transform">{submitLabel}</button>
+        <button type="button" onClick={() => window.history.back()} className="glass-button px-4 py-2 rounded text-[#111] font-medium hover:scale-105 transition-transform">Cancel</button>
       </div>
     </form>
   )
