@@ -1,0 +1,163 @@
+{
+  "UserRole": [
+    "ADMIN",
+    "ASSET_ADMIN",
+    "MANAGER",
+    "DEPARTMENT_USER",
+    "TECHNICIAN",
+    "AUDITOR",
+    "TOP_MANAGEMENT"
+  ],
+  "AssetStatus": [
+    "AVAILABLE",
+    "IN_USE",
+    "MAINTENANCE",
+    "RETIRED",
+    "DISPOSED"
+  ],
+  "RequestStatus": [
+    "PENDING",
+    "APPROVED",
+    "REJECTED",
+    "ALLOCATED",
+    "COMPLETED"
+  ],
+  "RequestType": [
+    "ASSET_REQUEST",
+    "MAINTENANCE_REQUEST",
+    "SPARE_PART_REQUEST",
+    "SOFTWARE_LICENSE",
+    "ASSET_TRANSFER",
+    "ASSET_DISPOSAL",
+    "ASSET_BREAKDOWN"
+  ],
+  "MaintenanceType": [
+    "PREVENTIVE",
+    "CORRECTIVE",
+    "EMERGENCY",
+    "SPARE_PART_REPLACEMENT",
+    "SOFTWARE_UPDATE",
+    "CALIBRATION"
+  ],
+  "MaintenanceStatus": [
+    "SCHEDULED",
+    "IN_PROGRESS",
+    "COMPLETED",
+    "CANCELLED"
+  ],
+  "AuditStatus": [
+    "SCHEDULED",
+    "IN_PROGRESS",
+    "COMPLETED"
+  ],
+  "NotificationType": [
+    "REQUEST_APPROVAL",
+    "ASSET_ALLOCATION",
+    "MAINTENANCE_DUE",
+    "AUDIT_SCHEDULED",
+    "GENERAL",
+    "MAINTENANCE_COMPLETED",
+    "REQUEST_REJECTED",
+    "ASSET_TRANSFERRED",
+    "SOFTWARE_LICENSE_EXPIRING",
+    "SPARE_PART_LOW_STOCK",
+    "MAINTENANCE_OVERDUE",
+    "ASSET_WARRANTY_EXPIRING",
+    "DECOMPOSITION_COMPLETED",
+    "VENDOR_CONTRACT_EXPIRING"
+  ],
+  "SparePartType": [
+    "COMPONENT",
+    "ACCESSORY",
+    "CONSUMABLE",
+    "TOOL",
+    "SOFTWARE"
+  ],
+  "SparePartStatus": [
+    "ACTIVE",
+    "DISCONTINUED",
+    "OUT_OF_STOCK",
+    "OBSOLETE"
+  ],
+  "ProcurementStatus": [
+    "ORDERED",
+    "SHIPPED",
+    "RECEIVED",
+    "PARTIALLY_RECEIVED",
+    "CANCELLED"
+  ],
+  "PartUsageType": [
+    "REPLACEMENT",
+    "UPGRADE",
+    "REPAIR",
+    "INSTALLATION",
+    "MAINTENANCE",
+    "TRANSFER"
+  ],
+  "ReplacementStatus": [
+    "PLANNED",
+    "IN_PROGRESS",
+    "COMPLETED",
+    "CANCELLED"
+  ],
+  "RegistrationStatus": [
+    "PENDING",
+    "APPROVED",
+    "REGISTERED",
+    "REJECTED"
+  ],
+  "ComponentStatus": [
+    "ACTIVE",
+    "INACTIVE",
+    "MAINTENANCE",
+    "TRANSFERRED",
+    "REPLACED",
+    "DISPOSED"
+  ],
+  "LocationType": [
+    "OFFICE",
+    "WAREHOUSE",
+    "FACTORY",
+    "RETAIL",
+    "DATA_CENTER",
+    "OTHER"
+  ],
+  "SoftwareType": [
+    "OPERATING_SYSTEM",
+    "APPLICATION",
+    "UTILITY",
+    "DRIVER",
+    "SECURITY",
+    "DEVELOPMENT_TOOL",
+    "OFFICE_SUITE",
+    "DATABASE",
+    "MIDDLEWARE",
+    "PLUGIN"
+  ],
+  "LicenseType": [
+    "PERPETUAL",
+    "SUBSCRIPTION",
+    "OPEN_SOURCE",
+    "TRIAL",
+    "EDUCATIONAL",
+    "ENTERPRISE",
+    "OEM",
+    "VOLUME"
+  ],
+  "LicenseStatus": [
+    "ACTIVE",
+    "EXPIRED",
+    "SUSPENDED",
+    "CANCELLED",
+    "PENDING_RENEWAL",
+    "VIOLATION"
+  ],
+  "AttachmentType": [
+    "IMAGE",
+    "DOCUMENT",
+    "MANUAL",
+    "WARRANTY",
+    "INVOICE",
+    "OTHER"
+  ]
+}
