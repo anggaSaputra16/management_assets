@@ -230,8 +230,9 @@ async function main() {
   console.log('=' .repeat(60));
 
   try {
-    // Step 1: Global Type Master
-    await seedGlobalTypeMaster();
+    // Step 1: Global Type Master (SKIPPED - table not in current schema)
+    // await seedGlobalTypeMaster();
+    console.log('\n🌍 GlobalTypeMaster seeding skipped (table not in schema)');
     
     // Step 2: System Settings
     await seedSystemSettings();
@@ -362,10 +363,9 @@ async function main() {
       for (const template of templates) {
         const loc = await prisma.location.upsert({
           where: {
-            companyId_name_building: {
+            companyId_name: {
               companyId: company.id,
-              name: template.name,
-              building: template.building
+              name: template.name
             }
           },
           update: {},
@@ -612,24 +612,33 @@ async function main() {
     console.log('\n🔧 Creating Spare Parts...');
     
     for (const company of companies) {
-      const compCategory = categoriesByCompany[company.id].find(c => c.code === 'COMP');
       const location = locationsByCompany[company.id].find(l => l.type === 'WAREHOUSE');
+      
+      const sparePartCategories = ['HARDWARE', 'HARDWARE', 'ACCESSORY', 'CONSUMABLE', 'HARDWARE'];
+      const sparePartNames = ['RAM DDR4 8GB', 'SSD 512GB', 'Mouse Wireless', 'Printer Toner', 'Network Cable'];
       
       for (let i = 1; i <= 5; i++) {
         const partNumber = `${company.code}-SP-${String(i).padStart(4, '0')}`;
         await prisma.sparePart.upsert({
-          where: { partNumber },
+          where: { 
+            companyId_partNumber: {
+              companyId: company.id,
+              partNumber
+            }
+          },
           update: {},
           create: {
             partNumber,
-            name: `RAM DDR4 ${i*8}GB`,
-            description: 'Memory module for computers',
+            name: sparePartNames[i-1],
+            description: `Spare part for ${sparePartNames[i-1]}`,
             partType: 'COMPONENT',
-            categoryId: compCategory.id,
-            quantity: 50,
-            minQuantity: 10,
-            unitPrice: 500000,
-            locationId: location.id,
+            category: sparePartCategories[i-1],
+            stockLevel: 50,
+            minStockLevel: 10,
+            maxStockLevel: 100,
+            reorderPoint: 20,
+            unitPrice: 500000 * i,
+            storageLocation: location.id,
             status: 'ACTIVE',
             companyId: company.id
           }
@@ -689,14 +698,22 @@ async function main() {
       
       const technician = usersByCompany[company.id].find(u => u.role === 'TECHNICIAN');
       
-      for (const asset of assets) {
-        await prisma.maintenanceRecord.create({
-          data: {
+      for (let idx = 0; idx < assets.length; idx++) {
+        const asset = assets[idx];
+        const maintenanceNumber = `${company.code}-MAINT-${String(idx + 1).padStart(4, '0')}`;
+        await prisma.maintenanceRecord.upsert({
+          where: { maintenanceNumber },
+          update: {},
+          create: {
+            maintenanceNumber,
+            title: `Preventive Maintenance for ${asset.name}`,
+            description: 'Scheduled preventive maintenance check',
             assetId: asset.id,
             maintenanceType: 'PREVENTIVE',
             scheduledDate: new Date('2024-12-01'),
             status: 'SCHEDULED',
-            assignedToId: technician.id,
+            technicianId: technician.id,
+            priority: 'MEDIUM',
             estimatedCost: 500000,
             companyId: company.id
           }
@@ -712,16 +729,21 @@ async function main() {
       const user = usersByCompany[company.id].find(u => u.role === 'DEPARTMENT_USER');
       const itDept = departmentsByCompany[company.id].find(d => d.code === 'IT');
       
-      await prisma.assetRequest.create({
-        data: {
+      const requestNumber = `${company.code}-REQ-0001`;
+      await prisma.assetRequest.upsert({
+        where: { requestNumber },
+        update: {},
+        create: {
+          requestNumber,
           requestType: 'ASSET_REQUEST',
-          requestedById: user.id,
-          departmentId: itDept.id,
           status: 'PENDING',
           priority: 'MEDIUM',
           title: 'Request New Laptop',
           description: 'Need a new laptop for development work',
-          companyId: company.id
+          justification: 'Current laptop is old and needs replacement for better productivity',
+          requester: { connect: { id: user.id } },
+          department: { connect: { id: itDept.id } },
+          company: { connect: { id: company.id } }
         }
       });
       console.log(`  ✅ ${company.code}: 1 asset request`);
