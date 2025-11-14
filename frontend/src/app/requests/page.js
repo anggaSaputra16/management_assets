@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react'
 import { useRequestStore, useAssetStore, useCategoryStore, useUserStore, useEnumStore } from '@/stores'
 import { useToast } from '@/contexts/ToastContext'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
-import FilterModal from './_components/filterModal'
+import TypeSelect from '@/components/TypeSelect'
+import TypeBadge, { STATUS_COLORS } from '@/components/TypeBadge'
 import {
   FileText,
   Plus,
+  Search,
   Filter,
   Edit,
   Trash2,
@@ -56,15 +58,16 @@ const RequestsPage = () => {
     requestTypes,
     requestStatuses,
     priorityLevels,
+    loading: enumLoading,
     initializeEnums
   } = useEnumStore()
 
+  const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [requestToDelete, setRequestToDelete] = useState(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState(null)
-  const [filtersOpen, setFiltersOpen] = useState(false)
   const itemsPerPage = 10
 
   const filteredRequests = getFilteredRequests()
@@ -242,20 +245,15 @@ const RequestsPage = () => {
                 <label className="block text-sm font-medium text-[#111] mb-2">
                   Type *
                 </label>
-                <select
+                <TypeSelect
+                  group="RequestType"
                   name="type"
                   value={formData.type}
                   onChange={handleInputChange}
                   required
+                  includeEmpty={false}
                   className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
-                >
-                  <option value="">Select Type</option>
-                  {requestTypes.map(type => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
 
@@ -343,7 +341,7 @@ const RequestsPage = () => {
                   <option value="">Select Assignee</option>
                   {Array.isArray(users) && users.map(user => (
                     <option key={user.id} value={user.id}>
-                      {user.name}
+                      {`${user.firstName || ''} ${user.lastName || ''}`.trim()}
                     </option>
                   ))}
                 </select>
@@ -363,19 +361,7 @@ const RequestsPage = () => {
                   className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-[#111] mb-2">
-                  Estimated Cost
-                </label>
-                <input
-                  type="number"
-                  name="estimatedCost"
-                  value={formData.estimatedCost}
-                  onChange={handleInputChange}
-                  step="0.01"
-                  className="w-full glass-input rounded-lg px-3 py-2 text-[#111] focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black/30"
-                />
-              </div>
+              {/* Estimated Cost removed per updated requirements */}
             </div>
 
             <div>
@@ -405,7 +391,7 @@ const RequestsPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform disabled:opacity-50"
+                className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform disabled:opacity-50"
               >
                 {loading ? 'Saving...' : editingRequest ? 'Update Request' : 'Create Request'}
               </button>
@@ -439,7 +425,7 @@ const RequestsPage = () => {
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform"
+                className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
               >
                 Delete
               </button>
@@ -492,9 +478,11 @@ const RequestsPage = () => {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-[#111]">Status</label>
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(selectedRequest.status)}`}>
-                  {selectedRequest.status}
-                </span>
+                <TypeBadge
+                  group="RequestStatus"
+                  value={selectedRequest.status}
+                  colorMap={STATUS_COLORS}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#111]">Priority</label>
@@ -507,11 +495,11 @@ const RequestsPage = () => {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-[#111]">Requester</label>
-                <p className="text-sm text-[#111]">{selectedRequest.requester?.name || 'Unknown'}</p>
+                  <p className="text-sm text-[#111]">{selectedRequest.requester ? `${selectedRequest.requester.firstName || ''} ${selectedRequest.requester.lastName || ''}`.trim() : 'Unknown'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#111]">Assignee</label>
-                <p className="text-sm text-[#111]">{selectedRequest.assignee?.name || 'Not assigned'}</p>
+                  <p className="text-sm text-[#111]">{selectedRequest.assignee ? `${selectedRequest.assignee.firstName || ''} ${selectedRequest.assignee.lastName || ''}`.trim() : 'Not assigned'}</p>
               </div>
             </div>
 
@@ -541,14 +529,7 @@ const RequestsPage = () => {
               )}
             </div>
 
-            {selectedRequest.estimatedCost && (
-              <div>
-                <label className="block text-sm font-medium text-[#111]">Estimated Cost</label>
-                <p className="text-sm text-[#111]">
-                  ${selectedRequest.estimatedCost.toLocaleString()}
-                </p>
-              </div>
-            )}
+            {/* Estimated Cost removed from request details per updated requirements */}
 
             {selectedRequest.notes && (
               <div>
@@ -564,7 +545,7 @@ const RequestsPage = () => {
                     handleApprove(selectedRequest.id)
                     setShowDetailModal(false)
                   }}
-                  className="px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform"
+                  className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <CheckCircle className="h-4 w-4 mr-2 inline" />
                   Approve
@@ -574,7 +555,7 @@ const RequestsPage = () => {
                     handleReject(selectedRequest.id, 'Rejected from detail view')
                     setShowDetailModal(false)
                   }}
-                  className="px-4 py-2 glass-button text-[#111] rounded-lg hover:scale-105 transition-transform"
+                  className="px-4 py-2 glass-button text-white rounded-lg hover:scale-105 transition-transform"
                 >
                   <XCircle className="h-4 w-4 mr-2 inline" />
                   Reject
@@ -600,7 +581,7 @@ const RequestsPage = () => {
         </div>
         <div className="flex space-x-3">
           <button
-            onClick={() => setFiltersOpen(true)}
+            onClick={() => setShowFilters(!showFilters)}
             className="glass-button inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium hover:scale-105 transition-transform"
           >
             <Filter className="h-4 w-4 mr-2" />
@@ -647,6 +628,75 @@ const RequestsPage = () => {
           )
         })}
       </div>
+
+      {/* Continue with filters, table, and modals... */}
+
+      {/* Filters */}
+      {showFilters && (
+        <div className="glass-card">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#111] mb-2">
+                Search
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#333]" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search requests..."
+                  className="glass-input pl-10 w-full rounded-lg px-3 py-2 text-sm text-[#111]"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-[#111] mb-2">
+                Type
+              </label>
+              <TypeSelect
+                group="RequestType"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="glass-input w-full rounded-lg px-3 py-2 text-sm text-[#111]"
+                emptyLabel="All Types"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#111] mb-2">
+                Status
+              </label>
+              <TypeSelect
+                group="RequestStatus"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="glass-input w-full rounded-lg px-3 py-2 text-sm text-[#111]"
+                emptyLabel="All Status"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#111] mb-2">
+                Priority
+              </label>
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                className="glass-input w-full rounded-lg px-3 py-2 text-sm text-[#111]"
+              >
+                <option value="">All Priorities</option>
+                {priorityLevels.map(priority => (
+                  <option key={priority.value} value={priority.value}>
+                    {priority.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Requests Table */}
       <div className="glass-card overflow-hidden">
@@ -710,13 +760,15 @@ const RequestsPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-[#111]">
                         <User className="h-4 w-4 mr-1 text-[#333]" />
-                        {request.requester?.name || 'Unknown'}
+                        {request.requester ? `${request.requester.firstName || ''} ${request.requester.lastName || ''}`.trim() : 'Unknown'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(request.status)}`}>
-                        {request.status}
-                      </span>
+                      <TypeBadge
+                        group="RequestStatus"
+                        value={request.status}
+                        colorMap={STATUS_COLORS}
+                      />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityBadgeColor(request.priority)}`}>
@@ -822,27 +874,6 @@ const RequestsPage = () => {
       {renderDeleteModal()}
       {renderDetailModal()}
       </div>
-      <FilterModal
-        open={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        typeFilter={typeFilter}
-        setTypeFilter={setTypeFilter}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        priorityFilter={priorityFilter}
-        setPriorityFilter={setPriorityFilter}
-        requestTypes={requestTypes}
-        requestStatuses={requestStatuses}
-        priorityLevels={priorityLevels}
-        onClearAll={() => {
-          setSearchTerm('')
-          setTypeFilter('')
-          setStatusFilter('')
-          setPriorityFilter('')
-        }}
-      />
     </DashboardLayout>
   )
 }
