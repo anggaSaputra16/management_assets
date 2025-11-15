@@ -5,25 +5,68 @@ const { authenticate, authorize, canApprove } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Validation schemas
-const createRequestSchema = Joi.object({
-  requestType: Joi.string().valid('ASSET_REQUEST', 'MAINTENANCE_REQUEST', 'SPARE_PART_REQUEST', 'SOFTWARE_LICENSE', 'ASSET_TRANSFER', 'ASSET_DISPOSAL', 'ASSET_BREAKDOWN').required(),
-  description: Joi.string().required(),
-  justification: Joi.string().required(),
-  priority: Joi.string().valid('LOW', 'MEDIUM', 'HIGH', 'URGENT').default('MEDIUM'),
-  assetId: Joi.string().optional(),
-  companyId: Joi.string().optional()
-});
+// Helper function to get valid values from GlobalTypeMaster
+const getValidValuesFromMaster = async (group) => {
+  const types = await prisma.globalTypeMaster.findMany({
+    where: {
+      group,
+      isActive: true
+    },
+    select: {
+      key: true
+    },
+    orderBy: {
+      sortOrder: 'asc'
+    }
+  });
+  return types.map(t => t.key);
+};
 
-const updateRequestSchema = Joi.object({
-  requestType: Joi.string().valid('ASSET_REQUEST', 'MAINTENANCE_REQUEST', 'SPARE_PART_REQUEST', 'SOFTWARE_LICENSE', 'ASSET_TRANSFER', 'ASSET_DISPOSAL', 'ASSET_BREAKDOWN').optional(),
-  description: Joi.string().optional(),
-  justification: Joi.string().optional(),
-  priority: Joi.string().valid('LOW', 'MEDIUM', 'HIGH', 'URGENT').optional(),
-  notes: Joi.string().optional()
-  ,
-  companyId: Joi.string().optional()
-});
+// Cache for master data to avoid repeated DB calls
+let masterDataCache = {
+  requestTypes: null,
+  priorities: null,
+  lastFetch: null
+};
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Get master data with caching
+const getMasterData = async (group) => {
+  const now = Date.now();
+  const cacheKey = group === 'REQUEST_TYPE' ? 'requestTypes' : 'priorities';
+  
+  if (masterDataCache[cacheKey] && masterDataCache.lastFetch && (now - masterDataCache.lastFetch < CACHE_DURATION)) {
+    return masterDataCache[cacheKey];
+  }
+  
+  const data = await getValidValuesFromMaster(group);
+  masterDataCache[cacheKey] = data;
+  masterDataCache.lastFetch = now;
+  
+  return data;
+};
+
+// Dynamic validation function
+const validateRequest = async (data, isUpdate = false) => {
+  const requestTypes = await getMasterData('REQUEST_TYPE');
+  const priorities = await getMasterData('PRIORITY');
+  
+  const schema = Joi.object({
+    requestType: isUpdate ? Joi.string().valid(...requestTypes).optional() : Joi.string().valid(...requestTypes).required(),
+    title: isUpdate ? Joi.string().optional() : Joi.string().required(),
+    description: isUpdate ? Joi.string().optional() : Joi.string().required(),
+    justification: isUpdate ? Joi.string().optional() : Joi.string().required(),
+    priority: Joi.string().valid(...priorities).optional().default('MEDIUM'),
+    assetId: isUpdate ? Joi.string().optional() : Joi.string().required(),
+    requiredDate: Joi.date().optional(),
+    estimatedCost: Joi.number().optional(),
+    notes: Joi.string().optional(),
+    companyId: Joi.string().optional()
+  });
+  
+  return schema.validate(data);
+};
 
 const approvalSchema = Joi.object({
   action: Joi.string().valid('APPROVE', 'REJECT').required(),
@@ -133,7 +176,7 @@ router.get('/', authenticate, async (req, res, next) => {
               status: true
             }
           },
-          approvedBy: {
+          users_asset_requests_approvedByIdTousers: {
             select: {
               id: true,
               firstName: true,
@@ -196,12 +239,12 @@ router.get('/:id', authenticate, async (req, res, next) => {
             name: true,
             description: true,
             status: true,
-            category: {
+            categories: {
               select: { name: true }
             }
           }
         },
-        approvedBy: {
+        users_asset_requests_approvedByIdTousers: {
           select: {
             id: true,
             firstName: true,
@@ -209,7 +252,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
             email: true
           }
         },
-        editedByUser: {
+        users_asset_requests_editedByTousers: {
           select: {
             id: true,
             firstName: true,
@@ -253,12 +296,24 @@ router.get('/:id', authenticate, async (req, res, next) => {
 // Create new request
 router.post('/', authenticate, async (req, res, next) => {
   try {
-    const { error, value } = createRequestSchema.validate(req.body);
+    const { error, value } = await validateRequest(req.body, false);
     if (error) {
+      // If missing/invalid requestType, return allowed values from master to help caller
+      const detail = error.details && error.details[0];
+      if (detail && detail.context && detail.context.key === 'requestType') {
+        const allowed = await getMasterData('REQUEST_TYPE');
+        return res.status(400).json({
+          success: false,
+          message: 'Validation error',
+          error: 'requestType is required or invalid',
+          allowedValues: allowed
+        });
+      }
+
       return res.status(400).json({
         success: false,
         message: 'Validation error',
-        error: error.details[0].message
+        error: detail ? detail.message : 'Invalid payload'
       });
     }
 
@@ -270,7 +325,7 @@ router.post('/', authenticate, async (req, res, next) => {
       });
     }
 
-    // If specific asset requested, check if it exists and is available
+    // Check if asset exists
     if (value.assetId) {
       const asset = await prisma.asset.findUnique({
         where: { id: value.assetId }
@@ -283,24 +338,40 @@ router.post('/', authenticate, async (req, res, next) => {
         });
       }
 
-      if (asset.status !== 'AVAILABLE') {
-        return res.status(400).json({
-          success: false,
-          message: 'Asset is not available for request'
-        });
-      }
+      // For MAINTENANCE/DECOMPOSITION, asset must exist but can be in any status
+      // because we're requesting work on existing asset
     }
 
     // Generate request number
-    const requestNumber = await generateRequestNumber();
+    const requestNumber = await generateRequestNumber(req.user.companyId);
 
-    // Create request
+    // Get request type configuration from GlobalTypeMaster
+    const requestTypeConfig = await prisma.globalTypeMaster.findUnique({
+      where: {
+        group_key: {
+          group: 'REQUEST_TYPE',
+          key: value.requestType
+        }
+      }
+    });
+
+    // Set flags based on requestType metadata
+    // Check if the type is configured for maintenance or decomposition routing
+    const metadata = requestTypeConfig?.description || '';
+    const needMaintenance = metadata.includes('ROUTE_TO_MAINTENANCE') || value.requestType === 'MAINTENANCE';
+    const needDecomposition = metadata.includes('ROUTE_TO_DECOMPOSITION') || value.requestType === 'DECOMPOSITION';
+
+    // Create request with appropriate flags
     const request = await prisma.assetRequest.create({
       data: {
         ...value,
         requestNumber,
         requesterId: req.user.id,
-        departmentId: req.user.departmentId
+        departmentId: req.user.departmentId,
+        companyId: req.user.companyId,
+        status: 'PENDING',
+        needMaintenance,
+        needDecomposition
       },
       include: {
         requester: {
@@ -342,13 +413,24 @@ router.post('/', authenticate, async (req, res, next) => {
 router.put('/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { error, value } = updateRequestSchema.validate(req.body);
+    const { error, value } = await validateRequest(req.body, true);
     
     if (error) {
+      const detail = error.details && error.details[0];
+      if (detail && detail.context && detail.context.key === 'requestType') {
+        const allowed = await getMasterData('REQUEST_TYPE');
+        return res.status(400).json({
+          success: false,
+          message: 'Validation error',
+          error: 'requestType is invalid',
+          allowedValues: allowed
+        });
+      }
+
       return res.status(400).json({
         success: false,
         message: 'Validation error',
-        error: error.details[0].message
+        error: detail ? detail.message : 'Invalid payload'
       });
     }
 
@@ -442,51 +524,6 @@ router.post('/:id/approval', authenticate, canApprove, async (req, res, next) =>
     const request = await prisma.assetRequest.findUnique({
       where: { id },
       include: {
-        requester: true,
-        department: true,
-        asset: true
-      }
-    });
-
-    if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: 'Request not found'
-      });
-    }
-
-    // Check if request is pending
-    if (request.status !== 'PENDING') {
-      return res.status(400).json({
-        success: false,
-        message: 'Request has already been processed'
-      });
-    }
-
-    // Check if manager can approve this department's requests
-    if (req.user.role === 'MANAGER' && request.departmentId !== req.user.departmentId) {
-      return res.status(403).json({
-        success: false,
-        message: 'You can only approve requests from your department'
-      });
-    }
-
-    const updateData = {
-      status: value.action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
-      approvedById: req.user.id,
-      approvedDate: new Date(),
-      notes: value.notes
-    };
-
-    if (value.action === 'REJECT') {
-      updateData.rejectionReason = value.rejectionReason;
-    }
-
-    // Update request
-    const updatedRequest = await prisma.assetRequest.update({
-      where: { id },
-      data: updateData,
-      include: {
         requester: {
           select: {
             id: true,
@@ -506,10 +543,47 @@ router.post('/:id/approval', authenticate, canApprove, async (req, res, next) =>
           select: {
             id: true,
             assetTag: true,
+            name: true,
+            description: true,
+            status: true,
+            categories: { select: { id: true, name: true } },
+            locations: { select: { id: true, name: true, building: true } }
+          }
+        },
+        users_asset_requests_approvedByIdTousers: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+    // Update request
+    const updatedRequest = await prisma.assetRequest.update({
+      where: { id },
+      data: updateData,
+      include: {
+        requester: { select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        department: { select: {
+            id: true,
+            name: true,
+            code: true
+          }
+        },
+        asset: { select: {
+            id: true,
+            assetTag: true,
             name: true
           }
         },
-        approvedBy: {
+        users_asset_requests_approvedByIdTousers: {
           select: {
             id: true,
             firstName: true,
@@ -754,5 +828,179 @@ router.get('/stats', authenticate, async (req, res, next) => {
   }
 });
 
+// Get maintenance requests (approved and need maintenance)
+router.get('/maintenance', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN', 'MANAGER'), async (req, res, next) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+    const companyId = req.user.companyId;
+
+    // Filter by needMaintenance flag, not hardcoded requestType
+    const where = {
+      companyId,
+      needMaintenance: true,
+      status: 'APPROVED' // Only show approved requests
+    };
+
+    const [requests, total] = await Promise.all([
+      prisma.assetRequest.findMany({
+        where,
+        include: {
+          requester: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          department: {
+            select: {
+              id: true,
+              name: true,
+              code: true
+            }
+          },
+          asset: {
+            select: {
+              id: true,
+              assetTag: true,
+              name: true,
+              description: true,
+              status: true,
+              categories: {
+                select: { id: true, name: true }
+              },
+              locations: {
+                select: { id: true, name: true, building: true }
+              }
+            }
+          },
+          users_asset_requests_approvedByIdTousers: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true
+            }
+          }
+        },
+        skip: parseInt(skip),
+        take: parseInt(limit),
+        orderBy: { approvedDate: 'desc' }
+      }),
+      prisma.assetRequest.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        requests,
+        pagination: {
+          current: parseInt(page),
+          pages: Math.ceil(total / limit),
+          total
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get decomposition requests (approved and need decomposition)
+router.get('/decomposition', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), async (req, res, next) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+    const companyId = req.user.companyId;
+
+    // Filter by needDecomposition flag, not hardcoded requestType
+    const where = {
+      companyId,
+      needDecomposition: true,
+      status: 'APPROVED' // Only show approved requests
+    };
+
+    const [requests, total] = await Promise.all([
+      prisma.assetRequest.findMany({
+        where,
+        include: {
+          requester: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          },
+          department: {
+            select: {
+              id: true,
+              name: true,
+              code: true
+            }
+          },
+          asset: {
+            select: {
+              id: true,
+              assetTag: true,
+              name: true,
+              description: true,
+              status: true,
+              categories: {
+                select: { id: true, name: true }
+              },
+              locations: {
+                select: { id: true, name: true, building: true }
+              }
+            }
+          },
+          users_asset_requests_approvedByIdTousers: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true
+            }
+          }
+        },
+        skip: parseInt(skip),
+        take: parseInt(limit),
+        orderBy: { approvedDate: 'desc' }
+      }),
+      prisma.assetRequest.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        requests,
+        pagination: {
+          current: parseInt(page),
+          pages: Math.ceil(total / limit),
+          total
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Helper endpoint for frontend to fetch master values for requests
+router.get('/types', authenticate, async (req, res, next) => {
+  try {
+    const requestTypes = await getMasterData('REQUEST_TYPE');
+    const priorities = await getMasterData('PRIORITY');
+    res.json({ success: true, data: { requestTypes, priorities } });
+  } catch (error) {
+    next(error);
+  }
+});
 module.exports = router;
-module.exports = router;
+
+
+
+
+
+
+

@@ -32,10 +32,10 @@ const checkAndNotifyOverdueLoans = async () => {
       },
       include: {
         borrowerEmployee: {
-          select: { id: true, email: true, firstName: true, lastName: true, companyId: true, user: { select: { id: true } } }
+          select: { id: true, email: true, firstName: true, lastName: true, companyId: true, users: { select: { id: true } } }
         },
         responsibleEmployee: {
-          select: { id: true, email: true, firstName: true, lastName: true, user: { select: { id: true } } }
+          select: { id: true, email: true, firstName: true, lastName: true, users: { select: { id: true } } }
         },
         requestedBy: {
           select: { id: true, email: true, firstName: true, lastName: true }
@@ -45,8 +45,8 @@ const checkAndNotifyOverdueLoans = async () => {
         },
         inventory: {
           include: {
-            asset: { select: { name: true, assetTag: true, companyId: true } },
-            department: { select: { name: true } }
+            assets: { select: { name: true, assetTag: true, companyId: true } },
+            departments: { select: { name: true } }
           }
         }
       }
@@ -63,10 +63,10 @@ const checkAndNotifyOverdueLoans = async () => {
       },
       include: {
         borrowerEmployee: {
-          select: { id: true, email: true, firstName: true, lastName: true, companyId: true, user: { select: { id: true } } }
+          select: { id: true, email: true, firstName: true, lastName: true, companyId: true, users: { select: { id: true } } }
         },
         responsibleEmployee: {
-          select: { id: true, email: true, firstName: true, lastName: true, user: { select: { id: true } } }
+          select: { id: true, email: true, firstName: true, lastName: true, users: { select: { id: true } } }
         },
         requestedBy: {
           select: { id: true, email: true, firstName: true, lastName: true }
@@ -76,8 +76,8 @@ const checkAndNotifyOverdueLoans = async () => {
         },
         inventory: {
           include: {
-            asset: { select: { name: true, assetTag: true, companyId: true } },
-            department: { select: { name: true } }
+            assets: { select: { name: true, assetTag: true, companyId: true } },
+            departments: { select: { name: true } }
           }
         }
       }
@@ -94,10 +94,10 @@ const checkAndNotifyOverdueLoans = async () => {
       },
       include: {
         borrowerEmployee: {
-          select: { id: true, email: true, firstName: true, lastName: true, companyId: true, user: { select: { id: true } } }
+          select: { id: true, email: true, firstName: true, lastName: true, companyId: true, users: { select: { id: true } } }
         },
         responsibleEmployee: {
-          select: { id: true, email: true, firstName: true, lastName: true, user: { select: { id: true } } }
+          select: { id: true, email: true, firstName: true, lastName: true, users: { select: { id: true } } }
         },
         requestedBy: {
           select: { id: true, email: true, firstName: true, lastName: true }
@@ -107,8 +107,8 @@ const checkAndNotifyOverdueLoans = async () => {
         },
         inventory: {
           include: {
-            asset: { select: { name: true, assetTag: true } },
-            department: { select: { name: true } }
+            assets: { select: { name: true, assetTag: true } },
+            departments: { select: { name: true } }
           }
         }
       }
@@ -316,7 +316,7 @@ const checkAndNotifyOverdueLoans = async () => {
 // Helper function to create notification
 const createNotification = async (data) => {
   try {
-    await prisma.notification.create({
+    await prisma.notifications.create({
       data: {
         userId: data.userId,
         companyId: data.companyId,

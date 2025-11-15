@@ -84,21 +84,21 @@ router.get('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER', 'DEPA
         take,
         orderBy: { [sortBy]: sortOrder },
         include: {
-          company: {
+          companies: {
             select: { id: true, name: true, code: true }
           },
-          department: {
+          departments: {
             select: { id: true, name: true, code: true }
           },
-          location: {
+          locations: {
             select: { id: true, name: true, code: true, building: true, city: true }
           },
-          user: {
+          users: {
             select: { id: true, email: true, username: true, role: true }
           },
           _count: {
             select: {
-              assignedAssets: true
+              assets: true
             }
           }
         }
@@ -129,19 +129,19 @@ router.get('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER', 'D
     const employee = await prisma.employee.findFirst({
       where: { id, companyId },
       include: {
-        company: {
+        companies: {
           select: { id: true, name: true, code: true }
         },
-        department: {
+        departments: {
           select: { id: true, name: true, code: true }
         },
-        location: {
+        locations: {
           select: { id: true, name: true, code: true, building: true, city: true }
         },
-        user: {
+        users: {
           select: { id: true, email: true, username: true, role: true, isActive: true }
         },
-        assignedAssets: {
+        assets: {
           select: {
             id: true,
             assetTag: true,
@@ -153,9 +153,11 @@ router.get('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER', 'D
         },
         _count: {
           select: {
-            assignedAssets: true,
-            transfersFrom: true,
-            transfersTo: true
+            assets: true,
+            asset_transfers_asset_transfers_fromEmployeeIdToemployees: true,
+            asset_transfers_asset_transfers_toEmployeeIdToemployees: true,
+            inventory_loans_inventory_loans_borrowerEmployeeIdToemployees: true,
+            inventory_loans_inventory_loans_responsibleEmployeeIdToemployees: true
           }
         }
       }
@@ -223,13 +225,13 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         userId: value.userId || null
       },
       include: {
-        department: {
+        departments: {
           select: { id: true, name: true, code: true }
         },
-        location: {
+        locations: {
           select: { id: true, name: true, code: true }
         },
-        user: {
+        users: {
           select: { id: true, email: true, username: true, role: true }
         }
       }
@@ -310,13 +312,13 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
         locationId: value.locationId === '' ? null : value.locationId
       },
       include: {
-        department: {
+        departments: {
           select: { id: true, name: true, code: true }
         },
-        location: {
+        locations: {
           select: { id: true, name: true, code: true }
         },
-        user: {
+        users: {
           select: { id: true, email: true, username: true, role: true }
         }
       }
@@ -339,7 +341,7 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
       where: { id, companyId },
       include: {
         _count: {
-          select: { assignedAssets: true }
+          select: { assets: true }
         }
       }
     });
@@ -349,7 +351,7 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
     }
 
     // Check if employee has assigned assets
-    if (employee._count.assignedAssets > 0) {
+    if (employee._count.assets > 0) {
       return res.status(400).json({ 
         error: 'Cannot delete employee with assigned assets. Please reassign or unassign assets first.' 
       });
@@ -374,7 +376,7 @@ router.get('/stats', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'),
     const [
       totalEmployees,
       activeEmployees,
-      employeesWithAssets,
+  employeesWithAssets,
       employeesWithAppAccess
     ] = await Promise.all([
       prisma.employee.count({ where: { companyId } }),
@@ -382,7 +384,7 @@ router.get('/stats', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'),
       prisma.employee.count({ 
         where: { 
           companyId,
-          assignedAssets: { some: {} }
+          assets: { some: {} }
         } 
       }),
       prisma.employee.count({ 
@@ -407,3 +409,6 @@ router.get('/stats', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'),
 });
 
 module.exports = router;
+
+
+

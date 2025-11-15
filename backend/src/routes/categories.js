@@ -58,21 +58,21 @@ router.get('/', authenticate, async (req, res, next) => {
       prisma.category.findMany({
         where,
         include: {
-          company: {
+          companies: {
             select: {
               id: true,
               name: true,
               code: true
             }
           },
-          parent: {
+          categories: {
             select: {
               id: true,
               name: true,
               code: true
             }
           },
-          children: {
+          other_categories: {
             select: {
               id: true,
               name: true,
@@ -83,7 +83,7 @@ router.get('/', authenticate, async (req, res, next) => {
           _count: {
             select: {
               assets: true,
-              children: true
+              other_categories: true
             }
           }
         },
@@ -120,10 +120,10 @@ router.get('/tree', authenticate, async (req, res, next) => {
         companyId: req.user.companyId // Filter by user's company
       },
       include: {
-        children: {
+        other_categories: {
           where: { isActive: true },
           include: {
-            children: {
+            other_categories: {
               where: { isActive: true },
               include: {
                 _count: {
@@ -163,14 +163,14 @@ router.get('/:id', authenticate, async (req, res, next) => {
         companyId: req.user.companyId
       },
       include: {
-        parent: {
+        categories: {
           select: {
             id: true,
             name: true,
             code: true
           }
         },
-        children: {
+        other_categories: {
           select: {
             id: true,
             name: true,
@@ -192,7 +192,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
         _count: {
           select: {
             assets: true,
-            children: true
+            other_categories: true
           }
         }
       }
@@ -279,19 +279,19 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         parent: parentId ? {
           connect: { id: parentId }
         } : undefined,
-        company: {
+        companies: {
           connect: { id: finalCompanyId }
         }
       },
       include: {
-        company: {
+        companies: {
           select: {
             id: true,
             name: true,
             code: true
           }
         },
-        parent: {
+        categories: {
           select: {
             id: true,
             name: true,
@@ -403,13 +403,13 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       where: { id },
       data: {
         ...updateData,
-        parent: {
+        categories: {
           connect: parentId ? { id: parentId } : undefined,
           disconnect: parentId === null ? true : undefined
         }
       },
       include: {
-        parent: {
+        categories: {
           select: {
             id: true,
             name: true,
@@ -419,7 +419,7 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
         _count: {
           select: {
             assets: true,
-            children: true
+            other_categories: true
           }
         }
       }
@@ -450,7 +450,7 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res, next) =
         _count: {
           select: {
             assets: true,
-            children: true
+            other_categories: true
           }
         }
       }
@@ -608,3 +608,6 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
 });
 
 module.exports = router;
+
+
+

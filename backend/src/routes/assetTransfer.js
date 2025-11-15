@@ -88,12 +88,12 @@ router.get('/', authenticate, async (req, res) => {
       prisma.assetTransfer.findMany({
         where: whereWithCompany,
         include: {
-          asset: {
+          assets: {
             select: {
               id: true,
               name: true,
               assetTag: true,
-              category: { select: { name: true } }
+              categories: { select: { name: true } }
             }
           },
           fromLocation: { select: { name: true } },
@@ -148,7 +148,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), asy
     const asset = await prisma.asset.findUnique({
       where: { id: value.assetId },
       include: {
-        location: true,
+        locations: true,
         department: true,
         assignedEmployee: true
       }
@@ -190,12 +190,12 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), asy
     const transfer = await prisma.assetTransfer.create({
       data: processedData,
       include: {
-        asset: {
+        assets: {
           select: {
             id: true,
             name: true,
             assetTag: true,
-            category: { select: { name: true } }
+            categories: { select: { name: true } }
           }
         },
         fromLocation: { select: { name: true } },
@@ -230,12 +230,12 @@ router.get('/:id', authenticate, async (req, res) => {
     const transfer = await prisma.assetTransfer.findUnique({
       where: { id },
       include: {
-        asset: {
+        assets: {
           select: {
             id: true,
             name: true,
             assetTag: true,
-            category: { select: { name: true } }
+            categories: { select: { name: true } }
           }
         },
   fromLocation: { select: { name: true } },
@@ -314,12 +314,12 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MANAGER'), a
       where: { id },
       data: updateData,
       include: {
-        asset: {
+        assets: {
           select: {
             id: true,
             name: true,
             assetTag: true,
-            category: { select: { name: true } }
+            categories: { select: { name: true } }
           }
         },
   fromLocation: { select: { name: true } },
@@ -435,7 +435,7 @@ router.post('/:id/approve', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MAN
         lastEditedAt: new Date()
       },
       include: {
-        asset: {
+        assets: {
           select: {
             id: true,
             name: true,
@@ -602,3 +602,6 @@ router.post('/:id/complete', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'MA
 })
 
 module.exports = router
+
+
+

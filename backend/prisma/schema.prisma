@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,1358 +7,1031 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Global Type Master - Dynamic Master Data for all enums
+model asset_attachments {
+  id             String    @id @default(cuid())
+  fileName       String
+  originalName   String
+  filePath       String
+  fileSize       Int?
+  mimeType       String?
+  attachmentType String
+  description    String?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime @updatedAt
+  assetId        String
+  companyId      String
+  uploadedById   String
+  assets         Asset    @relation(fields: [assetId], references: [id])
+  companies      Company @relation(fields: [companyId], references: [id])
+  users          User     @relation(fields: [uploadedById], references: [id])
+}
+
+model asset_components {
+  id                                            String                          @id @default(cuid())
+  name                                          String
+  description                                   String?
+  partNumber                                    String?
+  serialNumber                                  String?
+  brand                                         String?
+  model                                         String?
+  status                                        String
+  purchaseDate                                  DateTime?
+  purchasePrice                                 Decimal?                        @db.Decimal(10, 2)
+  warrantyExpiry                                DateTime?
+  isReplaceable                                 Boolean                         @default(true)
+  isTransferable                                Boolean                         @default(true)
+  notes                                         String?
+  specifications                                Json?
+  assetId                                       String
+  parentAssetId                                 String?
+  sourcePartId                                  String?
+  createdAt                                     DateTime                        @default(now())
+  updatedAt                                     DateTime @updatedAt
+  assets_asset_components_assetIdToassets       Asset                          @relation("asset_components_assetIdToassets", fields: [assetId], references: [id])
+  assets_asset_components_parentAssetIdToassets Asset?                         @relation("asset_components_parentAssetIdToassets", fields: [parentAssetId], references: [id])
+  spare_parts                                   SparePart?                    @relation(fields: [sourcePartId], references: [id])
+  component_maintenance_records                 component_maintenance_records[]
+  component_transfers                           component_transfers[]
+  part_replacements                             part_replacements[]
+  part_usages                                   part_usages[]
+}
+
+model asset_depreciations {
+  id                      String                 @id @default(cuid())
+  depreciationMethod      String                 @default("STRAIGHT_LINE")
+  usefulLife              Int
+  salvageValue            Decimal?               @db.Decimal(15, 2)
+  depreciationRate        Decimal?               @db.Decimal(5, 4)
+  currentBookValue        Decimal?               @db.Decimal(15, 2)
+  accumulatedDepreciation Decimal?               @db.Decimal(15, 2)
+  lastCalculatedDate      DateTime?
+  isActive                Boolean                @default(true)
+  notes                   String?
+  assetId                 String                 @unique
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime @updatedAt
+  assets                  Asset                 @relation(fields: [assetId], references: [id])
+  depreciation_records    depreciation_records[]
+}
+
+model AssetRequest {
+  id                                       String                @id @default(cuid())
+  requestNumber                            String                @unique
+  description                              String
+  justification                            String
+  priority                                 String                @default("MEDIUM")
+  status                                   String
+  requestedDate                            DateTime              @default(now())
+  approvedDate                             DateTime?
+  allocatedDate                            DateTime?
+  rejectionReason                          String?
+  notes                                    String?
+  requesterId                              String
+  departmentId                             String
+  assetId                                  String?
+  approvedById                             String?
+  createdAt                                DateTime              @default(now())
+  updatedAt                                DateTime @updatedAt
+  actualCost                               Decimal?              @db.Decimal(15, 2)
+  companyId                                String
+  completedDate                            DateTime?
+  estimatedCost                            Decimal?              @db.Decimal(15, 2)
+  requestType                              String
+  requiredDate                             DateTime?
+  title                                    String
+  editedBy                                 String?
+  lastEditedAt                             DateTime?
+  needMaintenance                          Boolean?              @default(false)
+  needDecomposition                        Boolean?              @default(false)
+  users_asset_requests_approvedByIdTousers User?                @relation("asset_requests_approvedByIdTousers", fields: [approvedById], references: [id])
+  asset                                    Asset?               @relation(fields: [assetId], references: [id])
+  company                                  Company              @relation(fields: [companyId], references: [id])
+  department                               Department           @relation(fields: [departmentId], references: [id])
+  users_asset_requests_editedByTousers     User?                @relation("asset_requests_editedByTousers", fields: [editedBy], references: [id])
+  requester                                User                 @relation("asset_requests_requesterIdTousers", fields: [requesterId], references: [id])
+  maintenance_records                      MaintenanceRecord[]
+  request_attachments                      request_attachments[]
+  request_workflows                        request_workflows[]
+
+  @@map("asset_requests")
+}
+
+model asset_required_software {
+  id              String          @id @default(cuid())
+  isRequired      Boolean         @default(true)
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime @updatedAt
+  assetId         String
+  softwareAssetId String
+  companyId       String
+  assets          Asset          @relation(fields: [assetId], references: [id])
+  companies       Company       @relation(fields: [companyId], references: [id])
+  software_assets SoftwareAsset @relation(fields: [softwareAssetId], references: [id])
+
+  @@unique([assetId, softwareAssetId])
+}
+
+model asset_transfers {
+  id                                                        String       @id @default(cuid())
+  transferNumber                                            String       @unique
+  reason                                                    String
+  transferDate                                              DateTime     @default(now())
+  effectiveDate                                             DateTime?
+  notes                                                     String?
+  approvalNotes                                             String?
+  status                                                    String       @default("PENDING")
+  assetId                                                   String
+  fromLocationId                                            String?
+  toLocationId                                              String?
+  fromDepartmentId                                          String?
+  toDepartmentId                                            String?
+  requestedById                                             String
+  approvedById                                              String?
+  createdAt                                                 DateTime     @default(now())
+  updatedAt                                                 DateTime @updatedAt
+  fromEmployeeId                                            String?
+  toEmployeeId                                              String?
+  editedBy                                                  String?
+  lastEditedAt                                              DateTime?
+  users_asset_transfers_approvedByIdTousers                 User?       @relation("asset_transfers_approvedByIdTousers", fields: [approvedById], references: [id])
+  assets                                                    Asset       @relation(fields: [assetId], references: [id])
+  users_asset_transfers_editedByTousers                     User?       @relation("asset_transfers_editedByTousers", fields: [editedBy], references: [id])
+  departments_asset_transfers_fromDepartmentIdTodepartments Department? @relation("asset_transfers_fromDepartmentIdTodepartments", fields: [fromDepartmentId], references: [id])
+  employees_asset_transfers_fromEmployeeIdToemployees       Employee?   @relation("asset_transfers_fromEmployeeIdToemployees", fields: [fromEmployeeId], references: [id])
+  locations_asset_transfers_fromLocationIdTolocations       Location?   @relation("asset_transfers_fromLocationIdTolocations", fields: [fromLocationId], references: [id])
+  users_asset_transfers_requestedByIdTousers                User        @relation("asset_transfers_requestedByIdTousers", fields: [requestedById], references: [id])
+  departments_asset_transfers_toDepartmentIdTodepartments   Department? @relation("asset_transfers_toDepartmentIdTodepartments", fields: [toDepartmentId], references: [id])
+  employees_asset_transfers_toEmployeeIdToemployees         Employee?   @relation("asset_transfers_toEmployeeIdToemployees", fields: [toEmployeeId], references: [id])
+  locations_asset_transfers_toLocationIdTolocations         Location?   @relation("asset_transfers_toLocationIdTolocations", fields: [toLocationId], references: [id])
+}
+
+model Asset {
+  id                                                          String                    @id @default(cuid())
+  assetTag                                                    String                    @unique
+  name                                                        String
+  description                                                 String?
+  serialNumber                                                String?
+  model                                                       String?
+  brand                                                       String?
+  purchaseDate                                                DateTime?
+  purchasePrice                                               Decimal?                  @db.Decimal(15, 2)
+  currentValue                                                Decimal?                  @db.Decimal(15, 2)
+  warrantyExpiry                                              DateTime?
+  status                                                      String
+  condition                                                   String?
+  notes                                                       String?
+  isActive                                                    Boolean                   @default(true)
+  createdAt                                                   DateTime                  @default(now())
+  updatedAt                                                   DateTime @updatedAt
+  categoryId                                                  String
+  vendorId                                                    String?
+  locationId                                                  String?
+  departmentId                                                String?
+  poNumber                                                    String?
+  qrCode                                                      String?
+  imageUrl                                                    String?
+  specifications                                              Json?
+  companyId                                                   String
+  assignedEmployeeId                                          String?
+  editedBy                                                    String?
+  lastEditedAt                                                DateTime?
+  asset_attachments                                           asset_attachments[]
+  asset_components_asset_components_assetIdToassets           asset_components[]        @relation("asset_components_assetIdToassets")
+  asset_components_asset_components_parentAssetIdToassets     asset_components[]        @relation("asset_components_parentAssetIdToassets")
+  asset_depreciations                                         asset_depreciations?
+  asset_requests                                              AssetRequest[]
+  asset_required_software                                     asset_required_software[]
+  asset_transfers                                             asset_transfers[]
+  employees                                                   Employee?                @relation(fields: [assignedEmployeeId], references: [id])
+  categories                                                  Category                @relation(fields: [categoryId], references: [id])
+  companies                                                   Company                 @relation(fields: [companyId], references: [id])
+  departments                                                 Department?              @relation(fields: [departmentId], references: [id])
+  users                                                       User?                    @relation(fields: [editedBy], references: [id])
+  locations                                                   Location?                @relation(fields: [locationId], references: [id])
+  vendors                                                     Vendor?                  @relation(fields: [vendorId], references: [id])
+  audit_records                                               audit_records[]
+  component_transfers_component_transfers_fromAssetIdToassets component_transfers[]     @relation("component_transfers_fromAssetIdToassets")
+  component_transfers_component_transfers_toAssetIdToassets   component_transfers[]     @relation("component_transfers_toAssetIdToassets")
+  disposal_records                                            disposal_records?
+  inventories                                                 inventories[]
+  maintenance_records                                         MaintenanceRecord[]
+  new_part_registrations                                      new_part_registrations[]
+  part_replacements                                           part_replacements[]
+  part_usages                                                 part_usages[]
+  software_installations                                      software_installations[]
+
+  @@map("assets")
+}
+
+model audit_records {
+  id                                   String    @id @default(cuid())
+  auditType                            String
+  scheduledDate                        DateTime
+  completedDate                        DateTime?
+  status                               String
+  findings                             String?
+  recommendations                      String?
+  assetId                              String?
+  auditorId                            String
+  createdAt                            DateTime  @default(now())
+  updatedAt                            DateTime @updatedAt
+  editedBy                             String?
+  lastEditedAt                         DateTime?
+  assets                               Asset?   @relation(fields: [assetId], references: [id])
+  users_audit_records_auditorIdTousers User     @relation("audit_records_auditorIdTousers", fields: [auditorId], references: [id])
+  users_audit_records_editedByTousers  User?    @relation("audit_records_editedByTousers", fields: [editedBy], references: [id])
+}
+
+model audit_trails {
+  id          String    @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String
+  oldValues   Json?
+  newValues   Json?
+  description String?
+  ipAddress   String?
+  userAgent   String?
+  sessionId   String?
+  userId      String
+  companyId   String
+  createdAt   DateTime  @default(now())
+  companies   Company @relation(fields: [companyId], references: [id])
+  users       User     @relation(fields: [userId], references: [id])
+
+  @@index([companyId, createdAt])
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
+}
+
+model Category {
+  id               String       @id @default(cuid())
+  name             String
+  code             String
+  description      String?
+  parentId         String?
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime @updatedAt
+  companyId        String
+  assets           Asset[]
+  companies        Company    @relation(fields: [companyId], references: [id])
+  categories       Category?  @relation("categoriesTocategories", fields: [parentId], references: [id])
+  other_categories Category[] @relation("categoriesTocategories")
+
+  @@unique([companyId, code])
+
+  @@map("categories")
+}
+
+model Company {
+  id                      String                    @id @default(cuid())
+  name                    String                    @unique
+  code                    String                    @unique
+  address                 String?
+  phone                   String?
+  email                   String?
+  website                 String?
+  logo                    String?
+  taxNumber               String?
+  registrationNumber      String?
+  description             String?
+  isActive                Boolean                   @default(true)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime @updatedAt
+  asset_attachments       asset_attachments[]
+  asset_requests          AssetRequest[]
+  asset_required_software asset_required_software[]
+  assets                  Asset[]
+  audit_trails            audit_trails[]
+  categories              Category[]
+  departments             Department[]
+  employees               Employee[]
+  locations               Location[]
+  maintenance_records     MaintenanceRecord[]
+  notifications           notifications[]
+  roles                   roles[]
+  software_assets         SoftwareAsset[]
+  software_installations  software_installations[]
+  software_licenses       SoftwareLicense[]
+  spare_parts             SparePart[]
+  users                   User[]
+  vendors                 Vendor[]
+
+  @@map("companies")
+}
+
+model component_maintenance_records {
+  id               String           @id @default(cuid())
+  description      String
+  maintenanceType  String
+  maintenanceDate  DateTime         @default(now())
+  cost             Decimal?         @db.Decimal(10, 2)
+  notes            String?
+  componentId      String
+  performedById    String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime @updatedAt
+  asset_components asset_components @relation(fields: [componentId], references: [id])
+  users            User            @relation(fields: [performedById], references: [id])
+}
+
+model component_transfers {
+  id                                             String           @id @default(cuid())
+  transferNumber                                 String           @unique
+  reason                                         String
+  transferDate                                   DateTime         @default(now())
+  notes                                          String?
+  componentId                                    String
+  fromAssetId                                    String
+  toAssetId                                      String
+  transferredById                                String
+  createdAt                                      DateTime         @default(now())
+  updatedAt                                      DateTime @updatedAt
+  asset_components                               asset_components @relation(fields: [componentId], references: [id])
+  assets_component_transfers_fromAssetIdToassets Asset           @relation("component_transfers_fromAssetIdToassets", fields: [fromAssetId], references: [id])
+  assets_component_transfers_toAssetIdToassets   Asset           @relation("component_transfers_toAssetIdToassets", fields: [toAssetId], references: [id])
+  users                                          User            @relation(fields: [transferredById], references: [id])
+}
+
+model Department {
+  id                                                            String            @id @default(cuid())
+  name                                                          String
+  code                                                          String
+  description                                                   String?
+  managerId                                                     String?
+  budgetLimit                                                   Decimal?          @db.Decimal(15, 2)
+  isActive                                                      Boolean           @default(true)
+  createdAt                                                     DateTime          @default(now())
+  updatedAt                                                     DateTime @updatedAt
+  companyId                                                     String
+  costCenter                                                    String?
+  parentDepartmentId                                            String?
+  asset_requests                                                AssetRequest[]
+  asset_transfers_asset_transfers_fromDepartmentIdTodepartments asset_transfers[] @relation("asset_transfers_fromDepartmentIdTodepartments")
+  asset_transfers_asset_transfers_toDepartmentIdTodepartments   asset_transfers[] @relation("asset_transfers_toDepartmentIdTodepartments")
+  assets                                                        Asset[]
+  companies                                                     Company         @relation(fields: [companyId], references: [id])
+  users_departments_managerIdTousers                            User?            @relation("departments_managerIdTousers", fields: [managerId], references: [id])
+  departments                                                   Department?      @relation("departmentsTodepartments", fields: [parentDepartmentId], references: [id])
+  other_departments                                             Department[]     @relation("departmentsTodepartments")
+  employees                                                     Employee[]
+  inventories                                                   inventories[]
+  users_users_departmentIdTodepartments                         User[]           @relation("users_departmentIdTodepartments")
+
+  @@unique([companyId, code])
+
+  @@map("departments")
+}
+
+model depreciation_records {
+  id                  String              @id @default(cuid())
+  period              String
+  depreciationAmount  Decimal             @db.Decimal(15, 2)
+  bookValueBefore     Decimal             @db.Decimal(15, 2)
+  bookValueAfter      Decimal             @db.Decimal(15, 2)
+  calculationDate     DateTime            @default(now())
+  notes               String?
+  depreciationId      String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime @updatedAt
+  asset_depreciations asset_depreciations @relation(fields: [depreciationId], references: [id])
+}
+
+model disposal_records {
+  id                String   @id @default(cuid())
+  disposalType      String
+  disposalDate      DateTime
+  disposalValue     Decimal? @db.Decimal(15, 2)
+  reason            String
+  approvalReference String?
+  notes             String?
+  assetId           String   @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  assets            Asset   @relation(fields: [assetId], references: [id])
+}
+
+model Employee {
+  id                                                               String            @id @default(cuid())
+  npk                                                              String            @unique
+  firstName                                                        String
+  lastName                                                         String
+  email                                                            String?
+  phone                                                            String?
+  dateOfBirth                                                      DateTime?
+  hireDate                                                         DateTime?
+  terminationDate                                                  DateTime?
+  address                                                          String?
+  position                                                         String?
+  isActive                                                         Boolean           @default(true)
+  createdAt                                                        DateTime          @default(now())
+  updatedAt                                                        DateTime @updatedAt
+  companyId                                                        String
+  departmentId                                                     String?
+  locationId                                                       String?
+  userId                                                           String?           @unique
+  asset_transfers_asset_transfers_fromEmployeeIdToemployees        asset_transfers[] @relation("asset_transfers_fromEmployeeIdToemployees")
+  asset_transfers_asset_transfers_toEmployeeIdToemployees          asset_transfers[] @relation("asset_transfers_toEmployeeIdToemployees")
+  assets                                                           Asset[]
+  companies                                                        Company         @relation(fields: [companyId], references: [id])
+  departments                                                      Department?      @relation(fields: [departmentId], references: [id])
+  locations                                                        Location?        @relation(fields: [locationId], references: [id])
+  users                                                            User?            @relation(fields: [userId], references: [id])
+  inventory_loans_inventory_loans_borrowerEmployeeIdToemployees    InventoryLoan[] @relation("inventory_loans_borrowerEmployeeIdToemployees")
+  inventory_loans_inventory_loans_responsibleEmployeeIdToemployees InventoryLoan[] @relation("inventory_loans_responsibleEmployeeIdToemployees")
+
+  @@unique([companyId, npk])
+  @@index([companyId])
+  @@index([departmentId])
+  @@index([locationId])
+
+  @@map("employees")
+}
+
 model GlobalTypeMaster {
   id          String   @id @default(cuid())
-  group       String   // e.g., 'UserRole', 'AssetStatus', 'RequestType'
-  key         String   // e.g., 'ADMIN', 'AVAILABLE', 'PENDING'
-  label       String   // e.g., 'Administrator', 'Available', 'Pending'
-  description String?  // Optional description
-  sortOrder   Int      @default(0) // For ordering in dropdowns
+  group       String
+  key         String
+  label       String
+  description String?
+  sortOrder   Int      @default(0)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@unique([group, key])
   @@index([group, isActive])
+
   @@map("global_type_master")
 }
 
-// Company Management - Multi-company support
-model Company {
-  id              String   @id @default(cuid())
-  name            String   @unique
-  code            String   @unique
-  address         String?
-  phone           String?
-  email           String?
-  website         String?
-  logo            String?
-  taxNumber       String?
-  registrationNumber String?
-  description     String?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
+model inventories {
+  id              String            @id @default(cuid())
+  inventoryTag    String            @unique
+  quantity        Int               @default(1)
+  availableQty    Int               @default(1)
+  condition       String            @default("GOOD")
+  status          String            @default("AVAILABLE")
+  location        String?
+  notes           String?
+  minStockLevel   Int?              @default(1)
+  assetId         String
+  departmentId    String
+  custodianId     String?
+  createdAt       DateTime          @default(now())
   updatedAt       DateTime @updatedAt
-  
-  // Relations
-  employees       Employee[]
-  users           User[]
-  roles           Role[]
-  departments     Department[]
-  locations       Location[]
-  assets          Asset[]
-  categories      Category[]
-  vendors         Vendor[]
-  softwareAssets  SoftwareAsset[]
-  softwareLicenses SoftwareLicense[]
-  softwareInstallations SoftwareInstallation[]
-  assetRequests   AssetRequest[]
-  maintenanceRecords MaintenanceRecord[]
-  auditTrails     AuditTrail[]
-  notifications   Notification[]
-  spareParts      SparePart[]
-  
-  // Asset Attachments
-  assetAttachments AssetAttachment[]
-  
-  // Asset Required Software
-  assetRequiredSoftware AssetRequiredSoftware[]
-  
-  @@map("companies")
-}
-
-// Role Management - Define custom roles per company
-model Role {
-  id              String   @id @default(cuid())
-  name            String   // e.g., "Admin", "Asset Manager", "Technician"
-  code            String   // e.g., "ADMIN", "ASSET_MGR", "TECH"
-  description     String?
-  permissions     String[] // Array of permission codes
-  isSystemRole    Boolean  @default(false) // True for built-in roles that can't be deleted
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Foreign Keys
-  companyId       String?  // NULL for system-wide roles, set for company-specific roles
-  
-  // Relations
-  company         Company? @relation(fields: [companyId], references: [id])
-  
-  @@unique([code, companyId]) // Role code must be unique per company
-  @@map("roles")
-}
-
-// Employee Management - For personnel who hold assets (may or may not have app access)
-model Employee {
-  id              String   @id @default(cuid())
-  npk             String   @unique // Nomor Pokok Karyawan
-  firstName       String
-  lastName        String
-  email           String?
-  phone           String?
-  dateOfBirth     DateTime?
-  hireDate        DateTime?
-  terminationDate DateTime?
-  address         String?
-  position        String?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Foreign Keys
   companyId       String
-  departmentId    String?
-  locationId      String?
-  userId          String?   @unique // Optional link to User if employee has app access
-  
-  // Relations
-  company         Company     @relation(fields: [companyId], references: [id])
-  department      Department? @relation("EmployeeDepartment", fields: [departmentId], references: [id])
-  location        Location?   @relation("EmployeeLocation", fields: [locationId], references: [id])
-  user            User?       @relation("EmployeeUser", fields: [userId], references: [id])
-  
-  // Employee holds assets
-  assignedAssets  Asset[]     @relation("EmployeeAssets")
-  
-  // Employee transfer activities
-  transfersFrom   AssetTransfer[] @relation("TransferFromEmployee")
-  transfersTo     AssetTransfer[] @relation("TransferToEmployee")
-  
-  // Inventory loan activities
-  borrowedLoans   InventoryLoan[] @relation("LoanBorrowerEmployee")
-  responsibleLoans InventoryLoan[] @relation("LoanResponsibleEmployee")
-  
-  @@unique([companyId, npk])
-  @@index([companyId])
-  @@index([departmentId])
-  @@index([locationId])
-  @@map("employees")
+  assets          Asset            @relation(fields: [assetId], references: [id])
+  users           User?            @relation(fields: [custodianId], references: [id])
+  departments     Department       @relation(fields: [departmentId], references: [id])
+  inventory_loans InventoryLoan[]
+
+  @@unique([assetId, departmentId])
+  @@index([companyId, departmentId, status])
+  @@index([companyId, status])
 }
 
-// User Management with Multi-company and Enhanced Employee Data
-model User {
-  id              String   @id @default(cuid())
-  employeeNumber  String   @unique
-  email           String   @unique
-  username        String   @unique
-  password        String
-  firstName       String
-  lastName        String
-  phone           String?
-  dateOfBirth     DateTime?
-  hireDate        DateTime?
-  terminationDate DateTime?
-  address         String?
-  emergencyContact String?
-  emergencyPhone  String?
-  role            String   @default("DEPARTMENT_USER") // Was: UserRole enum
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Foreign Keys
-  companyId       String
-  departmentId    String?
-  locationId      String?      // Location where user is assigned/working (e.g., Head Office, Branch)
-  managerId       String?      // Direct manager/supervisor
-  
-  // Relations
-  company         Company     @relation(fields: [companyId], references: [id])
-  department      Department? @relation(fields: [departmentId], references: [id])
-  location        Location?   @relation("UserLocation", fields: [locationId], references: [id])
-  manager         User?       @relation("ManagerSubordinate", fields: [managerId], references: [id])
-  subordinates    User[]      @relation("ManagerSubordinate")
-  
-  // Link to employee (if user represents an employee with app access)
-  employee        Employee?   @relation("EmployeeUser")
-  
-  // User activities
-  assetRequests    AssetRequest[]
-  approvedRequests AssetRequest[] @relation("ApprovedBy")
-  maintenanceRecords MaintenanceRecord[] @relation("TechnicianMaintenance")
-  managedDepartments Department[] @relation("DepartmentManager")
-  auditRecords     AuditRecord[]
-  notifications    Notification[]
-  
-  // Spare parts activities
-  procurementsOrdered Procurement[] @relation("ProcurementOrderedBy")
-  partUsages         PartUsage[] @relation("PartUsageUser")
-  replacementsPerformed PartReplacement[] @relation("ReplacementPerformedBy")
-  partRegistrations  NewPartRegistration[] @relation("PartRegistrationUser")
-  
-  // Component activities
-  componentTransfers ComponentTransfer[] @relation("ComponentTransferUser")
-  componentMaintenance ComponentMaintenance[] @relation("ComponentMaintenanceUser")
-  
-  // Inventory activities
-  custodiedInventories Inventory[] @relation("InventoryCustodian")
-  requestedLoans      InventoryLoan[] @relation("LoanRequestedBy")
-  approvedLoans       InventoryLoan[] @relation("LoanApprover")
-  
-  // Asset Transfer activities (User is for approval workflow, not ownership transfer)
-  transfersRequested  AssetTransfer[] @relation("TransferRequestedBy")
-  transfersApproved   AssetTransfer[] @relation("TransferApprovedBy")
-  
-  // Software activities
-  softwareInstallations SoftwareInstallation[] @relation("UserSoftware")
-  
-  // Enhanced workflow activities
-  workflowProcessed RequestWorkflow[] @relation("WorkflowProcessor")
-  attachmentsUploaded RequestAttachment[] @relation("AttachmentUploader")
-  maintenanceSupervised MaintenanceRecord[] @relation("MaintenanceSupervisor")
-  maintenanceAttachmentsUploaded MaintenanceAttachment[] @relation("MaintenanceAttachmentUploader")
-  auditTrails AuditTrail[] @relation("UserAuditTrail")
-  
-  // Location management
-  managedLocations Location[] @relation("LocationManager")
-  
-  // Asset Attachments uploaded by user
-  uploadedAssetAttachments AssetAttachment[] @relation("UploadedAttachments")
-  
-  // Audit relations - who edited what
-  editedAssets          Asset[]             @relation("AssetEditHistory")
-  editedRequests        AssetRequest[]      @relation("RequestEditHistory")
-  editedMaintenances    MaintenanceRecord[] @relation("MaintenanceEditHistory")
-  editedAudits          AuditRecord[]       @relation("AuditEditHistory")
-  editedTransfers       AssetTransfer[]     @relation("TransferEditHistory")
-  editedSpareParts      SparePart[]         @relation("SparePartEditHistory")
-  editedSoftwareAssets  SoftwareAsset[]     @relation("SoftwareAssetEditHistory")
-  
-  @@map("users")
+model InventoryLoan {
+  id                                                         String      @id @default(cuid())
+  loanNumber                                                 String      @unique
+  purpose                                                    String
+  quantity                                                   Int         @default(1)
+  loanDate                                                   DateTime    @default(now())
+  expectedReturnDate                                         DateTime
+  actualReturnDate                                           DateTime?
+  status                                                     String      @default("ACTIVE")
+  condition                                                  String?
+  notes                                                      String?
+  approvalNotes                                              String?
+  inventoryId                                                String
+  approvedById                                               String?
+  createdAt                                                  DateTime    @default(now())
+  updatedAt                                                  DateTime @updatedAt
+  borrowerEmployeeId                                         String
+  requestedById                                              String
+  responsibleEmployeeId                                      String
+  approvedBy                                                 User?      @relation("inventory_loans_approvedByIdTousers", fields: [approvedById], references: [id])
+  borrowerEmployee                                           Employee   @relation("inventory_loans_borrowerEmployeeIdToemployees", fields: [borrowerEmployeeId], references: [id])
+  inventory                                                  inventories @relation(fields: [inventoryId], references: [id])
+  requestedBy                                                User       @relation("inventory_loans_requestedByIdTousers", fields: [requestedById], references: [id])
+  responsibleEmployee                                        Employee   @relation("inventory_loans_responsibleEmployeeIdToemployees", fields: [responsibleEmployeeId], references: [id])
+
+  @@map("inventory_loans")
 }
 
-// Department Management with Multi-company Support
-model Department {
-  id          String   @id @default(cuid())
-  name        String
-  code        String
-  description String?
-  managerId   String?
-  budgetLimit Decimal? @db.Decimal(15, 2)
-  costCenter  String?  // Cost center code for accounting
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Foreign Keys
-  companyId   String
-  parentDepartmentId String? // For department hierarchy
-  
-  // Relations
-  company     Company     @relation(fields: [companyId], references: [id])
-  manager     User?       @relation("DepartmentManager", fields: [managerId], references: [id])
-  parent      Department? @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id])
-  children    Department[] @relation("DepartmentHierarchy")
-  employees   Employee[]  @relation("EmployeeDepartment")
-  users       User[]
-  assets      Asset[]
-  assetRequests AssetRequest[]
-  inventories Inventory[]    @relation("InventoryDepartment")
-  transfersFrom AssetTransfer[] @relation("TransferFromDepartment")
-  transfersTo   AssetTransfer[] @relation("TransferToDepartment")
-  
-  @@unique([companyId, code])
-  @@map("departments")
+model license_renewals {
+  id                String            @id @default(cuid())
+  renewalDate       DateTime
+  newExpiryDate     DateTime
+  cost              Decimal           @db.Decimal(15, 2)
+  notes             String?
+  licenseId         String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime @updatedAt
+  software_licenses SoftwareLicense @relation(fields: [licenseId], references: [id])
 }
 
-// Location Management with Multi-company Support
 model Location {
-  id          String   @id @default(cuid())
-  name        String
-  code        String?  // Added code field
-  building    String?
-  floor       String?
-  room        String?
-  address     String?
-  city        String?
-  state       String?
-  country     String?
-  postalCode  String?
-  capacity    Int?
-  type        String?   @default("OFFICE") // Was: LocationType enum
-  managerId   String?
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Foreign Keys
-  companyId   String
-  
-  // Relations
-  company     Company @relation(fields: [companyId], references: [id])
-  manager     User?   @relation("LocationManager", fields: [managerId], references: [id])
-  employees   Employee[] @relation("EmployeeLocation")
-  users       User[]  @relation("UserLocation")
-  assets      Asset[]
-  transfersFrom AssetTransfer[] @relation("TransferFromLocation")
-  transfersTo   AssetTransfer[] @relation("TransferToLocation")
-  
-  @@unique([companyId, name])
+  id                                                        String            @id @default(cuid())
+  name                                                      String
+  building                                                  String?
+  floor                                                     String?
+  room                                                      String?
+  address                                                   String?
+  description                                               String?
+  isActive                                                  Boolean           @default(true)
+  createdAt                                                 DateTime          @default(now())
+  updatedAt                                                 DateTime @updatedAt
+  capacity                                                  Int?
+  city                                                      String?
+  code                                                      String?
+  companyId                                                 String
+  country                                                   String?
+  managerId                                                 String?
+  postalCode                                                String?
+  state                                                     String?
+  type                                                      String?
+  asset_transfers_asset_transfers_fromLocationIdTolocations asset_transfers[] @relation("asset_transfers_fromLocationIdTolocations")
+  asset_transfers_asset_transfers_toLocationIdTolocations   asset_transfers[] @relation("asset_transfers_toLocationIdTolocations")
+  assets                                                    Asset[]
+  employees                                                 Employee[]
+  companies                                                 Company         @relation(fields: [companyId], references: [id])
+  users_locations_managerIdTousers                          User?            @relation("locations_managerIdTousers", fields: [managerId], references: [id])
+  users_users_locationIdTolocations                         User[]           @relation("users_locationIdTolocations")
+
   @@unique([companyId, code])
+  @@unique([companyId, name])
+
   @@map("locations")
 }
 
-// Category Management with Multi-company Support
-model Category {
-  id          String   @id @default(cuid())
-  name        String
-  code        String
-  description String?
-  parentId    String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Foreign Keys
-  companyId   String
-  
-  // Relations
-  company  Company     @relation(fields: [companyId], references: [id])
-  parent   Category?   @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children Category[]  @relation("CategoryHierarchy")
-  assets   Asset[]
-  spareParts SparePart[] @relation("SparePartCategory")
-  
-  @@unique([companyId, code])
-  @@map("categories")
+model maintenance_attachments {
+  id                  String              @id @default(cuid())
+  filename            String
+  originalName        String
+  mimeType            String
+  fileSize            Int
+  filePath            String
+  description         String?
+  attachmentType      String              @default("GENERAL")
+  maintenanceId       String
+  uploadedById        String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime @updatedAt
+  maintenance_records MaintenanceRecord @relation(fields: [maintenanceId], references: [id])
+  users               User               @relation(fields: [uploadedById], references: [id])
 }
 
-// Vendor Management with Multi-company Support
-model Vendor {
-  id          String   @id @default(cuid())
-  name        String
-  code        String
-  email       String?
-  phone       String?
-  address     String?
-  contactPerson String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Foreign Keys
-  companyId   String
-  
-  // Relations
-  company      Company @relation(fields: [companyId], references: [id])
-  assets Asset[]
-  maintenanceContracts MaintenanceContract[]
-  maintenanceRecords MaintenanceRecord[] @relation("MaintenanceVendor")
-  spareParts SparePart[] @relation("SparePartVendor")
-  procurements Procurement[] @relation("ProcurementVendor")
-  softwareLicenses SoftwareLicense[] @relation("SoftwareVendor")
-  
-  @@unique([companyId, code])
-  @@map("vendors")
+model maintenance_contracts {
+  id             String   @id @default(cuid())
+  contractNumber String   @unique
+  description    String
+  startDate      DateTime
+  endDate        DateTime
+  cost           Decimal  @db.Decimal(15, 2)
+  terms          String?
+  isActive       Boolean  @default(true)
+  vendorId       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  vendors        Vendor  @relation(fields: [vendorId], references: [id])
 }
 
-// Asset Management with Multi-company Support
-model Asset {
-  id              String      @id @default(cuid())
-  assetTag        String      @unique
-  name            String
-  description     String?
-  serialNumber    String?
-  model           String?
-  brand           String?
-  poNumber        String?     // Purchase Order Number
-  purchaseDate    DateTime?
-  purchasePrice   Decimal?    @db.Decimal(15, 2)
-  currentValue    Decimal?    @db.Decimal(15, 2)
-  warrantyExpiry  DateTime?
-  status          String      @default("AVAILABLE") // Was: AssetStatus enum
-  condition       String?
-  notes           String?
-  qrCode          String?     // QR Code for asset identification
-  imageUrl        String?     // Asset image for visual proof
-  specifications  Json?       // Asset specifications and technical details
-  isActive        Boolean     @default(true)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  
-  // Audit fields
-  editedBy        String?     // User ID who last edited
-  lastEditedAt    DateTime?   // Last edit timestamp
-  
-  // Foreign Keys
-  companyId       String
-  categoryId      String
-  vendorId        String?
-  locationId      String?
-  departmentId    String?
-  assignedEmployeeId String?  // Changed from assignedToId to assignedEmployeeId
-  
-  // Relations
-  company         Company      @relation(fields: [companyId], references: [id])
-  category        Category     @relation(fields: [categoryId], references: [id])
-  vendor          Vendor?      @relation(fields: [vendorId], references: [id])
-  location        Location?    @relation(fields: [locationId], references: [id])
-  department      Department?  @relation(fields: [departmentId], references: [id])
-  assignedEmployee Employee?   @relation("EmployeeAssets", fields: [assignedEmployeeId], references: [id])
-  editedByUser    User?        @relation("AssetEditHistory", fields: [editedBy], references: [id])
-  
-  // Asset activities
-  assetRequests   AssetRequest[]
-  maintenanceRecords MaintenanceRecord[]
-  auditRecords    AuditRecord[]
-  disposalRecord  DisposalRecord?
-  
-  // Spare parts and components
-  partUsages      PartUsage[] @relation("PartUsageAsset")
-  partReplacements PartReplacement[] @relation("AssetReplacement")
-  partRegistrations NewPartRegistration[] @relation("PartRegistration")
-  components      AssetComponent[] @relation("AssetComponents")
-  parentComponents AssetComponent[] @relation("ComponentParentAsset")
-  transfersFrom   ComponentTransfer[] @relation("TransferFromAsset")
-  transfersTo     ComponentTransfer[] @relation("TransferToAsset")
-  
-  // Asset Transfer and Depreciation
-  transfers       AssetTransfer[] @relation("AssetTransfers")
-  depreciation    AssetDepreciation? @relation("AssetDepreciation")
-  
-  // Inventory
-  inventories     Inventory[] @relation("InventoryAsset")
-  
-  // Software installations on this asset
-  softwareInstallations SoftwareInstallation[] @relation("SoftwareInstallations")
-  
-  // Asset Attachments
-  attachments     AssetAttachment[] @relation("AssetAttachments")
-  
-  // Required Software for this asset
-  requiredSoftware AssetRequiredSoftware[] @relation("RequiredSoftware")
-  
-  @@map("assets")
-}
-
-// Enhanced Asset Request Management untuk semua jenis request
-model AssetRequest {
-  id              String        @id @default(cuid())
-  requestNumber   String        @unique
-  requestType     String        @default("ASSET_REQUEST") // Was: RequestType enum
-  title           String        // Judul request
-  description     String
-  justification   String
-  priority        String        @default("MEDIUM") // HIGH, MEDIUM, LOW
-  status          String        @default("PENDING") // Was: RequestStatus enum
-  requestedDate   DateTime      @default(now())
-  requiredDate    DateTime?     // Kapan dibutuhkan
-  approvedDate    DateTime?
-  allocatedDate   DateTime?
-  completedDate   DateTime?
-  rejectionReason String?
-  notes           String?
-  estimatedCost   Decimal?      @db.Decimal(15, 2)
-  actualCost      Decimal?      @db.Decimal(15, 2)
-  
-  // Audit fields
-  editedBy        String?       // User ID who last edited
-  lastEditedAt    DateTime?     // Last edit timestamp
-  
-  // Foreign Keys
-  requesterId     String
-  departmentId    String
-  companyId       String        // Multi-company support
-  assetId         String?       // Untuk request yang terkait aset spesifik
-  approvedById    String?
-  
-  // Relations
-  requester       User          @relation(fields: [requesterId], references: [id])
-  department      Department    @relation(fields: [departmentId], references: [id])
-  company         Company       @relation(fields: [companyId], references: [id])
-  asset           Asset?        @relation(fields: [assetId], references: [id])
-  approvedBy      User?         @relation("ApprovedBy", fields: [approvedById], references: [id])
-  editedByUser    User?         @relation("RequestEditHistory", fields: [editedBy], references: [id])
-  
-  // Request workflow tracking
-  workflowSteps   RequestWorkflow[]
-  attachments     RequestAttachment[]
-  
-  // Link ke maintenance jika request memicu maintenance
-  maintenanceRecords MaintenanceRecord[] @relation("MaintenanceRequest")
-  
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  
-  @@map("asset_requests")
-}
-
-// Request Workflow untuk tracking approval process
-model RequestWorkflow {
-  id              String        @id @default(cuid())
-  step            String        // SUBMITTED, MANAGER_REVIEW, ADMIN_APPROVAL, COMPLETED
-  stepOrder       Int           // Urutan step dalam workflow
-  status          String        @default("PENDING") // PENDING, APPROVED, REJECTED, SKIPPED
-  comments        String?
-  processedDate   DateTime?
-  
-  // Foreign Keys  
-  requestId       String
-  processedById   String?       // User yang memproses step ini
-  
-  // Relations
-  request         AssetRequest  @relation(fields: [requestId], references: [id])
-  processedBy     User?         @relation("WorkflowProcessor", fields: [processedById], references: [id])
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  @@map("request_workflows")
-}
-
-// Request Attachments untuk supporting documents
-model RequestAttachment {
-  id              String        @id @default(cuid())
-  filename        String
-  originalName    String
-  mimeType        String
-  fileSize        Int
-  filePath        String
-  description     String?
-  
-  // Foreign Keys
-  requestId       String
-  uploadedById    String
-  
-  // Relations
-  request         AssetRequest  @relation(fields: [requestId], references: [id])
-  uploadedBy      User          @relation("AttachmentUploader", fields: [uploadedById], references: [id])
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  @@map("request_attachments")
-}
-
-// Enhanced Maintenance Management dengan Request Integration
 model MaintenanceRecord {
-  id              String            @id @default(cuid())
-  maintenanceNumber String          @unique
-  maintenanceType String            @default("CORRECTIVE") // Was: MaintenanceType enum
-  title           String
-  description     String
-  scheduledDate   DateTime
-  startedDate     DateTime?
-  completedDate   DateTime?
-  status          String            @default("SCHEDULED") // Was: MaintenanceStatus enum
-  priority        String            @default("MEDIUM") // HIGH, MEDIUM, LOW
-  estimatedCost   Decimal?          @db.Decimal(15, 2)
-  actualCost      Decimal?          @db.Decimal(15, 2)
-  downtime        Int?              // Downtime in minutes
-  notes           String?
-  workDescription String?           // Detail pekerjaan yang dilakukan
-  
-  // Audit fields
-  editedBy        String?           // User ID who last edited
-  lastEditedAt    DateTime?         // Last edit timestamp
-  
-  // Foreign Keys
-  assetId         String
-  companyId       String            // Multi-company support
-  requestId       String?           // Link ke request yang memicu maintenance
-  technicianId    String?
-  supervisorId    String?           // Supervisor maintenance
-  vendorId        String?
-  
-  // Relations
-  asset           Asset             @relation(fields: [assetId], references: [id])
-  company         Company           @relation(fields: [companyId], references: [id])
-  originatingRequest AssetRequest?  @relation("MaintenanceRequest", fields: [requestId], references: [id])
-  technician      User?             @relation("TechnicianMaintenance", fields: [technicianId], references: [id])
-  supervisor      User?             @relation("MaintenanceSupervisor", fields: [supervisorId], references: [id])
-  vendor          Vendor?           @relation("MaintenanceVendor", fields: [vendorId], references: [id])
-  editedByUser    User?             @relation("MaintenanceEditHistory", fields: [editedBy], references: [id])
-  partUsages      PartUsage[]       @relation("PartUsageMaintenance")
-  attachments     MaintenanceAttachment[]
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  id                                            String                    @id @default(cuid())
+  description                                   String
+  scheduledDate                                 DateTime
+  completedDate                                 DateTime?
+  status                                        String
+  notes                                         String?
+  assetId                                       String
+  technicianId                                  String?
+  vendorId                                      String?
+  createdAt                                     DateTime                  @default(now())
+  updatedAt                                     DateTime @updatedAt
+  actualCost                                    Decimal?                  @db.Decimal(15, 2)
+  companyId                                     String
+  downtime                                      Int?
+  estimatedCost                                 Decimal?                  @db.Decimal(15, 2)
+  maintenanceNumber                             String                    @unique
+  priority                                      String                    @default("MEDIUM")
+  requestId                                     String?
+  startedDate                                   DateTime?
+  supervisorId                                  String?
+  title                                         String
+  workDescription                               String?
+  maintenanceType                               String
+  editedBy                                      String?
+  lastEditedAt                                  DateTime?
+  maintenance_attachments                       maintenance_attachments[]
+  assets                                        Asset                    @relation(fields: [assetId], references: [id])
+  companies                                     Company                 @relation(fields: [companyId], references: [id])
+  users_maintenance_records_editedByTousers     User?                    @relation("maintenance_records_editedByTousers", fields: [editedBy], references: [id])
+  asset_requests                                AssetRequest?           @relation(fields: [requestId], references: [id])
+  users_maintenance_records_supervisorIdTousers User?                    @relation("maintenance_records_supervisorIdTousers", fields: [supervisorId], references: [id])
+  users_maintenance_records_technicianIdTousers User?                    @relation("maintenance_records_technicianIdTousers", fields: [technicianId], references: [id])
+  vendors                                       Vendor?                  @relation(fields: [vendorId], references: [id])
+  part_usages                                   part_usages[]
+
   @@map("maintenance_records")
 }
 
-// Maintenance Attachments untuk dokumentasi maintenance
-model MaintenanceAttachment {
-  id              String            @id @default(cuid())
-  filename        String
-  originalName    String
-  mimeType        String
-  fileSize        Int
-  filePath        String
-  description     String?
-  attachmentType  String            @default("GENERAL") // BEFORE, AFTER, INVOICE, REPORT
-  
-  // Foreign Keys
-  maintenanceId   String
-  uploadedById    String
-  
-  // Relations
-  maintenance     MaintenanceRecord @relation(fields: [maintenanceId], references: [id])
-  uploadedBy      User              @relation("MaintenanceAttachmentUploader", fields: [uploadedById], references: [id])
-  
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  
-  @@map("maintenance_attachments")
+model new_part_registrations {
+  id                 String      @id @default(cuid())
+  registrationNumber String      @unique
+  serialNumber       String?
+  assetTag           String?
+  status             String
+  registeredDate     DateTime?
+  notes              String?
+  partId             String
+  assetId            String?
+  registeredById     String
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime @updatedAt
+  assets             Asset?     @relation(fields: [assetId], references: [id])
+  spare_parts        SparePart @relation(fields: [partId], references: [id])
+  users              User       @relation(fields: [registeredById], references: [id])
 }
 
-// Maintenance Contracts
-model MaintenanceContract {
-  id              String    @id @default(cuid())
-  contractNumber  String    @unique
-  description     String
-  startDate       DateTime
-  endDate         DateTime
-  cost            Decimal   @db.Decimal(15, 2)
-  terms           String?
-  isActive        Boolean   @default(true)
-  
-  // Foreign Keys
-  vendorId        String
-  
-  // Relations
-  vendor          Vendor    @relation(fields: [vendorId], references: [id])
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@map("maintenance_contracts")
-}
+model notifications {
+  id                String    @id @default(cuid())
+  title             String
+  message           String
+  type              String
+  isRead            Boolean   @default(false)
+  userId            String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime @updatedAt
+  actionLabel       String?
+  actionUrl         String?
+  companyId         String
+  expiresAt         DateTime?
+  metadata          Json?
+  priority          String    @default("MEDIUM")
+  relatedEntityId   String?
+  relatedEntityType String?
+  companies         Company @relation(fields: [companyId], references: [id])
+  users             User     @relation(fields: [userId], references: [id])
 
-// Audit Management
-model AuditRecord {
-  id              String      @id @default(cuid())
-  auditType       String      // PHYSICAL, FINANCIAL, COMPLIANCE
-  scheduledDate   DateTime
-  completedDate   DateTime?
-  status          String      @default("SCHEDULED") // Was: AuditStatus enum
-  findings        String?
-  recommendations String?
-  
-  // Audit fields
-  editedBy        String?     // User ID who last edited
-  lastEditedAt    DateTime?   // Last edit timestamp
-  
-  // Foreign Keys
-  assetId         String?
-  auditorId       String
-  
-  // Relations
-  asset           Asset?      @relation(fields: [assetId], references: [id])
-  auditor         User        @relation(fields: [auditorId], references: [id])
-  editedByUser    User?       @relation("AuditEditHistory", fields: [editedBy], references: [id])
-  
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  
-  @@map("audit_records")
-}
-
-// Comprehensive Audit Trail untuk log semua aktivitas sistem
-model AuditTrail {
-  id              String        @id @default(cuid())
-  action          String        // CREATE, UPDATE, DELETE, ASSIGN, TRANSFER, APPROVE, etc.
-  entityType      String        // ASSET, USER, REQUEST, MAINTENANCE, etc.
-  entityId        String        // ID dari entity yang diaudit
-  oldValues       Json?         // Data sebelum perubahan
-  newValues       Json?         // Data setelah perubahan
-  description     String?       // Deskripsi readable dari aksi
-  ipAddress       String?
-  userAgent       String?
-  sessionId       String?
-  
-  // Foreign Keys
-  userId          String        // User yang melakukan aksi
-  companyId       String        // Company context
-  
-  // Relations
-  user            User          @relation("UserAuditTrail", fields: [userId], references: [id])
-  company         Company       @relation(fields: [companyId], references: [id])
-  
-  createdAt       DateTime      @default(now())
-  
-  @@map("audit_trails")
-  @@index([entityType, entityId])
-  @@index([userId, createdAt])
-  @@index([companyId, createdAt])
-}
-
-// Asset Disposal
-model DisposalRecord {
-  id              String    @id @default(cuid())
-  disposalType    String    // SALE, DONATION, SCRAP, TRANSFER
-  disposalDate    DateTime
-  disposalValue   Decimal?  @db.Decimal(15, 2)
-  reason          String
-  approvalReference String?
-  notes           String?
-  
-  // Foreign Keys
-  assetId         String    @unique
-  
-  // Relations
-  asset           Asset     @relation(fields: [assetId], references: [id])
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@map("disposal_records")
-}
-
-// Enhanced Notification System
-model Notification {
-  id              String           @id @default(cuid())
-  title           String
-  message         String
-  type            String           // Was: NotificationType enum
-  priority        String           @default("MEDIUM") // HIGH, MEDIUM, LOW
-  isRead          Boolean          @default(false)
-  actionUrl       String?          // URL untuk action yang bisa dilakukan
-  actionLabel     String?          // Label untuk action button
-  expiresAt       DateTime?        // Notifikasi bisa expire
-  metadata        Json?            // Additional data untuk notification
-  
-  // Foreign Keys
-  userId          String
-  companyId       String           // Multi-company support
-  relatedEntityType String?        // ASSET, REQUEST, MAINTENANCE, etc.
-  relatedEntityId String?          // ID dari entity terkait
-  
-  // Relations
-  user            User             @relation(fields: [userId], references: [id])
-  company         Company          @relation(fields: [companyId], references: [id])
-  
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  
-  @@map("notifications")
-  @@index([userId, isRead, createdAt])
   @@index([companyId, type, createdAt])
+  @@index([userId, isRead, createdAt])
 }
 
-// System Settings
-model SystemSettings {
-  id              String   @id @default(cuid())
-  key             String   @unique
-  value           String
-  description     String?
-  isActive        Boolean  @default(true)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@map("system_settings")
+model part_replacements {
+  id                                                   String            @id @default(cuid())
+  replacementNumber                                    String            @unique
+  reason                                               String
+  status                                               String
+  plannedDate                                          DateTime?
+  completedDate                                        DateTime?
+  cost                                                 Decimal?          @db.Decimal(10, 2)
+  notes                                                String?
+  oldPartId                                            String?
+  oldComponentId                                       String?
+  newPartId                                            String
+  assetId                                              String
+  performedById                                        String?
+  createdAt                                            DateTime          @default(now())
+  updatedAt                                            DateTime @updatedAt
+  assets                                               Asset            @relation(fields: [assetId], references: [id])
+  spare_parts_part_replacements_newPartIdTospare_parts SparePart       @relation("part_replacements_newPartIdTospare_parts", fields: [newPartId], references: [id])
+  asset_components                                     asset_components? @relation(fields: [oldComponentId], references: [id])
+  spare_parts_part_replacements_oldPartIdTospare_parts SparePart?      @relation("part_replacements_oldPartIdTospare_parts", fields: [oldPartId], references: [id])
+  users                                                User?            @relation(fields: [performedById], references: [id])
 }
 
-// Spare Parts Management
-model SparePart {
-  id              String            @id @default(cuid())
-  partNumber      String            
-  name            String
-  description     String?
-  brand           String?
-  model           String?
-  categoryId      String            // Changed from enum to Category relation
-  partType        String            @default("COMPONENT") // Was: SparePartType enum
-  status          String            @default("ACTIVE") // Was: SparePartStatus enum
-  unitPrice       Decimal           @db.Decimal(10, 2)
-  stockLevel      Int               @default(0)
-  minStockLevel   Int               @default(10)
-  maxStockLevel   Int               @default(100)
-  reorderPoint    Int               @default(15)
-  storageLocation String?
-  specifications  Json?
-  compatibleWith  String[]
-  notes           String?
-  isActive        Boolean           @default(true)
-  
-  // Audit fields
-  editedBy        String?           // User ID who last edited
-  lastEditedAt    DateTime?         // Last edit timestamp
-  
-  // Foreign Keys
-  vendorId        String?
-  companyId       String            // Multi-company support
-  
-  // Relations
-  category        Category          @relation("SparePartCategory", fields: [categoryId], references: [id])
-  vendor          Vendor?           @relation("SparePartVendor", fields: [vendorId], references: [id])
-  company         Company           @relation(fields: [companyId], references: [id])
-  editedByUser    User?             @relation("SparePartEditHistory", fields: [editedBy], references: [id])
-  procurements    Procurement[]
-  usages          PartUsage[]
-  replacements    PartReplacement[] @relation("NewPart")
-  oldReplacements PartReplacement[] @relation("OldPart")
-  registrations   NewPartRegistration[]
-  sourceComponents AssetComponent[] @relation("ComponentSourcePart")
-  // Optional link to the originating request (e.g. decomposition / asset breakdown)
-  // We store the foreign key scalar here without declaring an explicit relation field
-  // to avoid adding bidirectional relation fields on the referenced models.
-  createdFromRequestId String?
-  // Optional link to the source asset from which this spare part originated (scalar FK)
-  sourceAssetId        String?
-  
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  
-  @@unique([companyId, partNumber])
-  @@index([createdFromRequestId])
-  @@index([sourceAssetId])
-  @@index([companyId, categoryId])
-  @@map("spare_parts")
+model part_usages {
+  id                  String               @id @default(cuid())
+  quantity            Int
+  usageType           String
+  usageDate           DateTime             @default(now())
+  notes               String?
+  partId              String
+  assetId             String?
+  componentId         String?
+  maintenanceId       String?
+  usedById            String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime @updatedAt
+  assets              Asset?              @relation(fields: [assetId], references: [id])
+  asset_components    asset_components?    @relation(fields: [componentId], references: [id])
+  maintenance_records MaintenanceRecord? @relation(fields: [maintenanceId], references: [id])
+  spare_parts         SparePart          @relation(fields: [partId], references: [id])
+  users               User                @relation(fields: [usedById], references: [id])
 }
 
-model Procurement {
-  id                String            @id @default(cuid())
-  procurementNumber String            @unique
+model procurements {
+  id                String      @id @default(cuid())
+  procurementNumber String      @unique
   quantity          Int
-  unitPrice         Decimal           @db.Decimal(10, 2)
-  totalCost         Decimal           @db.Decimal(12, 2)
-  status            String            @default("ORDERED") // Was: ProcurementStatus enum
-  orderedDate       DateTime          @default(now())
+  unitPrice         Decimal     @db.Decimal(10, 2)
+  totalCost         Decimal     @db.Decimal(12, 2)
+  status            String
+  orderedDate       DateTime    @default(now())
   expectedDate      DateTime?
   receivedDate      DateTime?
   receivedQuantity  Int?
   invoiceNumber     String?
   notes             String?
-  
-  // Foreign Keys
   partId            String
   vendorId          String?
   orderedById       String
-  
-  // Relations
-  part              SparePart         @relation(fields: [partId], references: [id])
-  vendor            Vendor?           @relation("ProcurementVendor", fields: [vendorId], references: [id])
-  orderedBy         User              @relation("ProcurementOrderedBy", fields: [orderedById], references: [id])
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  
-  @@map("procurements")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime @updatedAt
+  users             User       @relation(fields: [orderedById], references: [id])
+  spare_parts       SparePart @relation(fields: [partId], references: [id])
+  vendors           Vendor?    @relation(fields: [vendorId], references: [id])
 }
 
-model PartUsage {
-  id              String        @id @default(cuid())
-  quantity        Int
-  usageType       String        @default("INSTALLATION") // Was: PartUsageType enum
-  usageDate       DateTime      @default(now())
-  notes           String?
-  
-  // Foreign Keys
-  partId          String
-  assetId         String?
-  componentId     String?
-  maintenanceId   String?
-  usedById        String
-  
-  // Relations
-  part            SparePart     @relation(fields: [partId], references: [id])
-  asset           Asset?        @relation("PartUsageAsset", fields: [assetId], references: [id])
-  component       AssetComponent? @relation(fields: [componentId], references: [id])
-  maintenance     MaintenanceRecord? @relation("PartUsageMaintenance", fields: [maintenanceId], references: [id])
-  usedBy          User          @relation("PartUsageUser", fields: [usedById], references: [id])
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  @@map("part_usages")
+model request_attachments {
+  id             String         @id @default(cuid())
+  filename       String
+  originalName   String
+  mimeType       String
+  fileSize       Int
+  filePath       String
+  description    String?
+  requestId      String
+  uploadedById   String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime @updatedAt
+  asset_requests AssetRequest @relation(fields: [requestId], references: [id])
+  users          User          @relation(fields: [uploadedById], references: [id])
 }
 
-model PartReplacement {
-  id                String            @id @default(cuid())
-  replacementNumber String            @unique
-  reason            String
-  status            String            @default("PLANNED") // Was: ReplacementStatus enum
-  plannedDate       DateTime?
-  completedDate     DateTime?
-  cost              Decimal?          @db.Decimal(10, 2)
-  notes             String?
-  
-  // Foreign Keys
-  oldPartId         String?
-  oldComponentId    String?
-  newPartId         String
-  assetId           String
-  performedById     String?
-  
-  // Relations
-  oldPart           SparePart?        @relation("OldPart", fields: [oldPartId], references: [id])
-  oldComponent      AssetComponent?   @relation("OldComponent", fields: [oldComponentId], references: [id])
-  newPart           SparePart         @relation("NewPart", fields: [newPartId], references: [id])
-  asset             Asset             @relation("AssetReplacement", fields: [assetId], references: [id])
-  performedBy       User?             @relation("ReplacementPerformedBy", fields: [performedById], references: [id])
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  
-  @@map("part_replacements")
+model request_workflows {
+  id             String         @id @default(cuid())
+  step           String
+  stepOrder      Int
+  status         String         @default("PENDING")
+  comments       String?
+  processedDate  DateTime?
+  requestId      String
+  processedById  String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime @updatedAt
+  users          User?         @relation(fields: [processedById], references: [id])
+  asset_requests AssetRequest @relation(fields: [requestId], references: [id])
 }
 
-model NewPartRegistration {
-  id                String             @id @default(cuid())
-  registrationNumber String            @unique
-  serialNumber      String?
-  assetTag          String?
-  status            String             @default("PENDING") // Was: RegistrationStatus enum
-  registeredDate    DateTime?
-  notes             String?
-  
-  // Foreign Keys
-  partId            String
-  assetId           String?
-  registeredById    String
-  
-  // Relations
-  part              SparePart          @relation(fields: [partId], references: [id])
-  asset             Asset?             @relation("PartRegistration", fields: [assetId], references: [id])
-  registeredBy      User               @relation("PartRegistrationUser", fields: [registeredById], references: [id])
-  
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  
-  @@map("new_part_registrations")
+model roles {
+  id           String     @id @default(cuid())
+  name         String
+  code         String
+  description  String?
+  permissions  String[]
+  isSystemRole Boolean    @default(false)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime @updatedAt
+  companyId    String?
+  companies    Company? @relation(fields: [companyId], references: [id])
+
+  @@unique([code, companyId])
 }
 
-// Asset Components for Decomposition
-model AssetComponent {
-  id                String          @id @default(cuid())
-  name              String
-  description       String?
-  partNumber        String?
-  serialNumber      String?
-  brand             String?
-  model             String?
-  status            String          @default("ACTIVE") // Was: ComponentStatus enum
-  purchaseDate      DateTime?
-  purchasePrice     Decimal?        @db.Decimal(10, 2)
-  warrantyExpiry    DateTime?
-  isReplaceable     Boolean         @default(true)
-  isTransferable    Boolean         @default(true)
-  notes             String?
-  specifications    Json?
-  
-  // Foreign Keys
-  assetId           String
-  parentAssetId     String?
-  sourcePartId      String?
-  
-  // Relations
-  asset             Asset           @relation("AssetComponents", fields: [assetId], references: [id])
-  parentAsset       Asset?          @relation("ComponentParentAsset", fields: [parentAssetId], references: [id])
-  sourcePart        SparePart?      @relation("ComponentSourcePart", fields: [sourcePartId], references: [id])
-  
-  // Component activities
-  usages            PartUsage[]
-  replacements      PartReplacement[] @relation("OldComponent")
-  transfers         ComponentTransfer[]
-  maintenanceRecords ComponentMaintenance[]
-  
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  
-  @@map("asset_components")
-}
-
-model ComponentTransfer {
-  id              String    @id @default(cuid())
-  transferNumber  String    @unique
-  reason          String
-  transferDate    DateTime  @default(now())
-  notes           String?
-  
-  // Foreign Keys
-  componentId     String
-  fromAssetId     String
-  toAssetId       String
-  transferredById String
-  
-  // Relations
-  component       AssetComponent @relation(fields: [componentId], references: [id])
-  fromAsset       Asset         @relation("TransferFromAsset", fields: [fromAssetId], references: [id])
-  toAsset         Asset         @relation("TransferToAsset", fields: [toAssetId], references: [id])
-  transferredBy   User          @relation("ComponentTransferUser", fields: [transferredById], references: [id])
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  @@map("component_transfers")
-}
-
-model ComponentMaintenance {
-  id              String    @id @default(cuid())
-  description     String
-  maintenanceType String
-  maintenanceDate DateTime  @default(now())
-  cost            Decimal?  @db.Decimal(10, 2)
-  notes           String?
-  
-  // Foreign Keys
-  componentId     String
-  performedById   String
-  
-  // Relations
-  component       AssetComponent @relation(fields: [componentId], references: [id])
-  performedBy     User          @relation("ComponentMaintenanceUser", fields: [performedById], references: [id])
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  @@map("component_maintenance_records")
-}
-
-// Asset Transfer Management
-model AssetTransfer {
-  id              String    @id @default(cuid())
-  transferNumber  String    @unique
-  reason          String
-  transferDate    DateTime  @default(now())
-  effectiveDate   DateTime?
-  notes           String?
-  approvalNotes   String?
-  status          String    @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED
-  
-  // Audit fields
-  editedBy        String?   // User ID who last edited
-  lastEditedAt    DateTime? // Last edit timestamp
-  
-  // Foreign Keys
-  assetId         String
-  fromLocationId  String?
-  toLocationId    String?
-  fromDepartmentId String?
-  toDepartmentId  String?
-  fromEmployeeId  String?  // Changed from fromUserId to fromEmployeeId
-  toEmployeeId    String?  // Changed from toUserId to toEmployeeId
-  requestedById   String   // User who requested the transfer (for approval workflow)
-  approvedById    String?  // User who approved the transfer
-  
-  // Relations
-  asset           Asset     @relation("AssetTransfers", fields: [assetId], references: [id])
-  fromLocation    Location? @relation("TransferFromLocation", fields: [fromLocationId], references: [id])
-  toLocation      Location? @relation("TransferToLocation", fields: [toLocationId], references: [id])
-  fromDepartment  Department? @relation("TransferFromDepartment", fields: [fromDepartmentId], references: [id])
-  toDepartment    Department? @relation("TransferToDepartment", fields: [toDepartmentId], references: [id])
-  fromEmployee    Employee? @relation("TransferFromEmployee", fields: [fromEmployeeId], references: [id])
-  toEmployee      Employee? @relation("TransferToEmployee", fields: [toEmployeeId], references: [id])
-  requestedBy     User      @relation("TransferRequestedBy", fields: [requestedById], references: [id])
-  approvedBy      User?     @relation("TransferApprovedBy", fields: [approvedById], references: [id])
-  editedByUser    User?     @relation("TransferEditHistory", fields: [editedBy], references: [id])
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@map("asset_transfers")
-}
-
-// Asset Depreciation Management
-model AssetDepreciation {
-  id              String    @id @default(cuid())
-  depreciationMethod String @default("STRAIGHT_LINE") // STRAIGHT_LINE, DECLINING_BALANCE, UNITS_OF_PRODUCTION
-  usefulLife      Int       // in years
-  salvageValue    Decimal?  @db.Decimal(15, 2)
-  depreciationRate Decimal? @db.Decimal(5, 4) // percentage as decimal
-  currentBookValue Decimal? @db.Decimal(15, 2)
-  accumulatedDepreciation Decimal? @db.Decimal(15, 2)
-  lastCalculatedDate DateTime?
-  isActive        Boolean   @default(true)
-  notes           String?
-  
-  // Foreign Keys
-  assetId         String    @unique
-  
-  // Relations
-  asset           Asset     @relation("AssetDepreciation", fields: [assetId], references: [id])
-  records         DepreciationRecord[]
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@map("asset_depreciations")
-}
-
-// Depreciation Records for tracking monthly/yearly depreciation
-model DepreciationRecord {
-  id              String    @id @default(cuid())
-  period          String    // Format: YYYY-MM or YYYY for annual
-  depreciationAmount Decimal @db.Decimal(15, 2)
-  bookValueBefore Decimal   @db.Decimal(15, 2)
-  bookValueAfter  Decimal   @db.Decimal(15, 2)
-  calculationDate DateTime  @default(now())
-  notes           String?
-  
-  // Foreign Keys
-  depreciationId  String
-  
-  // Relations
-  depreciation    AssetDepreciation @relation(fields: [depreciationId], references: [id])
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@map("depreciation_records")
-}
-
-// Inventory Management
-model Inventory {
-  id              String    @id @default(cuid())
-  inventoryTag    String    @unique
-  quantity        Int       @default(1)
-  availableQty    Int       @default(1)
-  condition       String    @default("GOOD") // GOOD, FAIR, POOR, DAMAGED
-  status          String    @default("AVAILABLE") // AVAILABLE, LOANED, MAINTENANCE, RETIRED
-  location        String?
-  notes           String?
-  minStockLevel   Int?      @default(1)
-  
-  // Foreign Keys
-  assetId         String
-  departmentId    String
-  companyId       String    // Multi-company support for direct scoping
-  custodianId     String?   // Person responsible for this inventory
-  
-  // Relations
-  asset           Asset     @relation("InventoryAsset", fields: [assetId], references: [id])
-  department      Department @relation("InventoryDepartment", fields: [departmentId], references: [id])
-  custodian       User?     @relation("InventoryCustodian", fields: [custodianId], references: [id])
-  loans           InventoryLoan[]
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@unique([assetId, departmentId]) // Prevent duplicate inventory per asset-department
-  @@index([companyId, departmentId, status])
-  @@index([companyId, status])
-  @@map("inventories")
-}
-
-// Inventory Loan Management
-model InventoryLoan {
-  id              String    @id @default(cuid())
-  loanNumber      String    @unique
-  purpose         String
-  quantity        Int       @default(1)
-  loanDate        DateTime  @default(now())
-  expectedReturnDate DateTime
-  actualReturnDate DateTime?
-  status          String    @default("ACTIVE") // ACTIVE, RETURNED, OVERDUE, LOST
-  condition       String?   // Condition when returned
-  notes           String?
-  approvalNotes   String?
-  
-  // Foreign Keys
-  inventoryId           String
-  borrowerEmployeeId    String   // Employee who borrows
-  responsibleEmployeeId String   // Employee responsible for the loan
-  requestedById         String   // User who creates the loan request
-  approvedById          String?  // Manager/Admin who approves
-  
-  // Relations
-  inventory           Inventory @relation(fields: [inventoryId], references: [id])
-  borrowerEmployee    Employee  @relation("LoanBorrowerEmployee", fields: [borrowerEmployeeId], references: [id])
-  responsibleEmployee Employee  @relation("LoanResponsibleEmployee", fields: [responsibleEmployeeId], references: [id])
-  requestedBy         User      @relation("LoanRequestedBy", fields: [requestedById], references: [id])
-  approvedBy          User?     @relation("LoanApprover", fields: [approvedById], references: [id])
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@map("inventory_loans")
-}
-
-// Software Asset Management
 model SoftwareAsset {
-  id              String        @id @default(cuid())
-  name            String
-  version         String?
-  publisher       String?
-  description     String?
-  softwareType    String        // Was: SoftwareType enum
-  category        String?
-  systemRequirements Json?
-  installationPath String?
-  // Directory paths (or JSON array) to attachments related to this software asset
-  // Stored as JSON string for backward compatibility with existing schema
-  dirAttachments  String?       @map("dir_attachments")
-  isActive        Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  // Audit fields
-  editedBy        String?       // User ID who last edited
-  lastEditedAt    DateTime?     // Last edit timestamp
-  
-  // Foreign Keys
-  companyId       String
-  
-  // Relations
-  company         Company       @relation(fields: [companyId], references: [id])
-  editedByUser    User?         @relation("SoftwareAssetEditHistory", fields: [editedBy], references: [id])
-  licenses        SoftwareLicense[]
-  installations   SoftwareInstallation[]
-  
-  // Required by assets
-  requiredByAssets AssetRequiredSoftware[] @relation("RequiredByAssets")
-  
+  id                      String                    @id @default(cuid())
+  name                    String
+  version                 String?
+  publisher               String?
+  description             String?
+  softwareType            String
+  category                String?
+  systemRequirements      Json?
+  installationPath        String?
+  isActive                Boolean                   @default(true)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime @updatedAt
+  companyId               String
+  dir_attachments         String?
+  editedBy                String?
+  lastEditedAt            DateTime?
+  asset_required_software asset_required_software[]
+  companies               Company                 @relation(fields: [companyId], references: [id])
+  users                   User?                    @relation(fields: [editedBy], references: [id])
+  software_installations  software_installations[]
+  software_licenses       SoftwareLicense[]
+
   @@map("software_assets")
 }
 
-model SoftwareLicense {
-  id              String        @id @default(cuid())
-  licenseKey      String?
-  licenseType     String        // Was: LicenseType enum
-  status          String        @default("ACTIVE") // Was: LicenseStatus enum
-  totalSeats      Int           @default(1)
-  usedSeats       Int           @default(0)
-  availableSeats  Int           @default(1)
-  purchaseDate    DateTime?
-  expiryDate      DateTime?
-  renewalDate     DateTime?
-  purchaseCost    Decimal?      @db.Decimal(15, 2)
-  renewalCost     Decimal?      @db.Decimal(15, 2)
-  notes           String?
-  isActive        Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  // Foreign Keys
+model software_attachments {
+  id              String   @id @default(cuid())
+  fileName        String
+  originalName    String
+  filePath        String
+  fileSize        Int?
+  mimeType        String?
+  attachmentType  String
+  description     String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   softwareAssetId String
-  vendorId        String?
   companyId       String
-  
-  // Relations
-  softwareAsset   SoftwareAsset @relation(fields: [softwareAssetId], references: [id])
-  vendor          Vendor?       @relation("SoftwareVendor", fields: [vendorId], references: [id])
-  company         Company       @relation(fields: [companyId], references: [id])
-  installations   SoftwareInstallation[]
-  renewals        LicenseRenewal[]
-  
+  uploadedById    String
+}
+
+model software_installations {
+  id                 String             @id @default(cuid())
+  installationDate   DateTime           @default(now())
+  uninstallationDate DateTime?
+  status             String             @default("INSTALLED")
+  installationPath   String?
+  version            String?
+  notes              String?
+  softwareAssetId    String
+  licenseId          String?
+  assetId            String?
+  userId             String?
+  companyId          String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime @updatedAt
+  assets             Asset?            @relation(fields: [assetId], references: [id])
+  companies          Company          @relation(fields: [companyId], references: [id])
+  software_licenses  SoftwareLicense? @relation(fields: [licenseId], references: [id])
+  software_assets    SoftwareAsset    @relation(fields: [softwareAssetId], references: [id])
+  users              User?             @relation(fields: [userId], references: [id])
+}
+
+model SoftwareLicense {
+  id                     String                   @id @default(cuid())
+  licenseKey             String?
+  licenseType            String
+  status                 String
+  totalSeats             Int                      @default(1)
+  usedSeats              Int                      @default(0)
+  availableSeats         Int                      @default(1)
+  purchaseDate           DateTime?
+  expiryDate             DateTime?
+  renewalDate            DateTime?
+  purchaseCost           Decimal?                 @db.Decimal(15, 2)
+  renewalCost            Decimal?                 @db.Decimal(15, 2)
+  notes                  String?
+  isActive               Boolean                  @default(true)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime @updatedAt
+  softwareAssetId        String
+  vendorId               String?
+  companyId              String
+  license_renewals       license_renewals[]
+  software_installations software_installations[]
+  company                Company                @relation(fields: [companyId], references: [id])
+  softwareAsset          SoftwareAsset          @relation(fields: [softwareAssetId], references: [id])
+  vendor                 Vendor?                @relation(fields: [vendorId], references: [id])
+
   @@map("software_licenses")
 }
 
-model SoftwareInstallation {
-  id              String        @id @default(cuid())
-  installationDate DateTime     @default(now())
-  uninstallationDate DateTime?
-  status          String        @default("INSTALLED") // INSTALLED, UNINSTALLED, PENDING
-  installationPath String?
-  version         String?
-  notes           String?
-  
-  // Foreign Keys
-  softwareAssetId String
-  licenseId       String?
-  assetId         String?       // Physical asset where software is installed
-  userId          String?       // User who uses the software
-  companyId       String
-  
-  // Relations
-  softwareAsset   SoftwareAsset @relation(fields: [softwareAssetId], references: [id])
-  license         SoftwareLicense? @relation(fields: [licenseId], references: [id])
-  asset           Asset?        @relation("SoftwareInstallations", fields: [assetId], references: [id])
-  user            User?         @relation("UserSoftware", fields: [userId], references: [id])
-  company         Company       @relation(fields: [companyId], references: [id])
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  @@map("software_installations")
+model SparePart {
+  id                                                         String                   @id @default(cuid())
+  partNumber                                                 String
+  name                                                       String
+  description                                                String?
+  brand                                                      String?
+  model                                                      String?
+  category                                                   String
+  partType                                                   String
+  status                                                     String
+  unitPrice                                                  Decimal                  @db.Decimal(10, 2)
+  stockLevel                                                 Int                      @default(0)
+  minStockLevel                                              Int                      @default(10)
+  maxStockLevel                                              Int                      @default(100)
+  reorderPoint                                               Int                      @default(15)
+  storageLocation                                            String?
+  specifications                                             Json?
+  compatibleWith                                             String[]
+  notes                                                      String?
+  isActive                                                   Boolean                  @default(true)
+  vendorId                                                   String?
+  createdAt                                                  DateTime                 @default(now())
+  updatedAt                                                  DateTime @updatedAt
+  companyId                                                  String
+  createdFromRequestId                                       String?
+  sourceAssetId                                              String?
+  editedBy                                                   String?
+  lastEditedAt                                               DateTime?
+  asset_components                                           asset_components[]
+  new_part_registrations                                     new_part_registrations[]
+  part_replacements_part_replacements_newPartIdTospare_parts part_replacements[]      @relation("part_replacements_newPartIdTospare_parts")
+  part_replacements_part_replacements_oldPartIdTospare_parts part_replacements[]      @relation("part_replacements_oldPartIdTospare_parts")
+  part_usages                                                part_usages[]
+  procurements                                               procurements[]
+  companies                                                  Company                @relation(fields: [companyId], references: [id])
+  users                                                      User?                   @relation(fields: [editedBy], references: [id])
+  vendors                                                    Vendor?                 @relation(fields: [vendorId], references: [id])
+
+  @@unique([companyId, partNumber])
+  @@index([companyId, category])
+  @@index([createdFromRequestId])
+  @@index([sourceAssetId])
+
+  @@map("spare_parts")
 }
 
-model LicenseRenewal {
-  id              String        @id @default(cuid())
-  renewalDate     DateTime
-  newExpiryDate   DateTime
-  cost            Decimal       @db.Decimal(15, 2)
-  notes           String?
-  
-  // Foreign Keys
-  licenseId       String
-  
-  // Relations
-  license         SoftwareLicense @relation(fields: [licenseId], references: [id])
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  @@map("license_renewals")
+model SystemSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_settings")
 }
 
-// Asset Attachments (Images and Documents)
-model AssetAttachment {
-  id              String        @id @default(cuid())
-  fileName        String
-  originalName    String
-  filePath        String
-  fileSize        Int?
-  mimeType        String?
-  attachmentType  String        // Was: AttachmentType enum
-  description     String?
-  isActive        Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  // Foreign Keys
-  assetId         String
-  companyId       String
-  uploadedById    String
-  
-  // Relations
-  asset           Asset         @relation("AssetAttachments", fields: [assetId], references: [id])
-  company         Company       @relation(fields: [companyId], references: [id])
-  uploadedBy      User          @relation("UploadedAttachments", fields: [uploadedById], references: [id])
-  
-  @@map("asset_attachments")
+model User {
+  id                                                          String                          @id @default(cuid())
+  email                                                       String                          @unique
+  username                                                    String                          @unique
+  password                                                    String
+  firstName                                                   String
+  lastName                                                    String
+  phone                                                       String?
+  role                                                        String
+  isActive                                                    Boolean                         @default(true)
+  createdAt                                                   DateTime                        @default(now())
+  updatedAt                                                   DateTime @updatedAt
+  departmentId                                                String?
+  address                                                     String?
+  companyId                                                   String
+  dateOfBirth                                                 DateTime?
+  emergencyContact                                            String?
+  emergencyPhone                                              String?
+  employeeNumber                                              String                          @unique
+  hireDate                                                    DateTime?
+  managerId                                                   String?
+  terminationDate                                             DateTime?
+  locationId                                                  String?
+  asset_attachments                                           asset_attachments[]
+  asset_requests_asset_requests_approvedByIdTousers           AssetRequest[]                @relation("asset_requests_approvedByIdTousers")
+  asset_requests_asset_requests_editedByTousers               AssetRequest[]                @relation("asset_requests_editedByTousers")
+  asset_requests_asset_requests_requesterIdTousers            AssetRequest[]                @relation("asset_requests_requesterIdTousers")
+  asset_transfers_asset_transfers_approvedByIdTousers         asset_transfers[]               @relation("asset_transfers_approvedByIdTousers")
+  asset_transfers_asset_transfers_editedByTousers             asset_transfers[]               @relation("asset_transfers_editedByTousers")
+  asset_transfers_asset_transfers_requestedByIdTousers        asset_transfers[]               @relation("asset_transfers_requestedByIdTousers")
+  assets                                                      Asset[]
+  audit_records_audit_records_auditorIdTousers                audit_records[]                 @relation("audit_records_auditorIdTousers")
+  audit_records_audit_records_editedByTousers                 audit_records[]                 @relation("audit_records_editedByTousers")
+  audit_trails                                                audit_trails[]
+  component_maintenance_records                               component_maintenance_records[]
+  component_transfers                                         component_transfers[]
+  departments_departments_managerIdTousers                    Department[]                   @relation("departments_managerIdTousers")
+  employees                                                   Employee?
+  inventories                                                 inventories[]
+  inventory_loans_inventory_loans_approvedByIdTousers         InventoryLoan[]               @relation("inventory_loans_approvedByIdTousers")
+  inventory_loans_inventory_loans_requestedByIdTousers        InventoryLoan[]               @relation("inventory_loans_requestedByIdTousers")
+  locations_locations_managerIdTousers                        Location[]                     @relation("locations_managerIdTousers")
+  maintenance_attachments                                     maintenance_attachments[]
+  maintenance_records_maintenance_records_editedByTousers     MaintenanceRecord[]           @relation("maintenance_records_editedByTousers")
+  maintenance_records_maintenance_records_supervisorIdTousers MaintenanceRecord[]           @relation("maintenance_records_supervisorIdTousers")
+  maintenance_records_maintenance_records_technicianIdTousers MaintenanceRecord[]           @relation("maintenance_records_technicianIdTousers")
+  new_part_registrations                                      new_part_registrations[]
+  notifications                                               notifications[]
+  part_replacements                                           part_replacements[]
+  part_usages                                                 part_usages[]
+  procurements                                                procurements[]
+  request_attachments                                         request_attachments[]
+  request_workflows                                           request_workflows[]
+  software_assets                                             SoftwareAsset[]
+  software_installations                                      software_installations[]
+  spare_parts                                                 SparePart[]
+  company                                                     Company                       @relation(fields: [companyId], references: [id])
+  department                                                  Department?                   @relation("users_departmentIdTodepartments", fields: [departmentId], references: [id])
+  location                                                    Location?                     @relation("users_locationIdTolocations", fields: [locationId], references: [id])
+  manager                                                     User?                         @relation("usersTousers", fields: [managerId], references: [id])
+  managedUsers                                                User[]                        @relation("usersTousers")
+
+  @@map("users")
 }
 
-// Software Attachments (Images and Documents for software assets)
-model SoftwareAttachment {
-  id              String        @id @default(cuid())
-  fileName        String
-  originalName    String
-  filePath        String
-  fileSize        Int?
-  mimeType        String?
-  attachmentType  String        // Was: AttachmentType enum
-  description     String?
-  isActive        Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+model Vendor {
+  id                    String                  @id @default(cuid())
+  name                  String
+  code                  String
+  email                 String?
+  phone                 String?
+  address               String?
+  contactPerson         String?
+  isActive              Boolean                 @default(true)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime @updatedAt
+  companyId             String
+  assets                Asset[]
+  maintenance_contracts maintenance_contracts[]
+  maintenance_records   MaintenanceRecord[]
+  procurements          procurements[]
+  software_licenses     SoftwareLicense[]
+  spare_parts           SparePart[]
+  companies             Company               @relation(fields: [companyId], references: [id])
 
-  // Foreign Keys
-  softwareAssetId String
-  companyId       String
-  uploadedById    String
+  @@unique([companyId, code])
 
-  // We intentionally keep only scalar foreign key fields for SoftwareAttachment
-  // (softwareAssetId, companyId, uploadedById) to avoid requiring reciprocal
-  // relation fields on SoftwareAsset/Company/User in this schema snapshot.
-
-  @@map("software_attachments")
+  @@map("vendors")
 }
-
-// Asset Required Software (Many-to-Many relationship)
-model AssetRequiredSoftware {
-  id              String        @id @default(cuid())
-  isRequired      Boolean       @default(true)
-  notes           String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  // Foreign Keys  
-  assetId         String
-  softwareAssetId String
-  companyId       String
-  
-  // Relations
-  asset           Asset         @relation("RequiredSoftware", fields: [assetId], references: [id])
-  softwareAsset   SoftwareAsset @relation("RequiredByAssets", fields: [softwareAssetId], references: [id])
-  company         Company       @relation(fields: [companyId], references: [id])
-  
-  @@unique([assetId, softwareAssetId])
-  @@map("asset_required_software")
-}
-

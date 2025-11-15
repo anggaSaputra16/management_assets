@@ -9,7 +9,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-  "db:seed": "node prisma/seed-complete.js",
+    "db:seed": "node prisma/seed-complete.js",
     "db:studio": "prisma studio"
   },
   "keywords": [

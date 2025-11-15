@@ -230,9 +230,8 @@ async function main() {
   console.log('=' .repeat(60));
 
   try {
-    // Step 1: Global Type Master (SKIPPED - table not in current schema)
-    // await seedGlobalTypeMaster();
-    console.log('\n🌍 GlobalTypeMaster seeding skipped (table not in schema)');
+    // Step 1: Global Type Master
+    await seedGlobalTypeMaster();
     
     // Step 2: System Settings
     await seedSystemSettings();
@@ -676,6 +675,7 @@ async function main() {
             softwareAssetId: software.id,
             licenseKey: `${template.name.replace(/\s+/g, '-').toUpperCase()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
             licenseType: 'VOLUME',
+            status: 'ACTIVE',
             totalSeats: 10,
             isActive: true,
             companyId: company.id,

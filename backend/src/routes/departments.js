@@ -51,15 +51,14 @@ router.get('/', authenticate, async (req, res, next) => {
     const [departments, total] = await Promise.all([
       prisma.department.findMany({
         where,
-        include: {
-          company: {
+        include: { companies: {
             select: {
               id: true,
               name: true,
               code: true
             }
           },
-          manager: {
+          users_departments_managerIdTousers: {
             select: {
               id: true,
               firstName: true,
@@ -69,7 +68,7 @@ router.get('/', authenticate, async (req, res, next) => {
           },
           _count: {
             select: {
-              users: true,
+              users_users_departmentIdTodepartments: true,
               assets: true
             }
           }
@@ -107,15 +106,14 @@ router.get('/:id', authenticate, async (req, res, next) => {
         id,
         companyId: req.user.companyId // Filter by user's company
       },
-      include: {
-        company: {
+      include: { companies: {
           select: {
             id: true,
             name: true,
             code: true
           }
         },
-        manager: {
+        users_departments_managerIdTousers: {
           select: {
             id: true,
             firstName: true,
@@ -143,10 +141,9 @@ router.get('/:id', authenticate, async (req, res, next) => {
           }
         },
         _count: {
-          select: {
-            users: true,
+          select: { users_users_departmentIdTodepartments: true,
             assets: true,
-            assetRequests: true
+            asset_requests: true
           }
         }
       }
@@ -234,15 +231,14 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         managerId,
         companyId: finalCompanyId
       },
-      include: {
-        company: {
+      include: { companies: {
           select: {
             id: true,
             name: true,
             code: true
           }
         },
-        manager: {
+        users_departments_managerIdTousers: {
           select: {
             id: true,
             firstName: true,
@@ -338,15 +334,14 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
     const updatedDepartment = await prisma.department.update({
       where: { id },
       data: value,
-      include: {
-        company: {
+      include: { companies: {
           select: {
             id: true,
             name: true,
             code: true
           }
         },
-        manager: {
+        users_departments_managerIdTousers: {
           select: {
             id: true,
             firstName: true,
@@ -355,8 +350,7 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
           }
         },
         _count: {
-          select: {
-            users: true,
+          select: { users_users_departmentIdTodepartments: true,
             assets: true
           }
         }
@@ -386,8 +380,7 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res, next) =
       },
       include: {
         _count: {
-          select: {
-            users: true,
+          select: { users_users_departmentIdTodepartments: true,
             assets: true
           }
         }
@@ -497,3 +490,5 @@ router.get('/:id/statistics', authenticate, async (req, res, next) => {
 });
 
 module.exports = router;
+
+

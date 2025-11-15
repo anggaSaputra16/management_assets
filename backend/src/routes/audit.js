@@ -73,23 +73,20 @@ router.get('/', authenticate, async (req, res, next) => {
     }
 
     const [auditRecords, total] = await Promise.all([
-      prisma.auditRecord.findMany({
+      prisma.audit_records.findMany({
         where,
         include: {
-          asset: {
+          assets: {
             select: {
               id: true,
               assetTag: true,
               name: true,
               status: true,
-              category: {
-                select: { name: true }
+              categories: {                select: { name: true }
               },
-              location: {
-                select: { name: true, building: true }
+              locations: {                select: { name: true, building: true }
               },
-              department: {
-                select: { name: true }
+              departments: {                select: { name: true }
               }
             }
           },
@@ -107,7 +104,7 @@ router.get('/', authenticate, async (req, res, next) => {
         take: parseInt(limit),
         orderBy: { scheduledDate: 'desc' }
       }),
-      prisma.auditRecord.count({ where })
+      prisma.audit_records.count({ where })
     ]);
 
     res.json({
@@ -131,10 +128,10 @@ router.get('/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const auditRecord = await prisma.auditRecord.findUnique({
+    const auditRecord = await prisma.audit_records.findUnique({
       where: { id },
       include: {
-        asset: {
+        assets: {
           select: {
             id: true,
             assetTag: true,
@@ -145,14 +142,11 @@ router.get('/:id', authenticate, async (req, res, next) => {
             model: true,
             brand: true,
             currentValue: true,
-            category: {
-              select: { name: true }
+            categories: {              select: { name: true }
             },
-            location: {
-              select: { name: true, building: true, floor: true, room: true }
+            locations: {              select: { name: true, building: true, floor: true, room: true }
             },
-            department: {
-              select: { name: true }
+            departments: {              select: { name: true }
             },
             assignedEmployee: {
               select: {
@@ -245,10 +239,10 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TOP_MANAGEMENT
     }
 
     // Create audit record
-    const auditRecord = await prisma.auditRecord.create({
+    const auditRecord = await prisma.audit_records.create({
       data: value,
       include: {
-        asset: {
+        assets: {
           select: {
             id: true,
             assetTag: true,
@@ -292,9 +286,9 @@ router.put('/:id', authenticate, async (req, res, next) => {
     }
 
     // Check if audit record exists
-    const existingRecord = await prisma.auditRecord.findUnique({
+    const existingRecord = await prisma.audit_records.findUnique({
       where: { id },
-      include: { asset: true }
+      include: { assets: true }
     });
 
     if (!existingRecord) {
@@ -322,11 +316,11 @@ router.put('/:id', authenticate, async (req, res, next) => {
     value.lastEditedAt = new Date();
     
     // Update audit record
-    const updatedRecord = await prisma.auditRecord.update({
+    const updatedRecord = await prisma.audit_records.update({
       where: { id },
       data: value,
       include: {
-        asset: {
+        assets: {
           select: {
             id: true,
             assetTag: true,
@@ -361,7 +355,7 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res, next) =
     const { id } = req.params;
 
     // Check if audit record exists
-    const auditRecord = await prisma.auditRecord.findUnique({
+    const auditRecord = await prisma.audit_records.findUnique({
       where: { id }
     });
 
@@ -373,7 +367,7 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res, next) =
     }
 
     // Delete audit record
-    await prisma.auditRecord.delete({
+    await prisma.audit_records.delete({
       where: { id }
     });
 
@@ -391,7 +385,7 @@ router.post('/:id/start', authenticate, authorize('AUDITOR', 'ADMIN', 'ASSET_ADM
   try {
     const { id } = req.params;
 
-    const auditRecord = await prisma.auditRecord.findUnique({
+    const auditRecord = await prisma.audit_records.findUnique({
       where: { id }
     });
 
@@ -418,7 +412,7 @@ router.post('/:id/start', authenticate, authorize('AUDITOR', 'ADMIN', 'ASSET_ADM
     }
 
     // Update audit status
-    const updatedRecord = await prisma.auditRecord.update({
+    const updatedRecord = await prisma.audit_records.update({
       where: { id },
       data: { status: 'IN_PROGRESS' }
     });
@@ -452,7 +446,7 @@ router.post('/:id/complete', authenticate, authorize('AUDITOR', 'ADMIN', 'ASSET_
       });
     }
 
-    const auditRecord = await prisma.auditRecord.findUnique({
+    const auditRecord = await prisma.audit_records.findUnique({
       where: { id }
     });
 
@@ -479,7 +473,7 @@ router.post('/:id/complete', authenticate, authorize('AUDITOR', 'ADMIN', 'ASSET_
     }
 
     // Update audit record
-    const updatedRecord = await prisma.auditRecord.update({
+    const updatedRecord = await prisma.audit_records.update({
       where: { id },
       data: {
         status: 'COMPLETED',
@@ -522,23 +516,23 @@ router.get('/statistics/overview', authenticate, authorize('ADMIN', 'ASSET_ADMIN
       upcomingAudits,
       auditsByAuditor
     ] = await Promise.all([
-      prisma.auditRecord.count({ where }),
-      prisma.auditRecord.count({ where: { ...where, status: 'SCHEDULED' } }),
-      prisma.auditRecord.count({ where: { ...where, status: 'IN_PROGRESS' } }),
-      prisma.auditRecord.count({ where: { ...where, status: 'COMPLETED' } }),
-      prisma.auditRecord.groupBy({
+      prisma.audit_records.count({ where }),
+      prisma.audit_records.count({ where: { ...where, status: 'SCHEDULED' } }),
+      prisma.audit_records.count({ where: { ...where, status: 'IN_PROGRESS' } }),
+      prisma.audit_records.count({ where: { ...where, status: 'COMPLETED' } }),
+      prisma.audit_records.groupBy({
         by: ['auditType'],
         where,
         _count: true
       }),
-      prisma.auditRecord.count({
+      prisma.audit_records.count({
         where: {
           ...where,
           status: 'SCHEDULED',
           scheduledDate: { lt: new Date() }
         }
       }),
-      prisma.auditRecord.count({
+      prisma.audit_records.count({
         where: {
           ...where,
           status: 'SCHEDULED',
@@ -548,7 +542,7 @@ router.get('/statistics/overview', authenticate, authorize('ADMIN', 'ASSET_ADMIN
           }
         }
       }),
-      req.user.role !== 'MANAGER' ? prisma.auditRecord.groupBy({
+      req.user.role !== 'MANAGER' ? prisma.audit_records.groupBy({
         by: ['auditorId'],
         where,
         _count: true
@@ -602,16 +596,15 @@ router.get('/upcoming', authenticate, async (req, res, next) => {
       ];
     }
 
-    const upcomingAudits = await prisma.auditRecord.findMany({
+    const upcomingAudits = await prisma.audit_records.findMany({
       where,
       include: {
-        asset: {
+        assets: {
           select: {
             id: true,
             assetTag: true,
             name: true,
-            location: {
-              select: { name: true, building: true }
+            locations: {              select: { name: true, building: true }
             }
           }
         },
@@ -641,12 +634,12 @@ router.get('/:id/report', authenticate, authorize('AUDITOR', 'ADMIN', 'ASSET_ADM
   try {
     const { id } = req.params;
 
-    const auditRecord = await prisma.auditRecord.findUnique({
+    const auditRecord = await prisma.audit_records.findUnique({
       where: { id },
       include: {
-        asset: {
+        assets: {
           include: {
-            category: true,
+            categories: true,
             location: true,
             department: true,
             assignedEmployee: {
@@ -766,3 +759,9 @@ router.get('/recent', authenticate, async (req, res, next) => {
 });
 
 module.exports = router;
+
+
+
+
+
+
