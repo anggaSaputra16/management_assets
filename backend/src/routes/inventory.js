@@ -46,7 +46,7 @@ const generateInventoryTag = async (departmentCode, companyId) => {
   
   const prefix = `INV-${departmentCode}-${year}${month}`;
   
-  const lastInventory = await prisma.inventory.findFirst({
+  const lastInventory = await prisma.inventories.findFirst({
     where: {
       inventoryTag: {
         startsWith: prefix
@@ -133,24 +133,21 @@ router.get('/', authenticate, pagination, async (req, res, next) => {
     }
 
     const [inventories, total] = await Promise.all([
-      prisma.inventory.findMany({
+      prisma.inventories.findMany({
         where,
         include: {
-          asset: {
-            select: {
+          assets: { select: {
               id: true,
               name: true,
               assetTag: true,
               serialNumber: true,
               description: true,
               status: true,
-              category: {
-                select: {
+              categories: {                select: {
                   name: true
                 }
               },
-              location: {
-                select: {
+              locations: {                select: {
                   id: true,
                   name: true,
                   code: true,
@@ -162,8 +159,7 @@ router.get('/', authenticate, pagination, async (req, res, next) => {
             }
           },
           // Include latest active loan (if any) with borrower/responsible for display
-          loans: {
-            where: { status: 'ACTIVE' },
+          inventory_loans: { where: { status: 'ACTIVE' },
             orderBy: { createdAt: 'desc' },
             take: 1,
             include: {
@@ -171,15 +167,13 @@ router.get('/', authenticate, pagination, async (req, res, next) => {
               responsibleEmployee: { select: { id: true, firstName: true, lastName: true, npk: true } }
             }
           },
-          department: {
-            select: {
+          departments: { select: {
               id: true,
               name: true,
               code: true
             }
           },
-          custodian: {
-            select: {
+          users: { select: {
               id: true,
               firstName: true,
               lastName: true,
@@ -190,7 +184,7 @@ router.get('/', authenticate, pagination, async (req, res, next) => {
           },
           _count: {
             select: {
-              loans: true
+              inventory_loans: true
             }
           }
         },
@@ -200,7 +194,7 @@ router.get('/', authenticate, pagination, async (req, res, next) => {
           createdAt: 'desc'
         }
       }),
-      prisma.inventory.count({ where })
+      prisma.inventories.count({ where })
     ]);
 
     res.json({
@@ -235,7 +229,7 @@ router.get('/available-assets', authenticate, async (req, res, next) => {
     }
 
     // Get existing inventory for this department to show allocated quantities
-    const existingInventory = await prisma.inventory.findMany({
+    const existingInventory = await prisma.inventories.findMany({
       where: {
         companyId,
         departmentId
@@ -266,13 +260,11 @@ router.get('/available-assets', authenticate, async (req, res, next) => {
         name: true,
         description: true,
         serialNumber: true,
-        category: {
-          select: {
+        categories: {          select: {
             name: true
           }
         },
-        department: {
-          select: {
+        departments: { select: {
             id: true,
             name: true
           }
@@ -393,7 +385,7 @@ router.post('/', authenticate, require('../middleware/auth').authorize('ADMIN', 
     }
 
     // Check if inventory already exists for this asset-department combination
-    const existingInventory = await prisma.inventory.findFirst({
+    const existingInventory = await prisma.inventories.findFirst({
       where: {
         assetId: value.assetId,
         departmentId: value.departmentId,
@@ -432,7 +424,7 @@ router.post('/', authenticate, require('../middleware/auth').authorize('ADMIN', 
     // Create inventory and update asset status in transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create inventory
-      const inventory = await tx.inventory.create({
+      const inventory = await tx.inventories.create({
         data: {
           assetId: value.assetId,
           departmentId: value.departmentId,
@@ -447,18 +439,15 @@ router.post('/', authenticate, require('../middleware/auth').authorize('ADMIN', 
           availableQty: value.quantity
         },
         include: {
-          asset: {
-            select: {
+          assets: { select: {
               name: true,
               assetTag: true,
               locationId: true,
-              location: {
-                select: { id: true, name: true }
+              locations: {                select: { id: true, name: true }
               }
             }
           },
-          department: {
-            select: {
+          departments: { select: {
               name: true,
               code: true
             }
@@ -499,9 +488,9 @@ router.post('/loans', authenticate, async (req, res, next) => {
     }
 
     // Check inventory availability
-    const inventory = await prisma.inventory.findUnique({
+    const inventory = await prisma.inventories.findUnique({
       where: { id: value.inventoryId },
-      include: { asset: { select: { companyId: true } } }
+      include: { assets: { select: { companyId: true } } }
     });
 
     if (!inventory) {
@@ -527,11 +516,11 @@ router.post('/loans', authenticate, async (req, res, next) => {
     const [borrowerEmployee, responsibleEmployee] = await Promise.all([
       prisma.employee.findUnique({
         where: { id: value.borrowerEmployeeId },
-        select: { companyId: true, firstName: true, lastName: true, email: true, department: { select: { name: true } } }
+        select: { companyId: true, firstName: true, lastName: true, email: true, departments: { select: { name: true } } }
       }),
       prisma.employee.findUnique({
         where: { id: value.responsibleEmployeeId },
-        select: { companyId: true, firstName: true, lastName: true, email: true, department: { select: { name: true } } }
+        select: { companyId: true, firstName: true, lastName: true, email: true, departments: { select: { name: true } } }
       })
     ]);
 
@@ -566,35 +555,30 @@ router.post('/loans', authenticate, async (req, res, next) => {
         include: {
           inventory: {
             include: {
-              asset: {
-                select: {
+              assets: { select: {
                   name: true,
                   assetTag: true
                 }
               }
             }
           },
-          borrowerEmployee: {
-            select: {
+          borrowerEmployee: { select: {
               id: true,
               firstName: true,
               lastName: true,
               email: true,
-              department: {
-                select: {
+              departments: { select: {
                   name: true
                 }
               }
             }
           },
-          responsibleEmployee: {
-            select: {
+          responsibleEmployee: { select: {
               id: true,
               firstName: true,
               lastName: true,
               email: true,
-              department: {
-                select: {
+              departments: { select: {
                   name: true
                 }
               }
@@ -612,7 +596,7 @@ router.post('/loans', authenticate, async (req, res, next) => {
       });
 
       // Update inventory available quantity
-      await tx.inventory.update({
+      await tx.inventories.update({
         where: { id: value.inventoryId },
         data: {
           availableQty: {
@@ -652,7 +636,7 @@ router.post('/loans', authenticate, async (req, res, next) => {
       const emailText = `A new loan request has been created:
       
 Loan Number: ${result.loanNumber}
-Asset: ${result.inventory?.asset?.name} (${result.inventory?.asset?.assetTag})
+Asset: ${result.inventories?.asset?.name} (${result.inventories?.asset?.assetTag})
 Requested By: ${requesterName} (${result.requestedBy.email})
 
 Borrower: ${borrowerName} (${result.borrowerEmployee.department?.name || 'No Dept'})
@@ -691,13 +675,13 @@ Please review and approve this loan request.`
 router.post('/loans/:id/approve', authenticate, authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
   try {
     const { id } = req.params
-  const loan = await prisma.inventoryLoan.findUnique({ where: { id }, include: { inventory: { include: { asset: { select: { companyId: true } } } }, borrowerEmployee: true, responsibleEmployee: true } })
+  const loan = await prisma.inventoryLoan.findUnique({ where: { id }, include: { inventories: { include: { assets: { select: { companyId: true } } } }, borrowerEmployee: true, responsibleEmployee: true } })
     if (!loan) {
       return res.status(404).json({ success: false, message: 'Loan not found' })
     }
 
     // Verify company scope
-    if (!loan.inventory?.asset || loan.inventory.asset.companyId !== req.user.companyId) {
+    if (!loan.inventories?.asset || loan.inventories.asset.companyId !== req.user.companyId) {
       return res.status(403).json({ success: false, message: 'Loan does not belong to your company' })
     }
 
@@ -712,7 +696,7 @@ router.post('/loans/:id/approve', authenticate, authorize('ADMIN', 'MANAGER'), a
       include: {
         borrowerEmployee: { select: { id: true, email: true, firstName: true, lastName: true } },
         responsibleEmployee: { select: { id: true, email: true, firstName: true, lastName: true } },
-        inventory: { include: { asset: { select: { id: true, name: true } } } }
+        inventories: { include: { assets: { select: { id: true, name: true } } } }
       }
     })
 
@@ -774,44 +758,38 @@ router.get('/loans', authenticate, pagination, async (req, res, next) => {
         include: {
           inventory: {
             include: {
-              asset: {
-                select: {
+              assets: { select: {
                   name: true,
                   assetTag: true
                 }
               },
-              department: {
-                select: {
+              departments: { select: {
                   name: true
                 }
               }
             }
           },
-          borrowerEmployee: {
-            select: {
+          borrowerEmployee: { select: {
               id: true,
               npk: true,
               firstName: true,
               lastName: true,
               email: true,
               position: true,
-              department: {
-                select: {
+              departments: { select: {
                   name: true
                 }
               }
             }
           },
-          responsibleEmployee: {
-            select: {
+          responsibleEmployee: { select: {
               id: true,
               npk: true,
               firstName: true,
               lastName: true,
               email: true,
               position: true,
-              department: {
-                select: {
+              departments: { select: {
                   name: true
                 }
               }
@@ -901,7 +879,7 @@ router.post('/loans/:id/return', authenticate, async (req, res, next) => {
       });
 
       // Update inventory available quantity
-      await tx.inventory.update({
+      await tx.inventories.update({
         where: { id: loan.inventoryId },
         data: {
           availableQty: {
@@ -933,11 +911,11 @@ router.get('/stats', authenticate, async (req, res, next) => {
       loanedInventory,
       activeLoans
     ] = await Promise.all([
-      prisma.inventory.count(),
-      prisma.inventory.count({
+      prisma.inventories.count(),
+      prisma.inventories.count({
         where: { status: 'AVAILABLE' }
       }),
-      prisma.inventory.count({
+      prisma.inventories.count({
         where: { status: 'LOANED' }
       }),
       prisma.inventoryLoan.count({
@@ -960,3 +938,10 @@ router.get('/stats', authenticate, async (req, res, next) => {
 });
 
 module.exports = router;
+
+
+
+
+
+
+

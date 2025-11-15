@@ -67,7 +67,7 @@ router.get('/', authenticate, async (req, res, next) => {
       prisma.vendor.findMany({
         where,
         include: {
-          company: {
+          companies: {
             select: {
               id: true,
               name: true,
@@ -77,7 +77,7 @@ router.get('/', authenticate, async (req, res, next) => {
           _count: {
             select: {
               assets: true,
-              maintenanceContracts: true
+              maintenance_contracts: true
             }
           }
         },
@@ -115,7 +115,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
         companyId: req.user.companyId
       },
       include: {
-        company: {
+        companies: {
           select: {
             id: true,
             name: true,
@@ -154,7 +154,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
         _count: {
           select: {
             assets: true,
-            maintenanceContracts: true
+            maintenance_contracts: true
           }
         }
       }
@@ -306,7 +306,7 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
         _count: {
           select: {
             assets: true,
-            maintenanceContracts: true
+            maintenance_contracts: true
           }
         }
       }
@@ -337,7 +337,7 @@ router.delete('/:id', authenticate, authorize('ADMIN'), async (req, res, next) =
         _count: {
           select: {
             assets: true,
-            maintenanceContracts: true
+            maintenance_contracts: true
           }
         }
       }
@@ -621,3 +621,5 @@ router.get('/:id/performance', authenticate, authorize('ADMIN', 'ASSET_ADMIN', '
 });
 
 module.exports = router;
+
+

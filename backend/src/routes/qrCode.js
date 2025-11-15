@@ -49,7 +49,7 @@ router.get('/asset/:id', authenticate, async (req, res) => {
     const asset = await prisma.asset.findUnique({
       where: { id },
       include: {
-          category: { select: { name: true } },
+          categories: { select: { name: true } },
           assignedEmployee: { select: { firstName: true, lastName: true } }
         }
     })
@@ -157,9 +157,9 @@ router.post('/asset/:id/download', authenticate, async (req, res) => {
     const asset = await prisma.asset.findUnique({
       where: { id },
       include: {
-        category: { select: { name: true } },
-        location: { select: { name: true } },
-        department: { select: { name: true } }
+        categories: { select: { name: true } },
+        locations: { select: { name: true } },
+        departments: { select: { name: true } }
       }
     })
 
@@ -300,11 +300,11 @@ router.post('/scan', authenticate, upload.single('qrImage'), async (req, res) =>
       const asset = await prisma.asset.findUnique({
         where: { id: qrData.id },
         include: {
-          category: { select: { name: true } },
-          location: { select: { name: true } },
-          department: { select: { name: true } },
+          categories: { select: { name: true } },
+          locations: { select: { name: true } },
+          departments: { select: { name: true } },
           assignedEmployee: { select: { firstName: true, lastName: true } },
-          vendor: { select: { name: true } }
+          vendors: { select: { name: true } }
         }
       })
 
@@ -379,7 +379,7 @@ router.post('/verify', authenticate, async (req, res) => {
     const asset = await prisma.asset.findUnique({
       where: { id: assetId },
       include: {
-        category: { select: { name: true } }
+        categories: { select: { name: true } }
       }
     })
 
@@ -434,7 +434,7 @@ router.get('/batch/assets', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), asy
     const assets = await prisma.asset.findMany({
       where,
       include: {
-        category: { select: { name: true } }
+        categories: { select: { name: true } }
       },
       take: 100 // Limit to prevent overload
     })
@@ -478,3 +478,6 @@ router.get('/batch/assets', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), asy
 })
 
 module.exports = router
+
+
+

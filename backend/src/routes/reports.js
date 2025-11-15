@@ -135,18 +135,16 @@ router.post('/generate/assets', authenticate, async (req, res, next) => {
     const assets = await prisma.asset.findMany({
       where: whereClause,
       include: {
-        category: {
+        categories: {
           select: {
             name: true
           }
         },
-        department: {
-          select: {
+        departments: { select: {
             name: true
           }
         },
-        location: {
-          select: {
+        locations: { select: {
             name: true
           }
         }
@@ -199,13 +197,12 @@ router.post('/generate/depreciation', authenticate, async (req, res, next) => {
         }
       },
       include: {
-        category: {
+        categories: {
           select: {
             name: true
           }
         },
-        department: {
-          select: {
+        departments: { select: {
             name: true
           }
         }
@@ -297,8 +294,7 @@ router.post('/generate/requests', authenticate, async (req, res, next) => {
             lastName: true
           }
         },
-        asset: {
-          select: {
+        assets: { select: {
             name: true,
             assetTag: true
           }
@@ -370,7 +366,7 @@ router.post('/generate/maintenance', authenticate, async (req, res, next) => {
     const maintenance = await prisma.maintenanceRecord.findMany({
       where: whereClause,
       include: {
-        asset: {
+        assets: {
           select: {
             name: true,
             assetTag: true
@@ -382,8 +378,7 @@ router.post('/generate/maintenance', authenticate, async (req, res, next) => {
             lastName: true
           }
         },
-        vendor: {
-          select: {
+        vendors: { select: {
             name: true
           }
         }
@@ -497,3 +492,6 @@ router.post('/export/:type', authenticate, async (req, res, next) => {
 });
 
 module.exports = router;
+
+
+
