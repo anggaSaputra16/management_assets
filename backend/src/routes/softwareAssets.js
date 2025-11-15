@@ -115,17 +115,15 @@ router.get('/', authenticate, async (req, res) => {
           { name: 'asc' }
         ],
         include: {
-          licenses: {
-            include: {
-              vendor: {
+          software_software_licenses: { include: {
+              vendors: {
                 select: { id: true, name: true }
               }
             }
           },
           // Include a small sample of recent active installations so the UI can show
           // which devices have this software installed without an extra request.
-          installations: {
-            where: { status: 'INSTALLED' },
+          software_software_installations: { where: { status: 'INSTALLED' },
             take: 5,
             orderBy: { installationDate: 'desc' },
             include: {
@@ -142,8 +140,8 @@ router.get('/', authenticate, async (req, res) => {
           },
           _count: {
             select: {
-              licenses: true,
-              installations: true
+              software_licenses: true,
+              software_installations: true
             }
           }
         }
@@ -233,9 +231,8 @@ router.get('/:id', authenticate, async (req, res) => {
     const softwareAsset = await prisma.softwareAsset.findUnique({
       where: { id },
       include: {
-        licenses: {
-          include: {
-            vendor: {
+        software_software_licenses: { include: {
+            vendors: {
               select: {
                 id: true,
                 name: true,
@@ -247,7 +244,7 @@ router.get('/:id', authenticate, async (req, res) => {
             createdAt: 'desc'
           }
         },
-        installations: {
+        software_installations: {
           include: {
             asset: {
               select: {
@@ -272,8 +269,8 @@ router.get('/:id', authenticate, async (req, res) => {
         },
         _count: {
           select: {
-            licenses: true,
-            installations: true
+            software_licenses: true,
+            software_installations: true
           }
         }
       }
@@ -439,17 +436,16 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
     const completeData = await prisma.softwareAsset.findUnique({
       where: { id: result.softwareAsset.id },
       include: {
-        licenses: {
-          include: {
-            vendor: {
+        software_software_licenses: { include: {
+            vendors: {
               select: { id: true, name: true }
             }
           }
         },
         _count: {
           select: {
-            licenses: true,
-            installations: true
+            software_licenses: true,
+            software_installations: true
           }
         }
       }
@@ -661,8 +657,8 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       include: {
         _count: {
           select: {
-            licenses: true,
-            installations: true
+            software_licenses: true,
+            software_installations: true
           }
         }
       }
@@ -719,8 +715,8 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
       include: {
         _count: {
           select: {
-            licenses: true,
-            installations: true
+            software_licenses: true,
+            software_installations: true
           }
         }
       }
@@ -1021,3 +1017,6 @@ router.delete('/:id/licenses/:licenseId', authenticate, authorize('ADMIN', 'ASSE
     res.status(500).json({ success: false, message: 'Failed to delete license', error: error.message })
   }
 })
+
+
+

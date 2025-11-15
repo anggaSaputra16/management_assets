@@ -66,13 +66,18 @@ router.get('/', authenticate, async (req, res) => {
               email: true 
             } 
           },
-          asset: { 
-            select: { 
+          assets: { select: { 
               id: true, 
               assetTag: true, 
               name: true,
               status: true,
-              category: true
+              categories: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true
+                }
+              }
             } 
           }
         }
@@ -161,7 +166,7 @@ router.get('/:id', authenticate, async (req, res) => {
       where: { id },
       include: {
         requester: { select: { id: true, firstName: true, lastName: true } },
-        asset: { select: { id: true, assetTag: true, name: true, companyId: true } }
+        assets: { select: { id: true, assetTag: true, name: true, companyId: true } }
       }
     })
 
@@ -280,7 +285,7 @@ router.post('/:id/execute', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TEC
     return res.status(400).json({ success: false, message: `Invalid postStatus. Allowed: ${allowedPostStatuses.join(', ')}` })
   }
   try {
-    const reqRecord = await prisma.assetRequest.findUnique({ where: { id }, include: { asset: true } })
+    const reqRecord = await prisma.assetRequest.findUnique({ where: { id }, include: { assets: true } })
     if (!reqRecord || reqRecord.requestType !== 'ASSET_BREAKDOWN') {
       return res.status(404).json({ success: false, message: 'Decomposition plan not found' })
     }
@@ -473,11 +478,11 @@ router.post('/:id/execute', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TEC
       const sparesWithIncludes = await tx.sparePart.findMany({
         where: { id: { in: sparePartIds } },
         include: {
-          vendor: { select: { id: true, name: true, code: true } },
-          company: { select: { id: true, name: true } },
+          vendors: { select: { id: true, name: true, code: true } },
+          companies: { select: { id: true, name: true } },
           sourceComponents: { 
             include: { 
-              asset: { 
+              assets: { 
                 select: { id: true, assetTag: true, name: true } 
               } 
             } 
@@ -556,3 +561,7 @@ router.get('/assets/compatible/:assetId', authenticate, async (req, res) => {
 })
 
 module.exports = router
+
+
+
+

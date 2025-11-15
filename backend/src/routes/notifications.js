@@ -38,14 +38,14 @@ router.get('/', authenticate, async (req, res, next) => {
     }
 
     const [notifications, total, unreadCount] = await Promise.all([
-      prisma.notification.findMany({
+      prisma.notifications.findMany({
         where,
         skip: parseInt(skip),
         take: parseInt(limit),
         orderBy: { createdAt: 'desc' }
       }),
-      prisma.notification.count({ where }),
-      prisma.notification.count({
+      prisma.notifications.count({ where }),
+      prisma.notifications.count({
         where: {
           userId: req.user.id,
           companyId: req.user.companyId,
@@ -76,7 +76,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const notification = await prisma.notification.findUnique({
+    const notification = await prisma.notifications.findUnique({
       where: { id }
     });
 
@@ -129,7 +129,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
     }
 
     // Create notification
-    const notification = await prisma.notification.create({
+    const notification = await prisma.notifications.create({
       data: value
     });
 
@@ -186,7 +186,7 @@ router.post('/broadcast', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async
       userId
     }));
 
-    await prisma.notification.createMany({
+    await prisma.notifications.createMany({
       data: notificationData
     });
 
@@ -257,7 +257,7 @@ router.post('/broadcast-role', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), 
       userId: user.id
     }));
 
-    await prisma.notification.createMany({
+    await prisma.notifications.createMany({
       data: notificationData
     });
 
@@ -289,7 +289,7 @@ router.put('/mark-read', authenticate, async (req, res, next) => {
     }
 
     // Update notifications (only user's own notifications)
-    const result = await prisma.notification.updateMany({
+    const result = await prisma.notifications.updateMany({
       where: {
         id: { in: value.notificationIds },
         userId: req.user.id
@@ -314,7 +314,7 @@ router.put('/mark-read', authenticate, async (req, res, next) => {
 // Mark all notifications as read
 router.put('/mark-all-read', authenticate, async (req, res, next) => {
   try {
-    const result = await prisma.notification.updateMany({
+    const result = await prisma.notifications.updateMany({
       where: {
         userId: req.user.id,
         isRead: false
@@ -342,7 +342,7 @@ router.delete('/:id', authenticate, async (req, res, next) => {
     const { id } = req.params;
 
     // Check if notification exists and belongs to user
-    const notification = await prisma.notification.findUnique({
+    const notification = await prisma.notifications.findUnique({
       where: { id }
     });
 
@@ -361,7 +361,7 @@ router.delete('/:id', authenticate, async (req, res, next) => {
     }
 
     // Delete notification
-    await prisma.notification.delete({
+    await prisma.notifications.delete({
       where: { id }
     });
 
@@ -377,7 +377,7 @@ router.delete('/:id', authenticate, async (req, res, next) => {
 // Delete all read notifications
 router.delete('/read/all', authenticate, async (req, res, next) => {
   try {
-    const result = await prisma.notification.deleteMany({
+    const result = await prisma.notifications.deleteMany({
       where: {
         userId: req.user.id,
         isRead: true
@@ -405,21 +405,21 @@ router.get('/statistics/overview', authenticate, async (req, res, next) => {
       notificationsByType,
       recentNotifications
     ] = await Promise.all([
-      prisma.notification.count({
+      prisma.notifications.count({
         where: { userId: req.user.id }
       }),
-      prisma.notification.count({
+      prisma.notifications.count({
         where: { 
           userId: req.user.id,
           isRead: false 
         }
       }),
-      prisma.notification.groupBy({
+      prisma.notifications.groupBy({
         by: ['type'],
         where: { userId: req.user.id },
         _count: true
       }),
-      prisma.notification.findMany({
+      prisma.notifications.findMany({
         where: { userId: req.user.id },
         orderBy: { createdAt: 'desc' },
         take: 5,
@@ -452,7 +452,7 @@ router.get('/statistics/overview', authenticate, async (req, res, next) => {
 // System notification helpers (used internally by other routes)
 const createSystemNotification = async (userId, title, message, type) => {
   try {
-    await prisma.notification.create({
+    await prisma.notifications.create({
       data: {
         userId,
         title,

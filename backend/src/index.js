@@ -33,6 +33,7 @@ const qrCodeRoutes = require('./routes/qrCode');
 const dashboardRoutes = require('./routes/dashboard');
 const enumsRoutes = require('./routes/enums');
 const rolesRoutes = require('./routes/roles');
+const masterTypesRoutes = require('./routes/masterTypes');
 // const componentsRoutes = require('./routes/components');
 const { prisma } = require('./config/database');
 const { startSoftwareExpiryNotifier } = require('./jobs/softwareExpiryNotifier');
@@ -101,6 +102,7 @@ app.use('/api/qr-codes', qrCodeRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/enums', enumsRoutes);
 app.use('/api/roles', rolesRoutes);
+app.use('/api/master/types', masterTypesRoutes);
 // app.use('/api/components', componentsRoutes);
 
 // Health check endpoint

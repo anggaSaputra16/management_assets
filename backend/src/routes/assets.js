@@ -246,21 +246,21 @@ router.get('/', authenticate, async (req, res, next) => {
       imageUrl: true,
       createdAt: true,
       // Include relations for display
-      category: { select: { id: true, name: true, code: true } },
-      company: { select: { id: true, name: true, code: true } },
-      location: { select: { id: true, name: true, building: true, room: true } },
-      department: { select: { id: true, name: true, code: true } },
-      assignedEmployee: { select: { id: true, npk: true, firstName: true, lastName: true, position: true } }
+      categories: { select: { id: true, name: true, code: true } },
+      companies: { select: { id: true, name: true, code: true } },
+      locations: { select: { id: true, name: true, building: true, room: true } },
+      departments: { select: { id: true, name: true, code: true } },
+      employees: { select: { id: true, npk: true, firstName: true, lastName: true, position: true } }
     };
 
     // Full include set (kept identical to previous behaviour) - opt-in only
     const fullInclude = {
-      category: { select: { id: true, name: true, code: true } },
-      company: { select: { id: true, name: true, code: true } },
-      vendor: { select: { id: true, name: true, code: true } },
-      location: { select: { id: true, name: true, building: true, room: true } },
-      department: { select: { id: true, name: true, code: true } },
-      assignedEmployee: { select: { id: true, npk: true, firstName: true, lastName: true, position: true, email: true } }
+      categories: { select: { id: true, name: true, code: true } },
+      companies: { select: { id: true, name: true, code: true } },
+      vendors: { select: { id: true, name: true, code: true } },
+      locations: { select: { id: true, name: true, building: true, room: true } },
+      departments: { select: { id: true, name: true, code: true } },
+      employees: { select: { id: true, npk: true, firstName: true, lastName: true, position: true, email: true } }
     };
 
     const start = Date.now();
@@ -319,23 +319,17 @@ router.get('/:id', authenticate, async (req, res, next) => {
     const asset = await prisma.asset.findUnique({
       where: { id },
       include: {
-        category: {
-          select: { id: true, name: true, code: true }
+        categories: { select: { id: true, name: true, code: true }
         },
-        company: {
-          select: { id: true, name: true, code: true }
+        companies: { select: { id: true, name: true, code: true }
         },
-        vendor: {
-          select: { id: true, name: true, code: true, contactPerson: true, phone: true }
+        vendors: { select: { id: true, name: true, code: true, contactPerson: true, phone: true }
         },
-        location: {
-          select: { id: true, name: true, building: true, floor: true, room: true }
+        locations: { select: { id: true, name: true, building: true, floor: true, room: true }
         },
-        department: {
-          select: { id: true, name: true, code: true }
+        departments: { select: { id: true, name: true, code: true }
         },
-        assignedEmployee: {
-          select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
+        employees: { select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
         },
         editedByUser: {
           select: { id: true, firstName: true, lastName: true, email: true }
@@ -631,23 +625,17 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple
         const asset = await tx.asset.create({
           data: createData,
         include: {
-          category: {
-            select: { id: true, name: true, code: true }
+          categories: { select: { id: true, name: true, code: true }
           },
-          company: {
-            select: { id: true, name: true, code: true }
+          companies: { select: { id: true, name: true, code: true }
           },
-          vendor: {
-            select: { id: true, name: true, code: true }
+          vendors: { select: { id: true, name: true, code: true }
           },
-          location: {
-            select: { id: true, name: true, building: true, room: true }
+          locations: { select: { id: true, name: true, building: true, room: true }
           },
-          department: {
-            select: { id: true, name: true, code: true }
+          departments: { select: { id: true, name: true, code: true }
           },
-          assignedEmployee: {
-            select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
+          employees: { select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
           }
         }
       });
@@ -846,11 +834,11 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultiple
       return await tx.asset.findUnique({
         where: { id: asset.id },
         include: {
-          category: { select: { id: true, name: true, code: true } },
-          vendor: { select: { id: true, name: true, code: true } },
-          location: { select: { id: true, name: true, building: true, room: true } },
-          department: { select: { id: true, name: true, code: true } },
-          assignedEmployee: { select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true } },
+          categories: { select: { id: true, name: true, code: true } },
+          vendors: { select: { id: true, name: true, code: true } },
+          locations: { select: { id: true, name: true, building: true, room: true } },
+          departments: { select: { id: true, name: true, code: true } },
+          employees: { select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true } },
           attachments: {
             select: {
               id: true,
@@ -1023,20 +1011,15 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultip
         where: { id },
         data: processedData,
         include: {
-          category: {
-            select: { id: true, name: true, code: true }
+          categories: { select: { id: true, name: true, code: true }
           },
-          vendor: {
-            select: { id: true, name: true, code: true }
+          vendors: { select: { id: true, name: true, code: true }
           },
-          location: {
-            select: { id: true, name: true, building: true, room: true }
+          locations: { select: { id: true, name: true, building: true, room: true }
           },
-          department: {
-            select: { id: true, name: true, code: true }
+          departments: { select: { id: true, name: true, code: true }
           },
-          assignedEmployee: {
-            select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
+          employees: { select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
           },
           attachments: {
             select: {
@@ -1094,20 +1077,15 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), uploadMultip
         return await tx.asset.findUnique({
           where: { id },
           include: {
-            category: {
-              select: { id: true, name: true, code: true }
+            categories: { select: { id: true, name: true, code: true }
             },
-            vendor: {
-              select: { id: true, name: true, code: true }
+            vendors: { select: { id: true, name: true, code: true }
             },
-            location: {
-              select: { id: true, name: true, building: true, room: true }
+            locations: { select: { id: true, name: true, building: true, room: true }
             },
-            department: {
-              select: { id: true, name: true, code: true }
+            departments: { select: { id: true, name: true, code: true }
             },
-            assignedEmployee: {
-              select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
+            employees: { select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true }
             },
             attachments: {
               select: {
@@ -1286,11 +1264,11 @@ router.post('/:id/retire', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), asyn
         notes: note ? `${asset.notes || ''}\n[${new Date().toISOString()}] Retired: ${note}` : `${asset.notes || ''}\n[${new Date().toISOString()}] Retired via API`
       },
       include: {
-        category: { select: { id: true, name: true, code: true } },
-        vendor: { select: { id: true, name: true, code: true } },
-        location: { select: { id: true, name: true } },
-        department: { select: { id: true, name: true } },
-        assignedEmployee: { select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true } }
+        categories: { select: { id: true, name: true, code: true } },
+        vendors: { select: { id: true, name: true, code: true } },
+        locations: { select: { id: true, name: true } },
+        departments: { select: { id: true, name: true } },
+        employees: { select: { id: true, npk: true, firstName: true, lastName: true, email: true, phone: true, position: true } }
       }
     })
 
@@ -1370,11 +1348,9 @@ router.post('/:id/assign', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), asyn
         notes: value.notes || undefined
       },
       include: {
-        assignedEmployee: {
-          select: { id: true, npk: true, firstName: true, lastName: true, position: true }
+        employees: { select: { id: true, npk: true, firstName: true, lastName: true, position: true }
         },
-        category: {
-          select: { id: true, name: true, code: true }
+        categories: { select: { id: true, name: true, code: true }
         }
       }
     });
@@ -1421,8 +1397,7 @@ router.post('/:id/unassign', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), as
         status: 'AVAILABLE'
       },
       include: {
-        category: {
-          select: { id: true, name: true, code: true }
+        categories: { select: { id: true, name: true, code: true }
         }
       }
     });
@@ -1925,3 +1900,4 @@ router.get('/stats', authenticate, async (req, res, next) => {
 });
 
 module.exports = router;
+

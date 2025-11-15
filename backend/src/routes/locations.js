@@ -76,7 +76,7 @@ router.get('/', authenticate, async (req, res, next) => {
       prisma.location.findMany({
         where,
         include: {
-          company: {
+          companies: {
             select: {
               id: true,
               name: true,
@@ -168,7 +168,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
         companyId: req.user.companyId // Filter by user's company
       },
       include: {
-        company: {
+        companies: {
           select: {
             id: true,
             name: true,
@@ -269,7 +269,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         companyId: finalCompanyId
       },
       include: {
-        company: {
+        companies: {
           select: {
             id: true,
             name: true,
@@ -355,7 +355,7 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, 
       where: { id },
       data: value,
       include: {
-        company: {
+        companies: {
           select: {
             id: true,
             name: true,
@@ -600,3 +600,5 @@ router.get('/buildings/summary', authenticate, async (req, res, next) => {
 });
 
 module.exports = router;
+
+

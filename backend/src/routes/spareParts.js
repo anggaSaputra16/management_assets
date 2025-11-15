@@ -90,9 +90,9 @@ router.get('/', authenticate, async (req, res) => {
     let total = 0
 
     const includeForList = {
-      vendor: { select: { id: true, name: true, code: true } },
-      company: { select: { id: true, name: true } },
-      _count: { select: { usages: true, procurements: true } }
+      vendors: { select: { id: true, name: true, code: true } },
+      companies: { select: { id: true, name: true } },
+      _count: { select: { part_usages: true, procurements: true } }
     }
 
     if (lowStock === 'true') {
@@ -193,8 +193,8 @@ if (process.env.NODE_ENV !== 'production') {
       const spareParts = await prisma.sparePart.findMany({
         orderBy: [{ partNumber: 'asc' }],
         include: {
-          vendor: { select: { id: true, name: true, code: true } },
-          _count: { select: { usages: true, procurements: true } }
+          vendors: { select: { id: true, name: true, code: true } },
+          _count: { select: { part_usages: true, procurements: true } }
         }
       })
 
@@ -331,10 +331,10 @@ router.get('/low-stock', authenticate, async (req, res) => {
       where: { isActive: true },
       orderBy: [{ stockLevel: 'asc' }],
       include: {
-        vendor: {
+        vendors: {
           select: { id: true, name: true, code: true }
         },
-        company: { select: { id: true, name: true } }
+        companies: { select: { id: true, name: true } }
       }
     })
 
@@ -499,8 +499,8 @@ router.post('/inventory', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async
         companyId: targetCompanyId
       },
         include: {
-          vendor: { select: { id: true, name: true, code: true } },
-          _count: { select: { usages: true, procurements: true } },
+          vendors: { select: { id: true, name: true, code: true } },
+          _count: { select: { part_usages: true, procurements: true } },
           procurements: {},
           usages: {},
           replacements: {},
@@ -628,14 +628,14 @@ router.put('/inventory/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TE
         companyId: targetCompanyId
       },
       include: {
-        vendor: {
+        vendors: {
           select: {
             id: true,
             name: true,
             code: true
           }
         },
-        company: {
+        companies: {
           select: {
             id: true,
             name: true
@@ -643,7 +643,7 @@ router.put('/inventory/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TE
         },
         _count: {
           select: {
-            usages: true,
+            part_usages: true,
             procurements: true
           }
         }
@@ -673,7 +673,7 @@ router.get('/:id', authenticate, async (req, res) => {
     const sparePart = await prisma.sparePart.findUnique({
       where: { id },
       include: {
-        vendor: {
+        vendors: {
           select: {
             id: true,
             name: true,
@@ -682,7 +682,7 @@ router.get('/:id', authenticate, async (req, res) => {
             phone: true
           }
         },
-        company: {
+        companies: {
           select: {
             id: true,
             name: true
@@ -712,7 +712,7 @@ router.get('/:id', authenticate, async (req, res) => {
         },
         procurements: {
           include: {
-            vendor: {
+            vendors: {
               select: {
                 id: true,
                 name: true,
@@ -743,7 +743,7 @@ router.get('/:id', authenticate, async (req, res) => {
         },
         _count: {
           select: {
-            usages: true,
+            part_usages: true,
             procurements: true
           }
         }
@@ -882,8 +882,8 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (req, re
         companyId: targetCompanyId
       },
         include: {
-          vendor: { select: { id: true, name: true, code: true } },
-          _count: { select: { usages: true, procurements: true } },
+          vendors: { select: { id: true, name: true, code: true } },
+          _count: { select: { part_usages: true, procurements: true } },
           procurements: {},
           usages: {},
           replacements: {},
@@ -1011,14 +1011,14 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN')
         companyId: targetCompanyId
       },
       include: {
-        vendor: {
+        vendors: {
           select: {
             id: true,
             name: true,
             code: true
           }
         },
-        company: {
+        companies: {
           select: {
             id: true,
             name: true
@@ -1026,7 +1026,7 @@ router.put('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN')
         },
         _count: {
           select: {
-            usages: true,
+            part_usages: true,
             procurements: true
           }
         }
@@ -1089,7 +1089,7 @@ router.put('/:id/stock', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNI
         notes: notes ? `${existingSparePart.notes || ''}\n[${new Date().toISOString()}] Stock updated: ${notes}` : existingSparePart.notes
       },
       include: {
-        vendor: {
+        vendors: {
           select: {
             id: true,
             name: true,
@@ -1163,8 +1163,8 @@ router.post('/upsert', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICI
           notes: notes ? `${existing.notes || ''}\n[${new Date().toISOString()}] ${notes}` : existing.notes
         },
         include: {
-          vendor: { select: { id: true, name: true, code: true } },
-          company: { select: { id: true, name: true } },
+          vendors: { select: { id: true, name: true, code: true } },
+          companies: { select: { id: true, name: true } },
           sourceComponents: {}
         }
       })
@@ -1197,8 +1197,8 @@ router.post('/upsert', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICI
         isActive: true
       },
       include: {
-        vendor: { select: { id: true, name: true, code: true } },
-        company: { select: { id: true, name: true } },
+        vendors: { select: { id: true, name: true, code: true } },
+        companies: { select: { id: true, name: true } },
         sourceComponents: {}
       }
     })
@@ -1221,7 +1221,7 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
       include: {
         _count: {
           select: {
-            usages: true,
+            part_usages: true,
             procurements: true
           }
         }
@@ -1266,3 +1266,6 @@ router.delete('/:id', authenticate, authorize('ADMIN', 'ASSET_ADMIN'), async (re
 })
 
 module.exports = router
+
+
+

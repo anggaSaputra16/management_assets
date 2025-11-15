@@ -56,7 +56,7 @@ router.get('/', authenticate, async (req, res, next) => {
     if (req.user.role === 'TECHNICIAN') {
       where.technicianId = req.user.id;
     } else if (req.user.role === 'DEPARTMENT_USER') {
-      where.asset = {
+      where.assets = {
         companyId,
         departmentId: req.user.departmentId
       };
@@ -83,17 +83,15 @@ router.get('/', authenticate, async (req, res, next) => {
       prisma.maintenanceRecord.findMany({
         where,
         include: {
-          asset: {
+          assets: {
             select: {
               id: true,
               assetTag: true,
               name: true,
               status: true,
-              category: {
-                select: { name: true }
+              categories: {                select: { name: true }
               },
-              location: {
-                select: { name: true, building: true }
+              locations: {                select: { name: true, building: true }
               }
             }
           },
@@ -106,8 +104,7 @@ router.get('/', authenticate, async (req, res, next) => {
               phone: true
             }
           },
-          vendor: {
-            select: {
+          vendors: { select: {
               id: true,
               name: true,
               contactPerson: true,
@@ -151,7 +148,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
     if (req.user.role === 'TECHNICIAN') {
       where.technicianId = req.user.id;
     } else if (req.user.role === 'DEPARTMENT_USER') {
-      where.asset = {
+      where.assets = {
         departmentId: req.user.departmentId
       };
     }
@@ -159,7 +156,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
     const maintenanceRecord = await prisma.maintenanceRecord.findFirst({
       where,
       include: {
-        asset: {
+        assets: {
           select: {
             id: true,
             assetTag: true,
@@ -169,14 +166,11 @@ router.get('/:id', authenticate, async (req, res, next) => {
             serialNumber: true,
             model: true,
             brand: true,
-            category: {
-              select: { name: true }
+            categories: {              select: { name: true }
             },
-            location: {
-              select: { name: true, building: true, floor: true, room: true }
+            locations: {              select: { name: true, building: true, floor: true, room: true }
             },
-            department: {
-              select: { name: true }
+            departments: {              select: { name: true }
             }
           }
         },
@@ -189,8 +183,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
             phone: true
           }
         },
-        vendor: {
-          select: {
+        vendors: { select: {
             id: true,
             name: true,
             contactPerson: true,
@@ -307,7 +300,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'), 
         companyId: req.user.companyId
       },
       include: {
-        asset: {
+        assets: {
           select: {
             id: true,
             assetTag: true,
@@ -323,8 +316,7 @@ router.post('/', authenticate, authorize('ADMIN', 'ASSET_ADMIN', 'TECHNICIAN'), 
             email: true
           }
         },
-        vendor: {
-          select: {
+        vendors: { select: {
             id: true,
             name: true,
             contactPerson: true
@@ -360,7 +352,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
     // Check if maintenance record exists
     const existingRecord = await prisma.maintenanceRecord.findUnique({
       where: { id },
-      include: { asset: true }
+      include: { assets: true }
     });
 
     if (!existingRecord) {
@@ -418,7 +410,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
         where: { id },
         data: value,
         include: {
-          asset: {
+          assets: {
             select: {
               id: true,
               assetTag: true,
@@ -434,8 +426,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
               email: true
             }
           },
-          vendor: {
-            select: {
+          vendors: { select: {
               id: true,
               name: true,
               contactPerson: true
@@ -503,7 +494,7 @@ router.post('/:id/start', authenticate, authorize('TECHNICIAN', 'ADMIN', 'ASSET_
 
     const maintenanceRecord = await prisma.maintenanceRecord.findUnique({
       where: { id },
-      include: { asset: true }
+      include: { assets: true }
     });
 
     if (!maintenanceRecord) {
@@ -574,7 +565,7 @@ router.post('/:id/complete', authenticate, authorize('TECHNICIAN', 'ADMIN', 'ASS
 
     const maintenanceRecord = await prisma.maintenanceRecord.findUnique({
       where: { id },
-      include: { asset: true }
+      include: { assets: true }
     });
 
     if (!maintenanceRecord) {
@@ -739,7 +730,7 @@ router.get('/statistics/overview', authenticate, authorize('ADMIN', 'ASSET_ADMIN
     
     // Filter by department for managers
     if (req.user.role === 'MANAGER' && req.user.departmentId) {
-      where.asset = {
+      where.assets = {
         departmentId: req.user.departmentId
       };
     }
@@ -822,7 +813,7 @@ router.get('/upcoming', authenticate, async (req, res, next) => {
     if (req.user.role === 'TECHNICIAN') {
       where.technicianId = req.user.id;
     } else if (req.user.role === 'DEPARTMENT_USER') {
-      where.asset = {
+      where.assets = {
         departmentId: req.user.departmentId
       };
     }
@@ -830,13 +821,12 @@ router.get('/upcoming', authenticate, async (req, res, next) => {
     const upcomingMaintenance = await prisma.maintenanceRecord.findMany({
       where,
       include: {
-        asset: {
+        assets: {
           select: {
             id: true,
             assetTag: true,
             name: true,
-            location: {
-              select: { name: true, building: true }
+            locations: {              select: { name: true, building: true }
             }
           }
         },
@@ -866,7 +856,7 @@ router.get('/stats', authenticate, async (req, res, next) => {
   try {
     const where = req.user.role === 'TECHNICIAN' ? { technicianId: req.user.id } : {};
     
-    const due = await prisma.maintenance.count({ 
+    const due = await prisma.maintenanceRecord.count({ 
       where: { 
         ...where, 
         status: 'SCHEDULED',
@@ -890,3 +880,9 @@ router.get('/stats', authenticate, async (req, res, next) => {
 module.exports = router;
 
 module.exports = router;
+
+
+
+
+
+
